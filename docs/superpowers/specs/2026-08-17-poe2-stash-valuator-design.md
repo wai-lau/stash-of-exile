@@ -179,14 +179,25 @@ the index ships the ranges.
 3. Escalate to a live trade search if **any** of:
    - `corrupted: true`
    - `CurrentPrice` ≥ 5000 ex (chase uniques)
-   - spread ≥ 2.0 **and** our roll ≥ 75th percentile (the Ventor's case)
+   - spread ≥ 2.0 **and** our roll ≥ 75th percentile **and**
+     `CurrentPrice` ≥ 50 ex (the Ventor's case)
 4. Otherwise take `CurrentPrice` from the index. No call.
 
 Spread on its own is deliberately **not** enough. Measured against live
 data, 219 of 449 priced uniques (49%) spread ≥ 2.0, and Thunderfist
-spreads ×111 while selling for ~3 ex — a wide range on a worthless item
-stays worthless. Requiring a good roll on *our* copy is what keeps the
-budget on items where the index is actually wrong about us.
+spreads ×111 (`(1-111)% increased Evasion and Energy Shield`) while
+selling for ~3 ex — a wide range on a worthless item stays worthless, and
+a *perfect* copy of it is still worth ~3 ex. Requiring a good roll on our
+copy is not sufficient either: a well-rolled Thunderfist satisfies both
+the spread and roll clauses. The **price floor** is what stops the swing
+rule spending a search slot on it.
+
+**Zero-floor ranges count as maximally swingy.** Ventor's Gamble rolls
+`+(0-80) to maximum Life` and `+(0-20) to Spirit` — the difference between
+a copy with the mod and a copy effectively without it. The ratio is
+undefined, so these score a fixed high value rather than being skipped.
+Skipping them (an earlier bug) left the metric blind to the exact case it
+exists to catch: Ventor's scored 2.5 off its weakest mod instead of 10.
 
 `src/sox/data/unique_allowlist.toml` carries the 38 uniques 0.5 build
 guides name outright (verified against the live item table, enriched with

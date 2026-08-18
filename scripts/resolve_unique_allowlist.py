@@ -26,6 +26,10 @@ import sys
 
 RANGE = re.compile(r"\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)")
 
+# Score for a range whose floor is 0 (e.g. "+(0-80) to maximum Life").
+# The ratio is undefined but the swing is total, so it must rank high.
+ZERO_FLOOR_SPREAD = 10.0
+
 def normalize_name(text):
     """Fold case/whitespace so a patch that re-cases a name cannot drop it.
 
@@ -79,16 +83,29 @@ NAMED_UNIQUES = [
 ]
 
 # Escalation thresholds, seeded from the live index distribution.
+#
+# min_escalation_price_ex is the floor that stops the swing rule wasting a
+# search slot. Thunderfist spreads x111 and indexes at 3 ex: a perfect copy of
+# a worthless item is still worthless, so a wide spread only earns a search
+# once the item is worth something to begin with.
 THRESHOLDS = {
     "chase_price_ex": 5000,
     "swing_ratio": 2.0,
     "roll_score_percentile": 0.75,
+    "min_escalation_price_ex": 50,
     "illiquid_quantity": 20,
 }
 
 
 def spread(item):
-    """Max/min ratio across every rolled range on the unique."""
+    """Widest swing across the unique's rolled ranges.
+
+    A zero-floor range like Ventor's Gamble's "+(0-80) to maximum Life" is the
+    swingiest roll there is — the difference between a copy with the mod and a
+    copy effectively without it. Dividing by zero is undefined, so those are
+    scored as ZERO_FLOOR_SPREAD rather than skipped; skipping them made the
+    metric blind to exactly the case it exists to catch.
+    """
     meta = item.get("ItemMetadata") or {}
     ratios = []
     for key in ("explicit_mods", "implicit_mods"):
@@ -100,13 +117,13 @@ def spread(item):
                             lo, hi = float(mag["min"]), float(mag["max"])
                         except (KeyError, TypeError, ValueError):
                             continue
-                        if lo > 0 and hi > lo:
-                            ratios.append(hi / lo)
+                        if hi > lo:
+                            ratios.append(hi / lo if lo > 0 else ZERO_FLOOR_SPREAD)
                 continue
             for lo, hi in RANGE.findall(mod):
                 lo, hi = float(lo), float(hi)
-                if lo > 0 and hi > lo:
-                    ratios.append(hi / lo)
+                if hi > lo:
+                    ratios.append(hi / lo if lo > 0 else ZERO_FLOOR_SPREAD)
     return max(ratios) if ratios else 1.0
 
 
@@ -139,8 +156,11 @@ def main():
     ]
     out.append("# Escalate a unique to a live trade search when ANY holds:")
     out.append("#   corrupted, OR index_price >= chase_price_ex,")
-    out.append("#   OR (spread >= swing_ratio AND our roll >= roll_score_percentile)")
-    out.append("# Spread alone is deliberately NOT enough: Thunderfist spreads x111 at ~3ex.")
+    out.append("#   OR (spread >= swing_ratio AND our roll >= roll_score_percentile")
+    out.append("#       AND index_price >= min_escalation_price_ex)")
+    out.append("# Spread alone is deliberately NOT enough: Thunderfist spreads x111 at ~3ex,")
+    out.append("# so a perfect copy of it is still worth ~3ex. The price floor is what stops")
+    out.append("# the swing rule spending a search slot on a well-rolled worthless item.")
     for key, value in THRESHOLDS.items():
         out.append(f"{key} = {value}")
     out.append("")

@@ -8,11 +8,15 @@
 [thresholds]
 # Escalate a unique to a live trade search when ANY holds:
 #   corrupted, OR index_price >= chase_price_ex,
-#   OR (spread >= swing_ratio AND our roll >= roll_score_percentile)
-# Spread alone is deliberately NOT enough: Thunderfist spreads x111 at ~3ex.
+#   OR (spread >= swing_ratio AND our roll >= roll_score_percentile
+#       AND index_price >= min_escalation_price_ex)
+# Spread alone is deliberately NOT enough: Thunderfist spreads x111 at ~3ex,
+# so a perfect copy of it is still worth ~3ex. The price floor is what stops
+# the swing rule spending a search slot on a well-rolled worthless item.
 chase_price_ex = 5000
 swing_ratio = 2.0
 roll_score_percentile = 0.75
+min_escalation_price_ex = 50
 illiquid_quantity = 20
 
 [[unique]]
@@ -182,7 +186,7 @@ group = "accessory"
 base = "Gold Ring"
 index_price_ex = 7
 quantity = 26747
-spread = 2.5
+spread = 10.0
 note = "roll-dependent: index price is the floor only"
 
 [[unique]]
