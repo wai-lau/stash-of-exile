@@ -1,0 +1,19 @@
+# python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# never commit anything that could carry a session token or stash contents
+*.session
+secrets.toml
+config.toml
+snapshots/
+cache.sqlite*
+
+# generated / disposable
+/graphify-out/
+/.archaeology/
