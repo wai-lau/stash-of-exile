@@ -943,6 +943,26 @@ class GGGSession:
         raise RateLimited("unreachable")   # pragma: no cover
 
     def _check(self, response: httpx.Response) -> None:
+        # Verified live on 2026-08-18: an unrecognised session does NOT get a
+        # redirect to login. GGG returns one of three shapes, and hands back a
+        # brand-new POESESSID via Set-Cookie because it treats us as anonymous.
+        #   401 {"error":{"code":8,"message":"Unauthorized"}}
+        #   403 {"error":{"code":6,"message":"Forbidden"}}
+        #   403 HTML page titled "Permission Denied"
+        if "POESESSID" in response.headers.get("set-cookie", ""):
+            raise AuthExpired(
+                "GGG issued a new session, meaning it did not recognise the "
+                "POESESSID we sent. Copy a fresh value from a browser that is "
+                "logged in, on this same machine and network."
+            )
+        if response.status_code in (401, 403):
+            body = response.text[:200]
+            if '"code":8' in body or '"code":6' in body or "Permission Denied" in body:
+                raise AuthExpired(
+                    "POESESSID was rejected. Copy a fresh value from a logged-in "
+                    "browser on this same machine and network."
+                )
+
         if response.status_code in (301, 302, 303, 307, 308):
             location = response.headers.get("location", "")
             if "login" in location:

@@ -510,6 +510,24 @@ Parse `X-Rate-Limit-Rules`, then for each rule `X-Rate-Limit-<Rule>`
 from a live response, the session's first call is deliberately a cheap
 one, made to learn the limits.
 
+**Real headers, captured live on 2026-08-18** from
+`character-window/get-characters`:
+
+```
+x-rate-limit-policy:   backend-character-request-limit
+x-rate-limit-rules:    Ip
+x-rate-limit-ip:       15:60:120,90:1800:600,180:7200:3600
+x-rate-limit-ip-state: 2:60:0,3:1800:0,3:7200:0
+```
+
+Note that **one rule carries several comma-separated clauses** — here
+15 per 60s (120s restriction), 90 per 1800s, and 180 per 7200s, all
+enforced at once. The governor must treat each clause as its own limit and
+respect the tightest; parsing only the first clause would breach the long
+windows during a large stash read. The 2-hour clause (180 requests) is the
+real ceiling on a full valuation run, which is another reason the search
+budget is capped and the cache TTLs are generous.
+
 ## Cache
 
 SQLite at `~/.local/share/sox/cache.sqlite`.
@@ -536,8 +554,9 @@ in as the account owner, without a password. Therefore:
 
 | Condition | Behavior |
 |---|---|
-| Expired session (302 to login) | Clear message, stop. No retry loop. |
+| Expired/unrecognised session | Clear message, stop. No retry loop. |
 | Cloudflare 403 | Stop; instruct to refresh the cookie. |
+| `Set-Cookie: POESESSID=…` on a response | GGG did not recognise our session and issued a fresh one. Treat as expired-session, never retry. |
 | 429 | Honor `Retry-After`, halve concurrency, resume. |
 | Unknown mod text | Skip that mod, record it in the report. |
 | Scout unreachable | Price uniques from last cache, mark results stale. |
