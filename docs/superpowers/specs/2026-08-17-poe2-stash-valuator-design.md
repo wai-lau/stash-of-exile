@@ -104,7 +104,7 @@ sox/
     trade.py           trade2 search / fetch / data.filters / data.stats
   scout.py             poe2scout index client
   valuation/
-    classify.py        item -> currency | gem | unique | rare | magic | normal
+    classify.py        item -> currency | gem | unique | gear | endgame | unknown
     index_pricer.py    item -> scout index entry -> price
     rolls.py           parse "(min-max)" ranges; score an item's actual rolls
     candidates.py      selects which items earn a live trade search
@@ -140,6 +140,31 @@ Gems are their own value class and must not be lumped into "currency":
   is therefore part of the index lookup key, not a detail.
 
 Both come from `Currencies/ByCategory`, so they cost no trade API calls.
+
+### Endgame items — no index exists, search or flag
+
+A coverage audit (`docs/research/2026-08-17-coverage-audit.md`) found five
+tradeable classes with **zero index coverage**. They are moddable or
+tiered, so they are priced by search, never by index:
+
+| Class | Search as | Key filters |
+|---|---|---|
+| Waystones (T1–T16) | `map.waystone` | `map_tier`, `map_packsize`, `map_iir`, `map_bonus` |
+| Tablets (8 kinds) | `map.tablet` | mods |
+| Skill/support gems (784 unindexed) | `gem.activegem` / `gem.supportgem` / `gem.metagem` | `gem_level`, `quality` |
+| Sanctum relics (non-unique) | `sanctum.relic` | mods |
+| Charms (non-unique) | `flask.charm` | mods |
+
+**Wombgift** (5 entries) has neither an index price nor a clean category
+mapping. It is reported as `unpriced:unknown-class` rather than guessed at
+or silently zeroed.
+
+Without this, a stash holding high-tier waystones or level-20 gems would
+be valued at zero for those items — an error that under-reports, which is
+the direction least likely to be noticed.
+
+`card` appears among the 64 trade categories but has no items in PoE2 —
+vestigial, no handling needed.
 
 ### Uniques — three tiers, assigned automatically
 
@@ -357,6 +382,8 @@ in as the account owner, without a password. Therefore:
 | Unknown mod text | Skip that mod, record it in the report. |
 | Scout unreachable | Price uniques from last cache, mark results stale. |
 | Legacy stash endpoint changed shape | Fail loudly in `ggg/stash.py` only. |
+| Special tab shape (currency/map/gem tabs) | Parse explicitly. A tab that reads as empty must raise, never silently contribute zero. |
+| Item class with no price path | Report `unpriced:unknown-class`; never value at zero. |
 
 ## Testing
 
@@ -368,8 +395,24 @@ in as the account owner, without a password. Therefore:
 - Roll scorer tested against known `(min-max)` ranges.
 - One opt-in integration test hits poe2scout only — no auth, no secrets.
 
+## Value-affecting item flags
+
+These change price and must be read from the stash JSON, not ignored:
+`corrupted`, `mirrored`, `fractured`, `desecrated`, quality, and socketed
+runes / soul cores. **Mirrored items cannot be modified further**, so they
+must never be priced as an equivalent normal item. Each has a
+`misc_filters` equivalent when a search is needed.
+
+Currency value is **per-unit × stack size** — the report multiplies rather
+than counting a stack of 500 as one item.
+
 ## Out of scope
 
 Live overlay, in-game integration, automatic listing/pricing of items,
 multi-account support, PoE1 support, any web UI. `sox diff` compares two
 snapshots; anything richer waits for a later iteration.
+
+**Character equipment and inventory** are also out of scope for v1 — gear
+worn by characters is not in stash tabs. Worth noting that `/character` is
+one of the few official OAuth endpoints that *does* support the poe2
+realm, so this is a cheap addition later.
