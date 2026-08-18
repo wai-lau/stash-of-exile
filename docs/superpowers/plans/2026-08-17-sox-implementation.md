@@ -2514,6 +2514,16 @@ def test_loads_every_mod_with_ids_and_weights():
     assert {entry.weight for entry in mods} == {1, 2, 3}
 
 
+def test_mods_carry_archetype_tags():
+    by_text = {m.text: m for m in load_mods()}
+    assert "attack" in by_text["# to Level of all Melee Skills"].tags
+    assert "spell" in by_text["#% increased Cast Speed"].tags
+    # A minion mod serves minion buyers only, never attack/spell.
+    minion = by_text["Minions have #% increased Attack and Cast Speed"]
+    assert minion.tags == ["minion"]
+    assert all(m.tags for m in load_mods()), "every mod must carry at least one tag"
+
+
 def test_ambiguous_mods_keep_all_ids():
     spirit = [m for m in load_mods() if m.slug == "to_spirit"][0]
     assert spirit.ambiguous is True
@@ -2566,6 +2576,7 @@ class ModEntry:
     text: str
     weight: int
     category: str
+    tags: list[str] = field(default_factory=list)   # archetypes this mod serves
     ambiguous: bool = False
 
 
@@ -2600,6 +2611,7 @@ def load_mods() -> list[ModEntry]:
                 text=mod["text"],
                 weight=int(mod["weight"]),
                 category=category["name"],
+                tags=list(mod.get("tags", [])),
                 ambiguous=bool(mod.get("ambiguous", False)),
             ))
     return entries
@@ -2728,6 +2740,9 @@ _NUMBER = re.compile(r"[+-]?\d+(?:\.\d+)?")
 # Most a pile of weight-1 mods may contribute in total.
 SUPPORTING_CAP = 2
 
+# Ceiling on the coherence bonus, so a deep stack cannot dominate the score.
+MAX_COHERENCE_BONUS = 3
+
 
 def normalize_mod(text: str) -> str:
     text = _NUMBER.sub("#", text)
@@ -2743,6 +2758,28 @@ def match_mod(text: str, entries: list[ModEntry]) -> ModEntry | None:
         if normalize_mod(entry.text) == target:
             return entry
     return None
+
+
+def coherence_bonus(item_mods: list[str], entries: list[ModEntry]) -> tuple[int, str]:
+    """Reward many mods serving ONE archetype.
+
+    Counted over archetype tags, not allowlist categories. A real build's mods
+    span categories (projectile levels + attack speed + flat damage is a bow
+    item), while a single category can hold mods for two unrelated builds
+    (+Melee Skills and +Spell Skills are both skill_levels and share no buyer).
+    """
+    counts: dict[str, int] = {}
+    for text in item_mods:
+        entry = match_mod(text, entries)
+        if entry is None:
+            continue
+        for tag in entry.tags:
+            counts[tag] = counts.get(tag, 0) + 1
+    if not counts:
+        return 0, ""
+    tag, top = max(counts.items(), key=lambda kv: kv[1])
+    bonus = min(max(top - 1, 0), MAX_COHERENCE_BONUS)
+    return bonus, (f"{tag}x{top}" if bonus else "")
 
 
 def score_mods(item_mods: list[str], entries: list[ModEntry]) -> tuple[int, dict[str, int]]:
@@ -2974,7 +3011,7 @@ from sox.config import Budgets
 from sox.scout import IndexEntry
 from sox.valuation.allowlists import BaseRules, ModEntry, UniqueRules
 from sox.valuation.classify import ItemClass, Rarity, classify, display_name, rarity_of
-from sox.valuation.mods import match_mod, score_mods
+from sox.valuation.mods import coherence_bonus, match_mod, score_mods
 from sox.valuation.rolls import roll_score, spread_of
 
 AVOID_PENALTY = 3
@@ -3052,10 +3089,11 @@ def score_gear(item: dict, mods: list[ModEntry], base_rules: BaseRules) -> tuple
     mod_score, by_category = score_mods(item_mods, mods)
     if mod_score:
         reasons.append(f"mods={mod_score}")
-    # Concentrated mods imply a real buyer; scattered ones usually do not.
-    if by_category and max(by_category.values()) >= mod_score * 0.6 and mod_score >= 4:
-        mod_score += 1
-        reasons.append("coherent")
+    # Many mods serving one archetype means a real buyer exists for the set.
+    bonus, why = coherence_bonus(item_mods, mods)
+    if bonus:
+        mod_score += bonus
+        reasons.append(why)
 
     # A locked-in high-tier mod with room left to craft is what sells.
     has_premium = any(

@@ -323,9 +323,43 @@ search if   score >= 6
 
 This follows the community pricing rule that a lone T1 mod rarely sells —
 value comes from three or more potent affixes serving the same build. A
-pile of weight-1 resistances therefore does not qualify, by design. A
-**coherence bonus** applies when most of the score sits in one category,
-since concentrated mods imply a real buyer.
+pile of weight-1 resistances therefore does not qualify, by design;
+weight-1 mods contribute at most 2 in total, because an item with four or
+more low-tier mods is worth *less* — they occupy affix slots a buyer would
+otherwise craft into.
+
+### Coherence — many mods serving one archetype
+
+Every allowlist mod is tagged with the archetypes it serves (`attack`,
+`spell`, `minion`, `projectile`, `melee`, `crit`, `life`, `es`, `armour`,
+`evasion`, `defence`, `spirit`, `elemental`, `chaos`, `physical`, …).
+Coherence counts how many of an item's mods share one archetype:
+
+```
+top = size of the largest archetype group among the item's matched mods
+coherence_bonus = min(top - 1, 3)
+```
+
+Tags, not allowlist categories. The categories cannot express this: a real
+build's mods **span** categories, while one category can hold mods for two
+unrelated builds. Measured against real mod sets, the category proxy fired
+on exactly the wrong items:
+
+| Item | Category proxy | Archetype count |
+|---|---|---|
+| `+3 Melee Skills` + `+3 Spell Skills` | coherent ✗ | attack×1, spell×1 → **+0** ✓ |
+| proj levels + attack speed + flat phys | not coherent ✗ | attack×2 → **+1** ✓ |
+| spell levels + cast speed + spell damage | not coherent ✗ | spell×3 → **+2** ✓ |
+| 5-mod caster item | — | spell×5 → **+3** ✓ |
+
+Tagging is conservative: a mod that could serve either delivery gets no
+delivery tag rather than a guessed one, and minion mods are stripped of
+`attack`/`spell` because *"Minions have increased Attack and Cast Speed"*
+is the minion's speed, not the player's, and serves only minion buyers.
+
+No conflict penalty is applied. An item carrying both `+Melee Skills` and
+`+Spell Skills` simply earns no coherence bonus rather than being marked
+down.
 
 ### Open affix space
 

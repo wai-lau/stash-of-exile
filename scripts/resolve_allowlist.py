@@ -215,6 +215,91 @@ def slugify(text):
     return re.sub(r"[^a-z0-9]+", "_", normalize(text)).strip("_")
 
 
+
+# --- Archetype tagging -------------------------------------------------
+#
+# Coherence must measure "do these mods serve ONE buyer", which the allowlist
+# categories cannot do: a real build's mods SPAN categories (projectile levels
+# + attack speed + flat damage is a textbook bow item), while one category can
+# hold mods for two different builds (+Melee Skills and +Spell Skills are both
+# skill_levels and share no buyer at all).
+#
+# Delivery tags (attack / spell / minion) are the ones that define a buyer.
+# Everything else describes the item and never triggers a conflict.
+DELIVERY_TAGS = ("attack", "spell", "minion")
+
+# (substring searched in the canonical text, tags). All matches union.
+# Deliberately conservative: a mod that could belong to either delivery gets
+# NO delivery tag rather than a guessed one.
+TAG_RULES = [
+    ("minion", ("minion",)),
+    ("reservation efficiency", ("spirit",)),
+    ("melee skills", ("attack", "melee")),
+    ("attack skills", ("attack",)),
+    ("to attacks", ("attack",)),
+    ("attack speed", ("attack",)),
+    ("accuracy", ("attack",)),
+    ("elemental damage with attacks", ("attack", "elemental")),
+    ("critical hit chance for attacks", ("attack", "crit")),
+    ("spell skills", ("spell",)),
+    ("spell damage", ("spell",)),
+    ("cast speed", ("spell",)),
+    ("critical hit chance for spells", ("spell", "crit")),
+    ("projectile", ("projectile",)),
+    ("chaos skills", ("chaos",)),
+    ("fire skills", ("elemental",)),
+    ("cold skills", ("elemental",)),
+    ("lightning skills", ("elemental",)),
+    ("physical spell skills", ("spell", "physical")),
+    ("physical", ("physical",)),
+    ("fire", ("elemental",)),
+    ("cold", ("elemental",)),
+    ("lightning", ("elemental",)),
+    ("chaos", ("chaos",)),
+    ("elemental", ("elemental",)),
+    ("critical", ("crit",)),
+    ("maximum life", ("life", "defence")),
+    ("energy shield", ("es", "defence")),
+    ("evasion", ("evasion", "defence")),
+    ("armour", ("armour", "defence")),
+    ("deflection", ("defence",)),
+    ("resistance", ("resistance", "defence")),
+    ("block", ("defence",)),
+    ("runic ward", ("defence",)),
+    ("spirit", ("spirit",)),
+    ("movement speed", ("movement",)),
+    ("rarity", ("rarity",)),
+    ("mana", ("mana",)),
+    ("poison", ("ailment",)),
+    ("bleeding", ("ailment",)),
+    ("ailments", ("ailment",)),
+    ("freeze", ("ailment",)),
+    ("shock", ("ailment",)),
+    ("area of effect", ("aoe",)),
+    ("skill effect duration", ("duration",)),
+    ("strength", ("attribute",)),
+    ("dexterity", ("attribute",)),
+    ("intelligence", ("attribute",)),
+]
+
+
+def tags_for(text):
+    """Archetypes a mod serves. Empty is allowed and means 'describes nothing
+    a buyer selects on' — such mods contribute score but never coherence."""
+    lowered = normalize(text)
+    tags = set()
+    for needle, applied in TAG_RULES:
+        if needle in lowered:
+            tags.update(applied)
+
+    # "Minions have increased Attack and Cast Speed" is the MINION's attack and
+    # cast speed, not the player's. A minion mod serves minion buyers only, so
+    # it must not also claim the attack or spell delivery tags.
+    if "minion" in tags:
+        tags -= {"attack", "spell", "melee", "projectile"}
+    return sorted(tags)
+
+
 def build_index(stats):
     """normalized text -> [(group, id)] in table order."""
     idx = {}
@@ -323,6 +408,9 @@ def main():
             out.append(f'slug = "{slugify(text)}"')
             out.append(f'text = "{text}"')
             out.append(f"weight = {weight}")
+            tags = tags_for(text)
+            if tags:
+                out.append("tags = [" + ", ".join(f'"{t}"' for t in tags) + "]")
             if is_ambiguous:
                 out.append("ambiguous = true  # matched by OR across these ids")
             if note:
