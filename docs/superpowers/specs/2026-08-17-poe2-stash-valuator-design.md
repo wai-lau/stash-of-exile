@@ -1,7 +1,7 @@
-# PoE2 Stash Valuator (`sox`) — Design
+# PoE2 Item Pricer (`sox`) — Design
 
-**Date:** 2026-08-17
-**Status:** Approved, pending implementation plan
+**Date:** 2026-08-17 (revised 2026-08-18)
+**Status:** Approved. Input model revised — see "There is no PoE2 stash API".
 
 ## Purpose
 
@@ -14,30 +14,91 @@ personal use, single account.
 All of the following were confirmed by live calls against the real
 services on 2026-08-17, not assumed.
 
-### The official API cannot read PoE2 stashes
+### There is no PoE2 stash API — verified 2026-08-18
 
-The [GGG developer reference](https://www.pathofexile.com/developer/docs/reference)
-lists `GET /stash[/<realm>]/<league>` (scope `account:stashes`) as **PoE1
-only**. Realm support is PC / Xbox / Sony; PoE2 is not among them. Same
-for `/public-stash-tabs` and `/league-account`. Only `/character`
-supports the poe2 realm.
+The original design read stash tabs through the legacy
+`character-window/get-stash-items` endpoint. **That does not work, and no
+alternative exists.** Established by four independent checks:
 
-**Consequence:** the OAuth route is closed for this project. Stash reads
-go through the legacy session endpoint (`character-window/get-stash-items`
-with realm `poe2`) authenticated by a `POESESSID` cookie — the same route
-the existing PoE2 tools use. This is an unofficial endpoint and may break
-without notice; the design isolates that risk in one module.
+1. **OAuth API.** The [developer reference](https://www.pathofexile.com/developer/docs/reference)
+   says of `GET /stash[/<realm>]/<league>`: *"realm can either be `xbox` or
+   `sony`. If omitted then the PoE1 PC realm is assumed"* — no `poe2`. The
+   [changelog](https://www.pathofexile.com/developer/docs/changelog) shows
+   this is deliberate: GGG added the poe2 realm to the **Character**
+   endpoints (0.1.1g, 28/03/2025) and the **League** endpoints (0.2.0,
+   05/04/2025), and never to Stash.
+2. **Legacy endpoint.** `character-window/get-stash-items` accepts
+   `realm=poe2` and silently ignores it. Called with a valid session it
+   returned only PoE1 data; `get-characters?realm=poe2` likewise returned
+   PoE1 characters (`realm: pc`, league Standard).
+3. **The PoE2 site.** `pathofexile2.com` is a separate SPA with its own
+   POESESSID and an `/internal-api/` surface covering account, shop, news
+   and content only. All 82 application chunks contain no stash route.
+4. **Community.** The GGG forum thread asking this exact question, most
+   recent post 08/06/2026: *"2026 here, still no Stash API :)"*.
 
-### Trade API (unofficial, Cloudflare-fronted)
+Authorizing an OAuth application does not help. Even the broadest existing
+scope (`account:stashes`, as used by PoE Overlay) reaches PoE1 stashes only,
+because the capability does not exist at any authorization level.
 
-- `POST /api/trade2/search/poe2/<league>` → `{id, result: [hashes]}`
+**Consequence: items enter the tool through the clipboard.** PoE2 copies a
+full item text block on Ctrl+C — `Item Class:` and `Rarity:` headers, then
+`--------`-separated sections for properties, requirements, item level and
+modifiers, with modifiers grouped as implicit / explicit / rune /
+desecrated. This is how every PoE2 price-check tool works, for exactly this
+reason.
+
+The valuation engine is unaffected: mod allowlist, notable lookup, query
+builder, relaxation ladder, index pricing and the rate governor all remain
+as designed. Only the input changes, from "read a stash tab" to "parse one
+item".
+
+### Trade API — no authentication required (verified end-to-end 2026-08-18)
+
+- `POST /api/trade2/search/poe2/<league>` → `{id, complexity, result: [hashes]}`
 - `GET  /api/trade2/fetch/<up to 10 hashes, csv>?query=<id>` → listings
-- `GET  /api/trade2/data/filters` → filter metadata (no auth required)
-- `GET  /api/trade2/data/stats` → stat id tables (no auth required)
+- `GET  /api/trade2/data/filters` → filter metadata
+- `GET  /api/trade2/data/stats` → stat id tables
 
-Rate limits are advertised only on live responses via `X-Rate-Limit-*`
-headers; there is no endpoint that reports them up front. The client must
-learn them from the first response.
+**None of these need a session.** A real search and fetch were executed
+with no cookie and returned 200. That removes POESESSID, `secrets.py`,
+session expiry and every auth failure path from the design entirely — the
+tool holds no credentials at all.
+
+Real search rate limits, captured live:
+
+```
+x-rate-limit-rules: Ip
+x-rate-limit-ip:    5:10:60,15:60:300,30:300:1800,600:21600:3600
+```
+
+Four simultaneous clauses — 5 per 10s, 15 per 60s, 30 per 5min, 600 per 6h.
+The 5-per-10s clause is what paces interactive use; 600 per 6h bounds a
+long session. These are tighter than the character endpoint's limits and
+are the ones that matter.
+
+**The fetch response carries stat ids directly**, which is a gift for
+validating our text→stat mapping:
+
+```json
+{"description": "[Herald] Skills deal 22% increased Damage",
+ "hash": "stat.explicit.stat_21071013",
+ "mods": [{"name": "Heralding", "tier": "P1",
+           "magnitudes": [{"min": "15", "max": "25"}]}]}
+```
+
+Note the hash is `stat.explicit.stat_X` while the *filter* id is
+`explicit.stat_X` — strip the leading `stat.`. Fetch also returns the mod
+**tier** (`P1` = prefix tier 1, `S1` = suffix tier 1) and the roll range,
+so items seen through trade come with tier information for free.
+
+Item objects carry **both** `rarity: "Magic"` and `frameType: 1`, which is
+why `classify.py` reads either.
+
+**Listing prices are not in exalted.** Observed currencies include
+`transmute` on cheap items. Every price must be converted to exalted using
+the index's currency table before comparison — comparing raw `amount`
+across listings would rank a 2-transmute item above a 1-divine one.
 
 Confirmed filter groups and ids:
 
@@ -97,10 +158,10 @@ Python 3.12, `uv`. Package `sox`.
 sox/
   config.py            league override, account, tab selection, filter rules, budgets
                        (TOML at ~/.config/sox/config.toml)
-  secrets.py           POESESSID resolution; redaction helpers
+  itemtext.py          parse the clipboard item block into an item dict
   ggg/
     session.py         HTTP client + rate governor. ALL GGG traffic passes here.
-    stash.py           legacy character-window endpoints: tab list, tab items
+    (no stash module — no PoE2 stash API exists; see above)
     trade.py           trade2 search / fetch / data.filters / data.stats
   scout.py             poe2scout index client
   valuation/

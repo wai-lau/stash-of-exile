@@ -3585,9 +3585,18 @@ FETCH_BATCH = 10       # the fetch endpoint accepts at most 10 hashes per call
 
 @dataclass(frozen=True)
 class Listing:
-    price_ex: float
-    currency: str
+    amount: float      # raw, in `currency` — NOT exalted
+    currency: str      # observed: exalted, divine, transmute, chaos, ...
     account: str
+
+    def to_exalted(self, rates: dict[str, float]) -> float | None:
+        """Convert to exalted using the index currency table.
+
+        Listings are priced in whatever currency the seller chose. Comparing
+        raw amounts would rank a 2-transmute item above a 1-divine one.
+        """
+        rate = rates.get(self.currency)
+        return None if rate is None else self.amount * rate
 
 
 class TradeClient:
