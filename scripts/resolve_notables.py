@@ -7,9 +7,12 @@ reports one number for every Megalomaniac, currently 1 exalted across ~25,000
 listings — so these must be priced by search, and the search needs the exact
 stat id per notable.
 
-Every notable is an explicit stat of the form:
+Notables live in the **enchant** group, not explicit. Verified against the
+live search API: `explicit.stat_2954116742|50562` returns 0 results while
+`enchant.stat_2954116742|50562` returns 11. The same numeric id appears under
+several groups, and only the enchant one matches listed jewels.
 
-    explicit.stat_2954116742|50562   "Allocates Barbaric Strength"
+    enchant.stat_2954116742|50562   "Allocates Barbaric Strength"
 
 Usage:
     python3 scripts/resolve_notables.py stats.json > src/sox/data/notables.toml
@@ -20,6 +23,9 @@ import re
 import sys
 
 PREFIX = "Allocates "
+
+# Notables match only under the enchant group; explicit/crafted return nothing.
+NOTABLE_GROUP = "enchant"
 
 
 def normalize_name(text):
@@ -32,7 +38,7 @@ def main():
 
     notables = {}
     for group in stats["result"]:
-        if group["id"] != "explicit":
+        if group["id"] != NOTABLE_GROUP:
             continue
         for entry in group["entries"]:
             text = entry["text"]

@@ -1,0 +1,13 @@
+Item Class: Jewels
+Rarity: Unique
+Megalomaniac
+Diamond
+--------
+Item Level: 80
+--------
+{ Unique Modifier — Notable }
+Allocates Barbaric Strength
+{ Unique Modifier — Notable }
+Allocates Kite Runner
+--------
+Corrupted
