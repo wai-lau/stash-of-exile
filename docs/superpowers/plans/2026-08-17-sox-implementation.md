@@ -2679,6 +2679,26 @@ def test_score_sums_weights_and_reports_categories():
 def test_unmatched_mods_contribute_nothing():
     total, _ = score_mods(["Cannot be Frozen"], MODS)
     assert total == 0
+
+
+def test_supporting_mods_do_not_stack_without_limit():
+    """Four low-tier mods make an item worse, not better — they block crafting."""
+    from sox.valuation.mods import SUPPORTING_CAP
+    total, _ = score_mods([
+        "+12% to Fire Resistance", "+11% to Cold Resistance",
+        "+14% to Lightning Resistance", "+9% to Fire Resistance",
+    ], MODS)
+    assert total == SUPPORTING_CAP
+
+
+def test_cap_applies_only_to_supporting_mods():
+    total, _ = score_mods([
+        "+96 to maximum Life",              # weight 3, uncapped
+        "+35% increased Movement Speed",    # weight 3, uncapped
+        "+12% to Fire Resistance", "+11% to Cold Resistance",
+        "+14% to Lightning Resistance",     # 3 supporting, capped to 2
+    ], MODS)
+    assert total == 3 + 3 + 2
 ```
 
 - [ ] **Step 6: Run test to verify it fails**
@@ -2705,6 +2725,9 @@ from sox.valuation.allowlists import ModEntry
 
 _NUMBER = re.compile(r"[+-]?\d+(?:\.\d+)?")
 
+# Most a pile of weight-1 mods may contribute in total.
+SUPPORTING_CAP = 2
+
 
 def normalize_mod(text: str) -> str:
     text = _NUMBER.sub("#", text)
@@ -2723,14 +2746,28 @@ def match_mod(text: str, entries: list[ModEntry]) -> ModEntry | None:
 
 
 def score_mods(item_mods: list[str], entries: list[ModEntry]) -> tuple[int, dict[str, int]]:
+    """Sum allowlist weights, capping what supporting mods can contribute.
+
+    Weight-1 mods are "supporting; only matters in combination", so they must
+    not stack without limit. Community pricing guidance is explicit that an
+    item with four or more low-tier mods is worth LESS, not more — those mods
+    occupy affix slots a buyer would otherwise craft into. Without this cap, a
+    pile of junk resistances out-scores the open slots it consumed.
+    """
     total = 0
+    supporting = 0
     by_category: dict[str, int] = {}
     for text in item_mods:
         entry = match_mod(text, entries)
         if entry is None:
             continue
-        total += entry.weight
-        by_category[entry.category] = by_category.get(entry.category, 0) + entry.weight
+        weight = entry.weight
+        if weight == 1:
+            if supporting >= SUPPORTING_CAP:
+                continue
+            supporting += weight
+        total += weight
+        by_category[entry.category] = by_category.get(entry.category, 0) + weight
     return total, by_category
 ```
 
@@ -2756,7 +2793,7 @@ git commit -m "feat(mods): load allowlists and score item mods without guessing 
 
 **Interfaces:**
 - Consumes: `ModEntry`/`BaseRules`/`UniqueRules` (Task 13), `score_mods` (Task 13), `roll_score`/`spread_of` (Task 12), `ItemClass`/`rarity_of` (Task 8).
-- Produces: `Candidate(item: dict, tab: int, item_class: ItemClass, score: int, reason: str)`, `score_gear(item, mods, base_rules) -> tuple[int, str]`, `should_search_unique(item, entry: IndexEntry | None, rules: UniqueRules) -> str | None`, `select(items: list[tuple[dict, int]], index, cfg_budgets, mods, base_rules, unique_rules) -> list[Candidate]`.
+- Produces: `Candidate(item: dict, tab: int, item_class: ItemClass, score: int, reason: str)`, `score_gear(item, mods, base_rules) -> tuple[int, str]`, `used_affixes(item) -> int`, `open_affix_bonus(item, mod_score, has_premium) -> tuple[int, str]`, `AFFIX_CAPACITY: dict[Rarity, int]`, `should_search_unique(item, entry: IndexEntry | None, rules: UniqueRules) -> str | None`, `select(items: list[tuple[dict, int]], index, cfg_budgets, mods, base_rules, unique_rules) -> list[Candidate]`.
 
 `reason` records *why* an item qualified, so the report can explain the spend.
 
@@ -2793,6 +2830,45 @@ def test_a_pile_of_resistances_does_not_qualify():
         rare(["+12% to Fire Resistance", "+11% to Cold Resistance",
               "+14% to Lightning Resistance"]), MODS, BASES)
     assert score < 6
+
+
+def test_open_affixes_beat_the_same_mods_with_junk_filling_them():
+    """Two strong mods plus room to craft is worth more than a finished item."""
+    craftable = rare(["+96 to maximum Life", "+40% increased Critical Hit Chance"])
+    filled = rare(["+96 to maximum Life", "+40% increased Critical Hit Chance",
+                   "+12% to Fire Resistance", "+11% to Cold Resistance",
+                   "+3% to Lightning Resistance", "+2% to Chaos Resistance"])
+    open_score, open_reason = score_gear(craftable, MODS, BASES)
+    filled_score, _ = score_gear(filled, MODS, BASES)
+    assert open_score > filled_score
+    assert "open" in open_reason
+
+
+def test_corrupted_item_gets_no_open_affix_bonus():
+    """A corrupted item cannot be crafted, so its empty slots stay empty."""
+    item = rare(["+96 to maximum Life", "+40% increased Critical Hit Chance"])
+    corrupted = {**item, "corrupted": True}
+    assert score_gear(corrupted, MODS, BASES)[0] < score_gear(item, MODS, BASES)[0]
+
+
+def test_mirrored_item_gets_no_open_affix_bonus():
+    item = rare(["+96 to maximum Life", "+40% increased Critical Hit Chance"])
+    mirrored = {**item, "mirrored": True}
+    assert score_gear(mirrored, MODS, BASES)[0] < score_gear(item, MODS, BASES)[0]
+
+
+def test_blank_rare_with_open_slots_gets_no_bonus():
+    """Open slots only matter once something worth keeping is already on it."""
+    score, reason = score_gear(rare(["+2% to Chaos Resistance"]), MODS, BASES)
+    assert "open" not in reason
+
+
+def test_fractured_mod_counts_toward_used_affixes():
+    item = {"typeLine": "Vaal Greaves", "baseType": "Vaal Greaves", "frameType": 2,
+            "ilvl": 82, "explicitMods": ["+96 to maximum Life"],
+            "fracturedMods": ["+35% increased Movement Speed"]}
+    score, reason = score_gear(item, MODS, BASES)
+    assert "open4" in reason, "6 capacity - 2 mods = 4 open"
 
 
 def test_high_ilvl_white_base_qualifies_on_base_score_alone():
@@ -2898,10 +2974,16 @@ from sox.config import Budgets
 from sox.scout import IndexEntry
 from sox.valuation.allowlists import BaseRules, ModEntry, UniqueRules
 from sox.valuation.classify import ItemClass, Rarity, classify, display_name, rarity_of
-from sox.valuation.mods import score_mods
+from sox.valuation.mods import match_mod, score_mods
 from sox.valuation.rolls import roll_score, spread_of
 
 AVOID_PENALTY = 3
+
+# Affix capacity by rarity: rare is 3 prefixes + 3 suffixes.
+AFFIX_CAPACITY = {Rarity.RARE: 6, Rarity.MAGIC: 2, Rarity.NORMAL: 0}
+
+MAX_OPEN_BONUS_PREMIUM = 3
+MAX_OPEN_BONUS_ORDINARY = 1
 
 
 @dataclass(frozen=True)
@@ -2917,19 +2999,73 @@ def _base_name(item: dict) -> str:
     return item.get("baseType") or item.get("typeLine") or ""
 
 
+def used_affixes(item: dict) -> int:
+    """Distinct mods occupying a prefix or suffix slot.
+
+    Fractured and crafted mods occupy slots like any other. They are unioned
+    rather than summed because the endpoint sometimes repeats a fractured mod
+    in explicitMods, and double-counting would understate the open space.
+    """
+    mods: set[str] = set()
+    for key in ("explicitMods", "fracturedMods", "craftedMods", "desecratedMods"):
+        mods.update(item.get(key) or [])
+    return len(mods)
+
+
+def open_affix_bonus(item: dict, mod_score: int, has_premium: bool) -> tuple[int, str]:
+    """Room left to craft is part of what a buyer pays for.
+
+    Corrupted and mirrored items score nothing here: neither can be modified
+    again, so their empty slots are permanently empty. Treating one as a craft
+    base is not a tuning preference, it is simply wrong.
+    """
+    if item.get("corrupted") or item.get("mirrored"):
+        return 0, ""
+
+    rarity = rarity_of(item)
+    # Normal items are excluded: their value IS open affix space, and the base
+    # score (ilvl + base type + rune family) already measures it.
+    if rarity not in (Rarity.RARE, Rarity.MAGIC):
+        return 0, ""
+
+    open_slots = AFFIX_CAPACITY[rarity] - used_affixes(item)
+    if open_slots <= 0:
+        return 0, ""
+
+    if has_premium:
+        bonus = min(open_slots, MAX_OPEN_BONUS_PREMIUM)
+    elif mod_score >= 4:
+        bonus = min(open_slots, MAX_OPEN_BONUS_ORDINARY)
+    else:
+        # A blank rare also has open slots and is not worth a search.
+        return 0, ""
+    return bonus, f"open{open_slots}"
+
+
 def score_gear(item: dict, mods: list[ModEntry], base_rules: BaseRules) -> tuple[int, str]:
     """Score an item on its mods and on its value as a crafting base."""
     ilvl = int(item.get("ilvl") or 0)
     base = _base_name(item)
     reasons = []
 
-    mod_score, by_category = score_mods(item.get("explicitMods") or [], mods)
+    item_mods = list(item.get("explicitMods") or []) + list(item.get("fracturedMods") or [])
+    mod_score, by_category = score_mods(item_mods, mods)
     if mod_score:
         reasons.append(f"mods={mod_score}")
     # Concentrated mods imply a real buyer; scattered ones usually do not.
     if by_category and max(by_category.values()) >= mod_score * 0.6 and mod_score >= 4:
         mod_score += 1
         reasons.append("coherent")
+
+    # A locked-in high-tier mod with room left to craft is what sells.
+    has_premium = any(
+        (entry := match_mod(text, mods)) is not None and entry.weight >= 3
+        for text in item_mods
+    )
+    bonus, open_reason = open_affix_bonus(item, mod_score, has_premium)
+    if bonus:
+        mod_score += bonus
+        reasons.append(open_reason)
 
     base_score = 0
     for min_ilvl, weight in base_rules.ilvl_tiers:

@@ -315,6 +315,8 @@ derived from the current meta.
 
 ```
 score = sum(weight of each allowlist mod present on the item)
+      + coherence_bonus
+      + open_affix_bonus
 search if   score >= 6
        or  (score >= 4 and ilvl >= 80)
 ```
@@ -324,6 +326,36 @@ value comes from three or more potent affixes serving the same build. A
 pile of weight-1 resistances therefore does not qualify, by design. A
 **coherence bonus** applies when most of the score sits in one category,
 since concentrated mods imply a real buyer.
+
+### Open affix space
+
+Remaining affix space is part of what a buyer pays for: an item with two
+strong mods and four open slots is a **crafting base**, while the same two
+mods surrounded by four junk mods is finished goods. Affix capacity is 6
+for rare (3 prefix + 3 suffix), 2 for magic, 0 for normal.
+
+```
+open = capacity(rarity) - distinct mods present
+open_affix_bonus = min(open, 3)  if the item carries a weight-3 mod
+                 = min(open, 1)  if score >= 4
+                 = 0             otherwise
+```
+
+Gating on an existing premium mod is deliberate: a blank rare with one
+junk mod also has open slots, and is not worth a search. What sells is a
+**locked-in high-tier mod with room left to craft**, which is also why a
+`fractured` mod earns the full bonus — fracturing is what guarantees the
+good mod survives further crafting.
+
+**Corrupted and mirrored items score no open-affix bonus at all.** Neither
+can be modified further, so their empty slots are permanently empty. This
+is not a tuning choice; treating a corrupted item as a craft base is
+simply wrong, and it would systematically over-value the corrupted uniques
+the tool already flags for other reasons.
+
+Normal-rarity items are excluded from this bonus because their value is
+*entirely* open affix space, which the base score (ilvl + base type +
+rune family) already measures. Adding both would double-count.
 
 Weights are league-scoped. Re-run the generator after any patch that
 rebalances defence layers — the 0.5 Energy Shield nerfs are exactly the
