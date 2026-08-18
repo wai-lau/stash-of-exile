@@ -358,21 +358,150 @@ TAG_RULES = [
 ]
 
 
+# Whose stat a mod modifies. This is what lets a mod keep BOTH "minion" and
+# "attack": "Minions have increased Attack Speed" really is an attack-speed
+# mod, it just belongs to the minion. Recording the subject preserves that
+# fact while keeping it from stacking coherence with the player's own attack
+# mods, which serve a different buyer.
+SUBJECT_RULES = [
+    ("companion", "companion"),
+    ("minions", "minion"),
+    ("allies in your presence", "minion"),
+    ("spectre", "minion"),
+    ("offering", "minion"),
+    ("totem", "totem"),
+]
+
+# Subjects that define a buyer largely on their own. "self" does not — a
+# player wants a specific archetype, not "any mod about me".
+BUYER_SUBJECTS = ("minion", "companion", "totem")
+
+# Minion buyers are NOT interchangeable, so subject alone is too coarse.
+# Verified against 0.5 build guides:
+#   - Companion Spirit Walker wants "+Level of all Minion Skills" and "Allies
+#     in your Presence deal increased Damage", but scales mainly off the
+#     PLAYER's main-hand weapon via Catha's Balance.
+#   - Spectre/Reaver builds prefer flat added physical on the sceptre over a
+#     high-rolled "Allies have #% increased Damage".
+#   - Attack minions (snipers, reavers, companions) and caster minions
+#     (skeleton mages) do not share attack-speed / cast-speed mods.
+#
+# So a minion mod is either UNIVERSAL (every minion build wants it) or bound to
+# a subtype. Universal mods count toward every subtype; subtype mods only
+# toward their own.
+MINION_SUBTYPES = ("attack", "caster", "companion")
+
+_ATTACK_ONLY = re.compile(r"attack speed|accuracy|attack physical damage|melee", re.I)
+_CASTER_ONLY = re.compile(r"cast speed|spell", re.I)
+
+
+def minion_subtype(text, subject):
+    """Which minion buyers a minion mod serves. None means universal."""
+    if subject not in BUYER_SUBJECTS:
+        return None
+    if subject == "companion":
+        return "companion"
+    lowered = normalize(text)
+    # "Attack and Cast Speed" is one mod serving both, and neither pattern
+    # below sees it as such because the words are split.
+    if "attack and cast" in lowered:
+        return None
+    attack = bool(_ATTACK_ONLY.search(lowered))
+    caster = bool(_CASTER_ONLY.search(lowered))
+    if attack and caster:
+        return None          # "Attack and Cast Speed" serves both
+    if attack:
+        return "attack"
+    if caster:
+        return "caster"
+    return None
+
+
+def subject_for(text):
+    lowered = normalize(text)
+    for needle, subject in SUBJECT_RULES:
+        if needle in lowered:
+            return subject
+    return "self"
+
+
 def tags_for(text):
     """Archetypes a mod serves. Empty is allowed and means 'describes nothing
-    a buyer selects on' — such mods contribute score but never coherence."""
+    a buyer selects on' — such mods contribute score but never coherence.
+
+    Tags are NOT stripped by subject. A minion attack-speed mod keeps both
+    tags; the subject field is what stops it grouping with the player's own
+    attack mods when coherence is computed.
+    """
     lowered = normalize(text)
     tags = set()
     for needle, applied in TAG_RULES:
         if needle in lowered:
             tags.update(applied)
-
-    # "Minions have increased Attack and Cast Speed" is the MINION's attack and
-    # cast speed, not the player's. A minion mod serves minion buyers only, so
-    # it must not also claim the attack or spell delivery tags.
-    if "minion" in tags:
-        tags -= {"attack", "spell", "melee", "projectile"}
     return sorted(tags)
+
+
+# --- Systematic coverage ------------------------------------------------
+#
+# Hand-listing every mod does not scale: the live table holds ~1,950 plausible
+# gear/jewel affixes and 250 skill-level variants alone. These patterns expand
+# against the live table so whole families are covered and stay covered when
+# GGG adds to them.
+
+# Mods that can never be a tradeable affix on a player's item. Excluded before
+# any pattern runs, so map/monster/debuff text cannot leak into the allowlist.
+NOT_PLAYER_GEAR = re.compile(
+    r"^(Allocates|Small Passive|Notable Passive|Players |Player |Monsters? |"
+    r"Rare Monsters|Magic Monsters|Map |Area |Waystone|Unique Boss|Enemies |"
+    r"Your Maps?|League |Strongbox|Shrines|Chests)|"
+    r"( in Map$| per Level$|Monster |to Monsters)",
+    re.I,
+)
+
+# (regex, weight, note). First match wins.
+PATTERN_RULES = [
+    (r"^\+?# to Level of all .+ Skills$", 3, "skill levels are the top scaler"),
+    (r"^Damage Penetrates #% .*Resistances?$", 3, None),
+    (r"^Bow Attacks fire # additional Arrows?$", 3, None),
+    (r"^Skills fire # additional Projectiles?$", 3, None),
+    (r"^#% increased Damage with .+$", 2, None),
+    (r"^Leech(es)? #% of .+ as (Life|Mana)$", 2, None),
+    (r"^#% chance to (Pierce|Chain|Fork) .+$", 2, None),
+    (r"^Projectiles? (Pierce|Chain|Fork) .+$", 2, None),
+    (r"^#% chance to gain a? ?(Frenzy|Power|Endurance) Charge.*$", 2, None),
+    (r"^# to (maximum )?(Frenzy|Power|Endurance) Charges$", 2, None),
+    (r"^#% increased Skill Speed$", 2, None),
+    (r"^\+?# to all Attributes$", 2, None),
+    (r"^#% increased Presence Area of Effect$", 2, None),
+    (r"^Herald Skills deal #% increased Damage$", 2, None),
+    (r"^#% increased Buff Effect .*$", 2, None),
+    (r"^#% to Block chance$", 2, None),
+    (r"^# Life Regeneration per second$", 1, None),
+    (r"^#% of maximum Life Regenerated per second$", 1, None),
+    (r"^# to Stun Threshold$", 1, None),
+    (r"^#% increased Stun Buildup$", 1, None),
+    (r"^#% increased Flask Charges gained$", 1, None),
+    (r"^#% increased Charm Charges gained$", 1, None),
+]
+
+
+def expand_patterns(stats):
+    """Yield (category, weight, text, note) for every pattern match in the
+    live table that is not already hand-listed."""
+    listed = {text for mods in ALLOWLIST.values() for _, text, _ in mods}
+    seen = set()
+    for group in stats["result"]:
+        if group["id"] != "explicit":
+            continue
+        for entry in group["entries"]:
+            text = entry["text"]
+            if text in listed or text in seen or NOT_PLAYER_GEAR.search(text):
+                continue
+            for pattern, weight, note in PATTERN_RULES:
+                if re.match(pattern, text):
+                    seen.add(text)
+                    yield "expanded", weight, text, note
+                    break
 
 
 def build_index(stats):
@@ -462,7 +591,12 @@ def main():
         "",
     ]
 
-    for category, mods in ALLOWLIST.items():
+    # Hand-listed mods first, then whole families expanded from the live table.
+    grouped = OrderedDict((name, list(mods)) for name, mods in ALLOWLIST.items())
+    for category, weight, text, note in expand_patterns(stats):
+        grouped.setdefault(category, []).append((weight, text, note))
+
+    for category, mods in grouped.items():
         out.append(f"[[category]]")
         out.append(f'name = "{category}"')
         out.append("")
@@ -486,6 +620,12 @@ def main():
             tags = tags_for(text)
             if tags:
                 out.append("tags = [" + ", ".join(f'"{t}"' for t in tags) + "]")
+            subject = subject_for(text)
+            if subject != "self":
+                out.append(f'subject = "{subject}"')
+                subtype = minion_subtype(text, subject)
+                if subtype:
+                    out.append(f'minion_subtype = "{subtype}"')
             if is_ambiguous:
                 out.append("ambiguous = true  # matched by OR across these ids")
             if note:

@@ -382,6 +382,9 @@ otherwise craft into.
 Every allowlist mod is tagged with the archetypes it serves (`attack`,
 `spell`, `minion`, `projectile`, `melee`, `crit`, `life`, `es`, `armour`,
 `evasion`, `defence`, `spirit`, `elemental`, `chaos`, `physical`, …).
+The allowlist is **405 mods**, built from a hand-curated core plus whole
+families expanded by pattern against the live stats table (250 skill-level
+variants alone), so coverage keeps up when GGG adds to a family.
 Coherence counts how many of an item's mods share one archetype:
 
 ```
@@ -402,9 +405,40 @@ on exactly the wrong items:
 | 5-mod caster item | — | spell×5 → **+3** ✓ |
 
 Tagging is conservative: a mod that could serve either delivery gets no
-delivery tag rather than a guessed one, and minion mods are stripped of
-`attack`/`spell` because *"Minions have increased Attack and Cast Speed"*
-is the minion's speed, not the player's, and serves only minion buyers.
+delivery tag rather than a guessed one.
+
+**Tags are not stripped — mods record a `subject` instead.** *"Minions have
+increased Attack Speed"* genuinely *is* an attack-speed mod; it just belongs
+to the minion. Each mod therefore keeps its full tags and records whose stat
+it modifies (`self`, `minion`, `companion`, `totem`). Coherence groups
+non-self subjects by subject, so a minion attack mod never stacks with the
+player's own attack mods, and no information is thrown away.
+
+**Minion buyers are not interchangeable**, so subject alone is too coarse.
+Verified against 0.5 guides:
+
+- Companion Spirit Walker wants `+Level of all Minion Skills` and `Allies in
+  your Presence deal increased Damage`, but scales mainly off the **player's
+  main-hand weapon** through Catha's Balance.
+- Spectre/Reaver builds prefer flat added physical on the sceptre over a
+  high-rolled *"Allies have #% increased Damage"*.
+- Attack minions (snipers, reavers, companions) and caster minions (skeleton
+  mages) share no attack-speed / cast-speed mods.
+
+So each minion mod is **universal** (every minion build wants it — skill
+levels, minion damage, minion life) or bound to a **subtype** (`attack`,
+`caster`, `companion`). Universal mods count toward every subtype; subtype
+mods count only toward their own. Measured:
+
+| Jewel | Coherence |
+|---|---|
+| 4 universal minion mods | `minion×4` → **+3** |
+| 2 companion + 2 universal | `minion:companion×4` → **+3** |
+| 2 attack-minion + 2 caster-minion | `minion:attack×2` → **+1** |
+| 2 attack-minion + 2 universal | `minion:attack×4` → **+3** |
+
+A jewel split across attack and caster minions scores below a focused one,
+which is the correct answer and what plain subject grouping got wrong.
 
 No conflict penalty is applied. An item carrying both `+Melee Skills` and
 `+Spell Skills` simply earns no coherence bonus rather than being marked
