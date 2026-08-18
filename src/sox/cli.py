@@ -25,7 +25,7 @@ from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_
 from sox.valuation.classify import ItemClass, classify, display_name
 from sox.valuation.index_pricer import index_price_for
 from sox.valuation.mods import build_index
-from sox.valuation.query import category_for
+from sox.valuation.query import category_for, explain_selection
 from sox.valuation.trade_pricer import price_by_search
 
 ITEM_SEPARATOR = "\n\n"
@@ -110,12 +110,14 @@ def price_one(block, index, rates, mod_index, base_rules, unique_rules,
                 item, category, mod_index, notables, trade, cache, rates,
                 status=cfg.status, max_searches=cfg.max_searches,
             )
+            group, stats = explain_selection(item, mod_index, notables)
             priced = report.PricedItem(
                 name=display_name(item), item_class=item_class,
                 price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",
                 tag=result.tag, reason=verdict.reason, listings=result.listings,
                 suggested_ask_ex=result.suggested_ask_ex,
                 searches_used=result.searches_used,
+                searched_group=group, searched_stats=stats,
             )
             return report.render(item, priced, divine_ratio)
 

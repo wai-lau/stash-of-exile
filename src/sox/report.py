@@ -23,6 +23,8 @@ class PricedItem:
     suggested_ask_ex: float | None = None
     searches_used: int = 0
     quantity: int = 0
+    searched_group: str | None = None
+    searched_stats: tuple[str, ...] = ()
 
 
 def fmt_price(ex: float | None, divine_ratio: float) -> str:
@@ -52,12 +54,21 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         lines.append(f"  ask        {fmt_price(priced.suggested_ask_ex, divine_ratio)}")
         lines.append("             cheapest listing at least as good as yours, "
                      "so treat it as a ceiling, not a comp")
+        if priced.listings < 3:
+            lines.append("             thin evidence — only a couple of comparable "
+                         "listings exist, so treat this as a rough bound")
     else:
         lines.append(f"  index      {fmt_price(priced.price_ex, divine_ratio)}"
                      + (f"   ({priced.quantity:,} listed)" if priced.quantity else ""))
         if priced.quantity and priced.quantity < 20:
             lines.append("             thin market — index price is weak evidence")
 
+    if priced.searched_stats:
+        head = f"  searched   as {priced.searched_group}" if priced.searched_group \
+            else "  searched   on"
+        lines.append(head)
+        for stat in priced.searched_stats:
+            lines.append(f"             - {stat}")
     if priced.reason:
         lines.append(f"  why        {priced.reason}")
     if priced.searches_used:

@@ -69,6 +69,62 @@ def score_mods(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[int, d
     return total, by_category
 
 
+def coherence_keys(entry: ModEntry) -> tuple[str, ...]:
+    """The buyer groups a mod belongs to.
+
+    Minion buyers are not interchangeable: universal minion mods serve every
+    minion build, while subtype mods (attack / caster / companion) serve only
+    theirs. Companions are minions, so they count toward both.
+    """
+    if entry.subject in ("minion", "companion"):
+        if entry.minion_subtype:
+            return (f"minion:{entry.minion_subtype}",)
+        return ("minion", *(f"minion:{s}" for s in MINION_SUBTYPES))
+    if entry.subject == "totem":
+        return ("totem",)
+    return tuple(entry.tags)
+
+
+def dominant_archetype(entries: list[ModEntry]) -> tuple[str | None, int]:
+    """The buyer group the most mods on this item serve."""
+    counts: dict[str, int] = {}
+    for entry in entries:
+        for key in coherence_keys(entry):
+            counts[key] = counts.get(key, 0) + 1
+    if not counts:
+        return None, 0
+    key, top = max(counts.items(), key=lambda kv: kv[1])
+    return key, top
+
+
+def select_synergistic(
+    entries: list[ModEntry], limit: int
+) -> tuple[list[ModEntry], str]:
+    """Pick the mods a real buyer would search on, together.
+
+    This is the judgement a price-check overlay leaves to the player: which
+    stats belong to one build. Picking the heaviest mods regardless of
+    archetype produces a query no single buyer wants — +Melee Skills AND
+    +Spell Skills describes nobody. So mods serving the item's dominant
+    archetype come first, and only then the heaviest leftovers.
+    """
+    if not entries:
+        return [], ""
+
+    key, top = dominant_archetype(entries)
+    if key is None or top < 2:
+        chosen = sorted(entries, key=lambda e: -e.weight)[:limit]
+        return chosen, "top-weight"
+
+    in_group = [e for e in entries if key in coherence_keys(e)]
+    outside = [e for e in entries if key not in coherence_keys(e)]
+    in_group.sort(key=lambda e: -e.weight)
+    outside.sort(key=lambda e: -e.weight)
+
+    chosen = (in_group + outside)[:limit]
+    return chosen, key
+
+
 def coherence_bonus(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[int, str]:
     """Reward many mods serving ONE archetype.
 
@@ -76,37 +132,10 @@ def coherence_bonus(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[i
     build's mods span categories (projectile levels + attack speed + flat
     damage is a bow item), while one category can hold mods for two unrelated
     builds (+Melee Skills and +Spell Skills share no buyer).
-
-    Minion buyers are not interchangeable either. Universal minion mods serve
-    every minion build; subtype mods (attack / caster / companion) serve only
-    theirs.
     """
-    counts: dict[str, int] = {}
-    universal_minion = 0
-    subtype_counts = dict.fromkeys(MINION_SUBTYPES, 0)
-
-    for entry in matched(item_mods, index):
-        if entry.subject in ("minion", "companion"):
-            if entry.minion_subtype:
-                subtype_counts[entry.minion_subtype] = (
-                    subtype_counts.get(entry.minion_subtype, 0) + 1
-                )
-            else:
-                universal_minion += 1
-            continue
-        if entry.subject == "totem":
-            counts["totem"] = counts.get("totem", 0) + 1
-            continue
-        for tag in entry.tags:
-            counts[tag] = counts.get(tag, 0) + 1
-
-    if universal_minion or any(subtype_counts.values()):
-        counts["minion"] = universal_minion
-        for subtype, n in subtype_counts.items():
-            counts[f"minion:{subtype}"] = universal_minion + n
-
-    if not counts:
+    entries = matched(item_mods, index)
+    key, top = dominant_archetype(entries)
+    if key is None:
         return 0, ""
-    tag, top = max(counts.items(), key=lambda kv: kv[1])
     bonus = min(max(top - 1, 0), MAX_COHERENCE_BONUS)
-    return bonus, (f"{tag}x{top}" if bonus else "")
+    return bonus, (f"{key}x{top}" if bonus else "")

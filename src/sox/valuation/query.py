@@ -14,7 +14,7 @@ import json
 
 from sox.valuation.allowlists import ModEntry
 from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
-from sox.valuation.mods import match_mod
+from sox.valuation.mods import match_mod, select_synergistic
 from sox.valuation.rolls import parse_values
 
 # Relaxation ladder: (scale applied to every minimum, how many stats to keep).
@@ -139,9 +139,20 @@ def build_query(
             continue
         scored.append((entry.weight, text, entry))
 
-    # Highest-weight mods first; those are the ones a buyer searches on.
-    scored.sort(key=lambda t: -t[0])
-    for _, text, entry in scored[:max_stats]:
+    # Choose stats that SYNERGIZE, not merely the heaviest ones. Selecting by
+    # weight alone can mix archetypes and describe a buyer who does not exist.
+    notable_items = [(w, t, e) for w, t, e in scored if isinstance(e, _Notable)]
+    mod_items = [(w, t, e) for w, t, e in scored if not isinstance(e, _Notable)]
+
+    chosen_entries, _group = select_synergistic(
+        [e for _, _, e in mod_items], max(max_stats - len(notable_items), 0)
+    )
+    by_entry = {id(e): t for _, t, e in mod_items}
+    selected = notable_items[:max_stats] + [
+        (0, by_entry[id(e)], e) for e in chosen_entries
+    ]
+
+    for _, text, entry in selected[:max_stats]:
         if isinstance(entry, _Notable):
             and_filters.append({"id": entry.stat_id, "value": {}})
             continue
@@ -174,3 +185,36 @@ def build_query(
 
 def query_hash(query: dict) -> str:
     return hashlib.sha256(json.dumps(query, sort_keys=True).encode()).hexdigest()[:16]
+
+
+def explain_selection(
+    item: dict,
+    index: dict[str, ModEntry],
+    notables: dict[str, str],
+    relax: int = 0,
+) -> tuple[str | None, list[str]]:
+    """Which stats the query will search on, and the buyer group behind them.
+
+    Surfaced in the output because this is the judgement the tool exists to
+    make. A price-check overlay leaves it to the player, whose knowledge of
+    which stats synergize comes from having played the archetype.
+    """
+    from sox.valuation.mods import matched, select_synergistic
+
+    _, max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
+
+    all_mods = (
+        list(item.get("explicitMods") or [])
+        + list(item.get("fracturedMods") or [])
+        + list(item.get("runeMods") or [])
+    )
+    notable_texts = [
+        t for t in all_mods
+        if t.startswith("Allocates ") and notables.get(t[len("Allocates "):].strip())
+    ]
+    if notable_texts:
+        return "notable", notable_texts[:max_stats]
+
+    entries = matched([t for t in all_mods if not t.startswith("Allocates ")], index)
+    chosen, group = select_synergistic(entries, max_stats)
+    return (group or None), [e.text for e in chosen]

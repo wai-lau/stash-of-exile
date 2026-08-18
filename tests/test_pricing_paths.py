@@ -88,3 +88,37 @@ def test_uncut_gem_is_a_gem_not_currency():
     item = load("UncutSkillGem")
     assert classify(item) is ItemClass.GEM
     assert item["gemLevel"] == 19
+
+
+def test_selection_prefers_synergy_over_raw_weight():
+    """The judgement a price-check overlay leaves to the player.
+
+    An amulet carrying both caster and attack mods must be searched as ONE
+    archetype; picking the heaviest mods regardless would mix Cast Speed with
+    Attack Speed and describe a buyer who does not exist.
+    """
+    from sox.valuation.mods import matched, select_synergistic
+
+    item = itemtext.parse(
+        "Item Class: Amulets\nRarity: Rare\nBrood Collar\nLapis Amulet\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Prefix Modifier }\n+3 to Level of all Spell Skills\n"
+        "{ Prefix Modifier }\n25% increased Cast Speed\n"
+        "{ Suffix Modifier }\n18% increased Attack Speed\n"
+        "{ Suffix Modifier }\n40% increased Spell Damage\n"
+    )
+    entries = matched(item["explicitMods"], MODS)
+    chosen, group = select_synergistic(entries, 3)
+    texts = [e.text for e in chosen]
+
+    assert group == "spell"
+    assert "#% increased Attack Speed" not in texts, "must not mix buyer pools"
+    assert "#% increased Spell Damage" in texts
+
+
+def test_explain_selection_reports_notables_for_jewels():
+    from sox.valuation.query import explain_selection
+
+    group, stats = explain_selection(load("MegalomaniacJewel"), MODS, NOTABLES)
+    assert group == "notable"
+    assert all(s.startswith("Allocates ") for s in stats)
