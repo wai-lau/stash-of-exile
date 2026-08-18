@@ -104,7 +104,7 @@ sox/
     trade.py           trade2 search / fetch / data.filters / data.stats
   scout.py             poe2scout index client
   valuation/
-    classify.py        item -> currency | unique | rare | magic | normal
+    classify.py        item -> currency | gem | unique | rare | magic | normal
     index_pricer.py    item -> scout index entry -> price
     rolls.py           parse "(min-max)" ranges; score an item's actual rolls
     candidates.py      selects which items earn a live trade search
@@ -125,9 +125,21 @@ API call; the search budget is spent only where it changes the answer.
 
 ### Bulk (no API cost)
 
-Currency, fragments, runes, essences, and the long tail of uniques are
-priced from the cached scout index. Three to four cached calls cover the
-entire stash.
+Currency, fragments, runes, essences, **gems**, and the long tail of
+uniques are priced from the cached scout index. A handful of cached calls
+covers the entire stash.
+
+Gems are their own value class and must not be lumped into "currency":
+
+- **Lineage Support Gems** (`lineagesupportgems`, 75 items) are breach-boss
+  drops and include some of the most valuable items in the game —
+  Uul-Netol's Embrace indexes at **150,826 ex**, above Mageblood. These
+  are frequently sitting in a stash tab unrecognised.
+- **Uncut gems** (`uncutgems`, 42 items) are priced *by level*: an Uncut
+  Skill Gem (Level 20) is ~1,595 ex while a Level 4 is ~200 ex. Gem level
+  is therefore part of the index lookup key, not a detail.
+
+Both come from `Currencies/ByCategory`, so they cost no trade API calls.
 
 ### Uniques — three tiers, assigned automatically
 

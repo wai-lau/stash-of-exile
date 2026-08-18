@@ -193,6 +193,43 @@ search if base_score >= 4
 `type_filters.category`. One trap caught: quarterstaves are **`weapon.warstaff`**
 in the trade taxonomy, not `weapon.quarterstaff`.
 
+## Gems are a value class of their own
+
+Chasing down what `Uul-Netol's Embrace` actually is (the Titan guide cites it
+for "Fully Broken Armour") turned up an item class the first pass missed
+entirely. It is a **Lineage Support Gem** — a breach-boss drop granting 40% of
+Physical as Extra Chaos and Break Armour equal to 20% of Chaos dealt — and it
+is the most expensive one in the game:
+
+| Lineage Support Gem | Index price | Listings |
+|---|---|---|
+| Uul-Netol's Embrace | 150,826 ex | 3 |
+| Garukhan's Resolve | 130,002 ex | 11 |
+| Seraph's Heart | 97,983 ex | 8 |
+| Atziri's Communion | 96,651 ex | 22 |
+
+That top entry prices **above Mageblood** (135,417 ex). Sibling lineage gems
+sit in the same `gem` group: Tul's Avalanche, Tul's Stillness, Esh's Prowess,
+Esh's Radiance, Hand of Chayula.
+
+**Uncut gems price by level**, which is easy to get wrong:
+
+| Item | Index price |
+|---|---|
+| Uncut Skill Gem (Level 20) | 1,595 ex |
+| Uncut Spirit Gem (Level 20) | 1,591 ex |
+| Uncut Spirit Gem (Level 4) | 200 ex |
+
+An 8× spread across levels of the same item means **gem level belongs in the
+index lookup key**, not as a display detail.
+
+Both classes come from scout's `Currencies/ByCategory`
+(`lineagesupportgems`, `uncutgems`), so they cost zero trade API calls — but
+only if `classify.py` recognises gems as their own class rather than folding
+them into currency. The original classification (`currency | unique | rare |
+magic | normal`) had no gem class and would have left six-figure items
+unpriced.
+
 ## Scoring rule
 
 Community pricing guidance is consistent that a single T1 mod rarely makes an
