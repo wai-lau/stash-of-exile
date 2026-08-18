@@ -103,6 +103,8 @@ ALLOWLIST = OrderedDict(
                 (3, "# to Level of all Lightning Skills", None),
                 (3, "# to Level of all Physical Spell Skills", None),
                 (3, "# to Level of all Attack Skills", None),
+                (3, "+# to Level of all Tamed Companion Skills", None),
+                (3, "+# to Level of all Summon Spectre Skills", None),
             ],
         ),
         (
@@ -155,6 +157,40 @@ ALLOWLIST = OrderedDict(
                 (2, "Minions have #% increased Attack and Cast Speed", None),
                 (2, "Minions have #% increased Critical Hit Chance", None),
                 (2, "Minions have #% increased Critical Damage Bonus", None),
+                (2, "Minions have #% increased maximum Life", "minion defensive core"),
+                (2, "Minions deal #% increased Damage with Command Skills", None),
+                (2, "Minions gain #% of their maximum Life as Extra maximum Energy Shield", None),
+                (1, "Minions have #% increased Area of Effect", None),
+                (1, "Minions have #% increased Movement Speed", None),
+                (1, "Minions have #% additional Physical Damage Reduction", None),
+                (1, "Minions Regenerate #% of maximum Life per second", None),
+                (1, "Minions have #% to Chaos Resistance", None),
+                (1, "Minions have #% to all Elemental Resistances",
+                 "Disciple of Varashta guides warn this conflicts with their build"),
+                # "Allies in your Presence" is PoE2's ally-scaling family and is
+                # how Tactician scales its whole build. Same buyers as minions.
+                (2, "Allies in your Presence deal #% increased Damage", None),
+                (2, "Allies in your Presence deal # to # added Attack Physical Damage", None),
+                (2, "Allies in your Presence have #% increased Attack Speed", None),
+                (2, "Allies in your Presence have #% increased Cast Speed", None),
+                (2, "Allies in your Presence have #% increased Critical Hit Chance", None),
+                (2, "Allies in your Presence have #% increased Critical Damage Bonus", None),
+                (1, "Allies in your Presence have # to Accuracy Rating", None),
+                (1, "Allies in your Presence have #% to all Elemental Resistances", None),
+                # Companions are minions and share the same buyers — the
+                # Companion Spirit Walker build scales entirely on these.
+                # Only mods whose SUBJECT is the companion are listed; the
+                # "while your Companion is in your Presence" family scales the
+                # PLAYER and must not be tagged as a minion mod.
+                (2, "Companions deal #% increased Damage", None),
+                (2, "Companions have #% increased maximum Life", None),
+                (2, "Companions have #% increased Attack Speed", None),
+                (1, "Companions deal #% increased damage to your Marked targets", None),
+                (2, "#% increased Reservation Efficiency of Companion Skills", None),
+                # Spectres and offerings are minion scaling too.
+                (2, "Offerings have #% increased Maximum Life", None),
+                (2, "Offering Skills have #% increased Buff effect", None),
+                (1, "Offering Skills have #% increased Duration", None),
             ],
         ),
         (
@@ -168,6 +204,33 @@ ALLOWLIST = OrderedDict(
                 (1, "# to Strength", None),
                 (1, "# to Dexterity", None),
                 (1, "# to Intelligence", None),
+            ],
+        ),
+        (
+            # Jewels are pure mod items — no defences, no meaningful base — so
+            # weapon-scoped and generic damage mods carry their whole value.
+            "jewel_damage",
+            [
+                (2, "#% increased Damage", None),
+                (2, "#% increased Attack Damage", None),
+                (2, "#% increased Elemental Damage", None),
+                (2, "#% increased Chaos Damage", None),
+                (2, "#% increased Damage with Bows", "weapon-scoped jewel staple"),
+                (2, "#% increased Damage with Bow Skills", None),
+                (2, "#% increased Damage with Crossbows", None),
+                (2, "#% increased Damage with Quarterstaves", None),
+                (2, "#% increased Damage with Spears", None),
+                (2, "#% increased Damage with Maces", None),
+                (2, "#% increased Damage with Hits against Rare and Unique Enemies", None),
+            ],
+        ),
+        (
+            "totems",
+            [
+                (2, "#% increased Totem Damage", "Warbringer / spell-totem builds"),
+                (2, "#% increased Totem Life", None),
+                (2, "# to maximum number of Summoned Totems", None),
+                (1, "#% increased Totem Placement speed", None),
             ],
         ),
         (
@@ -233,11 +296,17 @@ DELIVERY_TAGS = ("attack", "spell", "minion")
 # NO delivery tag rather than a guessed one.
 TAG_RULES = [
     ("minion", ("minion",)),
+    ("allies in your presence", ("minion",)),
+    ("companion", ("minion", "companion")),
+    ("spectre", ("minion",)),
+    ("offering", ("minion",)),
+    ("totem", ("totem",)),
     ("reservation efficiency", ("spirit",)),
     ("melee skills", ("attack", "melee")),
     ("attack skills", ("attack",)),
     ("to attacks", ("attack",)),
     ("attack speed", ("attack",)),
+    ("attack damage", ("attack",)),
     ("accuracy", ("attack",)),
     ("elemental damage with attacks", ("attack", "elemental")),
     ("critical hit chance for attacks", ("attack", "crit")),
@@ -275,6 +344,12 @@ TAG_RULES = [
     ("ailments", ("ailment",)),
     ("freeze", ("ailment",)),
     ("shock", ("ailment",)),
+    ("damage with bows", ("attack", "projectile")),
+    ("damage with bow skills", ("attack", "projectile")),
+    ("damage with crossbows", ("attack", "projectile")),
+    ("damage with quarterstaves", ("attack", "melee")),
+    ("damage with spears", ("attack", "melee")),
+    ("damage with maces", ("attack", "melee")),
     ("area of effect", ("aoe",)),
     ("skill effect duration", ("duration",)),
     ("strength", ("attribute",)),

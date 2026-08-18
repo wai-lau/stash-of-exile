@@ -84,6 +84,7 @@ def test_defaults_when_no_file(tmp_path):
     assert cfg.status == "online"
     assert cfg.budgets.rares == 20
     assert cfg.budgets.bases == 15
+    assert cfg.budgets.jewels == 15
     assert cfg.budgets.uniques == 10
     assert "sox" in cfg.user_agent
 
@@ -153,6 +154,7 @@ class Budgets:
 
     rares: int = 20
     bases: int = 15
+    jewels: int = 15      # a stash holds many, and they are cheap to search
     uniques: int = 10
     endgame: int = 10
 

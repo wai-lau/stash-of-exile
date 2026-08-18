@@ -392,6 +392,21 @@ text = "# to Level of all Attack Skills"
 weight = 3
 tags = ["attack"]
 
+[[category.mod]]
+ids = ["explicit.stat_448592698|201", "explicit.stat_448592698|193"]
+slug = "to_level_of_all_tamed_companion_skills"
+text = "+# to Level of all Tamed Companion Skills"
+weight = 3
+tags = ["companion", "minion"]
+ambiguous = true  # matched by OR across these ids
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|200"]
+slug = "to_level_of_all_summon_spectre_skills"
+text = "+# to Level of all Summon Spectre Skills"
+weight = 3
+tags = ["minion"]
+
 [[category]]
 name = "added_damage"
 
@@ -615,6 +630,183 @@ text = "Minions have #% increased Critical Damage Bonus"
 weight = 2
 tags = ["crit", "minion"]
 
+[[category.mod]]
+ids = ["explicit.stat_770672621"]
+slug = "minions_have_increased_maximum_life"
+text = "Minions have #% increased maximum Life"
+weight = 2
+tags = ["defence", "life", "minion"]
+note = "minion defensive core"
+
+[[category.mod]]
+ids = ["explicit.stat_3742865955"]
+slug = "minions_deal_increased_damage_with_command_skills"
+text = "Minions deal #% increased Damage with Command Skills"
+weight = 2
+tags = ["minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_943702197"]
+slug = "minions_gain_of_their_maximum_life_as_extra_maximum_energy_shield"
+text = "Minions gain #% of their maximum Life as Extra maximum Energy Shield"
+weight = 2
+tags = ["defence", "es", "life", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_3811191316"]
+slug = "minions_have_increased_area_of_effect"
+text = "Minions have #% increased Area of Effect"
+weight = 1
+tags = ["aoe", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_174664100"]
+slug = "minions_have_increased_movement_speed"
+text = "Minions have #% increased Movement Speed"
+weight = 1
+tags = ["minion", "movement"]
+
+[[category.mod]]
+ids = ["explicit.stat_3119612865"]
+slug = "minions_have_additional_physical_damage_reduction"
+text = "Minions have #% additional Physical Damage Reduction"
+weight = 1
+tags = ["minion", "physical"]
+
+[[category.mod]]
+ids = ["explicit.stat_2479683456"]
+slug = "minions_regenerate_of_maximum_life_per_second"
+text = "Minions Regenerate #% of maximum Life per second"
+weight = 1
+tags = ["defence", "life", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_3837707023"]
+slug = "minions_have_to_chaos_resistance"
+text = "Minions have #% to Chaos Resistance"
+weight = 1
+tags = ["chaos", "defence", "minion", "resistance"]
+
+[[category.mod]]
+ids = ["explicit.stat_1423639565"]
+slug = "minions_have_to_all_elemental_resistances"
+text = "Minions have #% to all Elemental Resistances"
+weight = 1
+tags = ["defence", "elemental", "minion", "resistance"]
+note = "Disciple of Varashta guides warn this conflicts with their build"
+
+[[category.mod]]
+ids = ["explicit.stat_1798257884"]
+slug = "allies_in_your_presence_deal_increased_damage"
+text = "Allies in your Presence deal #% increased Damage"
+weight = 2
+tags = ["minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_1574590649"]
+slug = "allies_in_your_presence_deal_to_added_attack_physical_damage"
+text = "Allies in your Presence deal # to # added Attack Physical Damage"
+weight = 2
+tags = ["minion", "physical"]
+
+[[category.mod]]
+ids = ["explicit.stat_1998951374"]
+slug = "allies_in_your_presence_have_increased_attack_speed"
+text = "Allies in your Presence have #% increased Attack Speed"
+weight = 2
+tags = ["minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_289128254"]
+slug = "allies_in_your_presence_have_increased_cast_speed"
+text = "Allies in your Presence have #% increased Cast Speed"
+weight = 2
+tags = ["minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_1250712710"]
+slug = "allies_in_your_presence_have_increased_critical_hit_chance"
+text = "Allies in your Presence have #% increased Critical Hit Chance"
+weight = 2
+tags = ["crit", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_3057012405"]
+slug = "allies_in_your_presence_have_increased_critical_damage_bonus"
+text = "Allies in your Presence have #% increased Critical Damage Bonus"
+weight = 2
+tags = ["crit", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_3169585282"]
+slug = "allies_in_your_presence_have_to_accuracy_rating"
+text = "Allies in your Presence have # to Accuracy Rating"
+weight = 1
+tags = ["minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_3850614073"]
+slug = "allies_in_your_presence_have_to_all_elemental_resistances"
+text = "Allies in your Presence have #% to all Elemental Resistances"
+weight = 1
+tags = ["defence", "elemental", "minion", "resistance"]
+
+[[category.mod]]
+ids = ["explicit.stat_234296660"]
+slug = "companions_deal_increased_damage"
+text = "Companions deal #% increased Damage"
+weight = 2
+tags = ["companion", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_1805182458"]
+slug = "companions_have_increased_maximum_life"
+text = "Companions have #% increased maximum Life"
+weight = 2
+tags = ["companion", "defence", "life", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_666077204"]
+slug = "companions_have_increased_attack_speed"
+text = "Companions have #% increased Attack Speed"
+weight = 2
+tags = ["companion", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_1067622524"]
+slug = "companions_deal_increased_damage_to_your_marked_targets"
+text = "Companions deal #% increased damage to your Marked targets"
+weight = 1
+tags = ["companion", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_3413635271"]
+slug = "increased_reservation_efficiency_of_companion_skills"
+text = "#% increased Reservation Efficiency of Companion Skills"
+weight = 2
+tags = ["companion", "minion", "spirit"]
+
+[[category.mod]]
+ids = ["explicit.stat_3787460122"]
+slug = "offerings_have_increased_maximum_life"
+text = "Offerings have #% increased Maximum Life"
+weight = 2
+tags = ["defence", "life", "minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_3191479793"]
+slug = "offering_skills_have_increased_buff_effect"
+text = "Offering Skills have #% increased Buff effect"
+weight = 2
+tags = ["minion"]
+
+[[category.mod]]
+ids = ["explicit.stat_2957407601"]
+slug = "offering_skills_have_increased_duration"
+text = "Offering Skills have #% increased Duration"
+weight = 1
+tags = ["minion"]
+
 [[category]]
 name = "utility"
 
@@ -675,6 +867,117 @@ slug = "to_intelligence"
 text = "# to Intelligence"
 weight = 1
 tags = ["attribute"]
+
+[[category]]
+name = "jewel_damage"
+
+[[category.mod]]
+ids = ["explicit.stat_2154246560"]
+slug = "increased_damage"
+text = "#% increased Damage"
+weight = 2
+
+[[category.mod]]
+ids = ["explicit.stat_2843214518"]
+slug = "increased_attack_damage"
+text = "#% increased Attack Damage"
+weight = 2
+tags = ["attack"]
+
+[[category.mod]]
+ids = ["explicit.stat_3141070085"]
+slug = "increased_elemental_damage"
+text = "#% increased Elemental Damage"
+weight = 2
+tags = ["elemental"]
+
+[[category.mod]]
+ids = ["explicit.stat_736967255"]
+slug = "increased_chaos_damage"
+text = "#% increased Chaos Damage"
+weight = 2
+tags = ["chaos"]
+
+[[category.mod]]
+ids = ["explicit.stat_4188894176"]
+slug = "increased_damage_with_bows"
+text = "#% increased Damage with Bows"
+weight = 2
+tags = ["attack", "projectile"]
+note = "weapon-scoped jewel staple"
+
+[[category.mod]]
+ids = ["explicit.stat_1241625305"]
+slug = "increased_damage_with_bow_skills"
+text = "#% increased Damage with Bow Skills"
+weight = 2
+tags = ["attack", "projectile"]
+
+[[category.mod]]
+ids = ["explicit.stat_427684353"]
+slug = "increased_damage_with_crossbows"
+text = "#% increased Damage with Crossbows"
+weight = 2
+tags = ["attack", "projectile"]
+
+[[category.mod]]
+ids = ["explicit.stat_4045894391"]
+slug = "increased_damage_with_quarterstaves"
+text = "#% increased Damage with Quarterstaves"
+weight = 2
+tags = ["attack", "melee"]
+
+[[category.mod]]
+ids = ["explicit.stat_2696027455"]
+slug = "increased_damage_with_spears"
+text = "#% increased Damage with Spears"
+weight = 2
+tags = ["attack", "melee"]
+
+[[category.mod]]
+ids = ["explicit.stat_1181419800"]
+slug = "increased_damage_with_maces"
+text = "#% increased Damage with Maces"
+weight = 2
+tags = ["attack", "melee"]
+
+[[category.mod]]
+ids = ["explicit.stat_1852872083"]
+slug = "increased_damage_with_hits_against_rare_and_unique_enemies"
+text = "#% increased Damage with Hits against Rare and Unique Enemies"
+weight = 2
+
+[[category]]
+name = "totems"
+
+[[category.mod]]
+ids = ["explicit.stat_3851254963"]
+slug = "increased_totem_damage"
+text = "#% increased Totem Damage"
+weight = 2
+tags = ["totem"]
+note = "Warbringer / spell-totem builds"
+
+[[category.mod]]
+ids = ["explicit.stat_686254215"]
+slug = "increased_totem_life"
+text = "#% increased Totem Life"
+weight = 2
+tags = ["totem"]
+
+[[category.mod]]
+ids = ["explicit.stat_429867172"]
+slug = "to_maximum_number_of_summoned_totems"
+text = "# to maximum number of Summoned Totems"
+weight = 2
+tags = ["totem"]
+
+[[category.mod]]
+ids = ["explicit.stat_3374165039"]
+slug = "increased_totem_placement_speed"
+text = "#% increased Totem Placement speed"
+weight = 1
+tags = ["totem"]
 
 [[category]]
 name = "ailments"
