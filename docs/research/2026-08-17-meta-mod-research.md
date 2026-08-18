@@ -97,6 +97,59 @@ the generator:
   `Adds # to # Fire damage to Attacks` (lowercase d).
 - `#% increased chance to Shock` is lowercase "chance".
 
+## Crafting bases and item level
+
+Build hunting surfaced a second market the mod allowlist does not cover:
+players buy **white and magic bases to craft on**, and there the price driver is
+item level and base class, not mods.
+
+**Item level breakpoints.** Endgame crafting targets **ilvl 82**, where every
+Tier 1 modifier can roll. 81 unlocks most (e.g. +5 to Lightning Spell Skills on
+wands gates at 81+); 80 is marginal. Sources disagree at the edges — some slot
+guides cite 78–79 as the floor for helmets/boots, and certain armour mods are
+cited as gating at 85+. Treated as a graded score rather than a single cliff,
+because the true gate is per-mod, not global.
+
+**Attribute type gates premium mods.** A base's attribute class decides which
+top mods can appear on it:
+
+| Base attribute | Unlocks |
+|---|---|
+| Strength | `#% of Armour also applies to Elemental Damage` |
+| Dexterity | `Gain Deflection Rating equal to #% of Evasion Rating` |
+| Intelligence (body) | faster start of Energy Shield Recharge |
+
+So a perfect ilvl 82 base of the wrong attribute type cannot roll the mod that
+would make it worth buying. The scorer encodes this rather than treating all
+ilvl 82 bases alike.
+
+**Runeforging (new in 0.5)** produces a parallel base for **427 item types** —
+`Runeforged <base>` is a distinct item from its plain twin, and worth tracking
+separately.
+
+**Named bases from the guides** (all 15 verified against the live item table):
+Sinister and Skullcrusher Quarterstaff; Winged, Soaring, Akoyan, Seaglass and
+Spiked Spear; Omen Sceptre; Primed Quiver; Pearlescent Amulet; Ancestral,
+Kamasan and Sorcerous Tiara; Time-Lost Diamond. Guides explicitly warn off
+**Dreaming Quarterstaff** — higher base damage but 0% base crit — so it is
+recorded as an `avoid_base`.
+
+A useful sanity result: four names the guides mentioned (Nazir's Judgement,
+Splinterheart, Slivertongue, Mist Whisper) did **not** resolve, correctly —
+they are uniques, not bases, and the resolver filters on entries without a
+`name` field.
+
+Base scoring lives in `src/sox/data/base_allowlist.toml`:
+
+```
+base_score = ilvl_weight + slot_weight + named_base_weight + runeforged_bonus
+search if base_score >= 4
+```
+
+19 slot categories are tracked, all verified against
+`type_filters.category`. One trap caught: quarterstaves are **`weapon.warstaff`**
+in the trade taxonomy, not `weapon.quarterstaff`.
+
 ## Scoring rule
 
 Community pricing guidance is consistent that a single T1 mod rarely makes an
@@ -138,4 +191,8 @@ the score.
 - [IGGM 0.5 best gear affixes](https://www.iggm.com/news/poe-2-patch-0-5-0-best-gear-affixes-guide-top-mods-for-every-equipment-slot) — per-slot affix guidance
 - [expcarry rare pricing guide](https://expcarry.com/poe-2-trading-price-guide) — the "3+ potent affixes" pricing rule
 - [Steam: spotting high-value items](https://steamcommunity.com/sharedfiles/filedetails/?id=3415604016) — Deflection / Spirit Reservation Efficiency valuation
+- [Maxroll: how to craft in PoE2](https://maxroll.gg/poe2/resources/how-to-craft-in-path-of-exile-2) — ilvl 82 crafting target
+- [Mobalytics SSF crafting fundamentals](https://mobalytics.gg/poe-2/guides/ssf-crafting) — base selection and ilvl breakpoints
+- [MMOExp ES helmet crafting](https://www.mmoexp.com/News/path-of-exile-2-currency-guide-how-to-craft-a-600-energy-shield-helmet-for-profit-in-poe-2.html) — Ancestral vs Kamasan Tiara pricing
+- `https://www.pathofexile.com/api/trade2/data/items` — authoritative base names
 - `https://www.pathofexile.com/api/trade2/data/stats` and `/data/filters` — authoritative stat ids and filter ids
