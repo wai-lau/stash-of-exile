@@ -395,6 +395,41 @@ in as the account owner, without a password. Therefore:
 - Roll scorer tested against known `(min-max)` ranges.
 - One opt-in integration test hits poe2scout only — no auth, no secrets.
 
+## Surviving patches — how the data files stay correct
+
+The allowlists are generated from GGG's live tables, so the risk is that a
+patch reworded a mod and entries silently vanish. Three layers, in order:
+
+1. **Locked ids.** Every entry carries a `slug` derived from *our* canonical
+   text, plus the resolved `ids`. On regeneration, an id that still exists
+   in the table is reused as-is. GGG can reword a mod freely — the lock
+   holds. This is the layer that matters most, because stat ids are the
+   stable identifier and text is the volatile one.
+2. **Normalized matching.** When there is no lock, matching folds case,
+   whitespace, and a leading `+`. Measured against the live table this
+   introduces **zero** new ambiguity, so the capitalization traps
+   (`Physical Damage to Attacks` vs `Fire damage to Attacks`) can no longer
+   break a build.
+3. **Loud failure.** If neither works, the generator exits non-zero and
+   names the entry. A mod that genuinely no longer exists stops the build
+   rather than disappearing from the allowlist.
+
+**Ambiguity is preserved, never resolved by guessing.** Several stat ids can
+share one mod text — `# to Spirit`, `#% increased Spirit` and
+`# to maximum Runic Ward` each have two. Those entries carry all ids and
+`ambiguous = true`, and the query emits an OR group across them.
+
+**No cross-group fallback.** The same text also exists under `fractured`,
+`crafted` and `desecrated`, but those match only items carrying the mod *as*
+fractured/crafted/desecrated. Substituting one would skew every search built
+from it, so resolution is restricted to `pseudo` and `explicit`.
+
+`tests/test_resolver_drift.py` proves each layer by mutating a recorded copy
+of the live table the way a patch would — re-casing, adding a `+`, rewording
+entirely, and removing a mod outright — then asserting the allowlist still
+resolves, or fails loudly when it genuinely cannot. Fixtures are recorded and
+gzipped under `tests/fixtures/`; the suite makes no network calls.
+
 ## Value-affecting item flags
 
 These change price and must be read from the stash JSON, not ignored:

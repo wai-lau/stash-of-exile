@@ -26,6 +26,15 @@ import sys
 
 RANGE = re.compile(r"\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)")
 
+def normalize_name(text):
+    """Fold case/whitespace so a patch that re-cases a name cannot drop it.
+
+    Mirrors scripts/resolve_allowlist.py::normalize. Item and unique names are
+    proper nouns and rarely churn, but the cost of tolerating it is one regex.
+    """
+    return re.sub(r"\s+", " ", text.casefold()).strip()
+
+
 # Uniques named outright by the 0.5 build guides, with the build that wants
 # them. weight 3 = build-defining/chase, 2 = commonly slotted, 1 = budget pick.
 NAMED_UNIQUES = [
@@ -104,7 +113,7 @@ def spread(item):
 def main():
     items = json.load(open(sys.argv[1]))
     known = {
-        e["name"]: (g["id"], e.get("type"))
+        normalize_name(e["name"]): (e["name"], g["id"], e.get("type"))
         for g in items["result"]
         for e in g["entries"]
         if e.get("name")
@@ -138,11 +147,13 @@ def main():
 
     missing, resolved = [], 0
     for name, weight, note in NAMED_UNIQUES:
-        if name not in known:
+        hit = known.get(normalize_name(name))
+        if hit is None:
             missing.append(name)
             continue
         resolved += 1
-        group, base = known[name]
+        # Write the table's canonical spelling, not whatever we typed.
+        name, group, base = hit
         out += ["[[unique]]", f'name = "{name}"', f"weight = {weight}"]
         out.append(f'group = "{group}"')
         if base:
@@ -167,6 +178,7 @@ def main():
         print("# UNRESOLVED (not in the live item table):", file=sys.stderr)
         for name in missing:
             print(f"#   {name}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

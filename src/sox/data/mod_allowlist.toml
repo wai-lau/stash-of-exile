@@ -5,55 +5,73 @@
 # weight 3 = build-defining (justifies a search alone)
 # weight 2 = strong
 # weight 1 = supporting (only matters in combination)
+#
+# `slug` is derived from OUR canonical text and is the stable lock key:
+# on regeneration an id that still exists is reused, so GGG rewording a
+# mod cannot silently drop it. Matching is also case/whitespace/plus
+# insensitive, so re-casing cannot break it either.
+#
+# `ids` is a LIST because several stat ids can share one mod text
+# (e.g. "# to Spirit" has two). Those become an OR group in the query
+# rather than an arbitrary pick.
 
 [[category]]
 name = "defence_core"
 
 [[category.mod]]
-id = "explicit.stat_3299347043"
+ids = ["explicit.stat_3299347043"]
+slug = "to_maximum_life"
 text = "# to maximum Life"
 weight = 3
 note = "universal after the 0.5 ES nerfs"
 
 [[category.mod]]
-id = "explicit.stat_3489782002"
+ids = ["explicit.stat_3489782002"]
+slug = "to_maximum_energy_shield"
 text = "# to maximum Energy Shield"
 weight = 2
 note = "still core for ES builds"
 
 [[category.mod]]
-id = "explicit.stat_983749596"
+ids = ["explicit.stat_983749596"]
+slug = "increased_maximum_life"
 text = "#% increased maximum Life"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_4015621042"
+ids = ["explicit.stat_4015621042"]
+slug = "increased_energy_shield"
 text = "#% increased Energy Shield"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_2106365538"
+ids = ["explicit.stat_2106365538"]
+slug = "increased_evasion_rating"
 text = "#% increased Evasion Rating"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_2866361420"
+ids = ["explicit.stat_2866361420"]
+slug = "increased_armour"
 text = "#% increased Armour"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_1999113824"
+ids = ["explicit.stat_1999113824"]
+slug = "increased_evasion_and_energy_shield"
 text = "#% increased Evasion and Energy Shield"
 weight = 2
 note = "hybrid bases"
 
 [[category.mod]]
-id = "explicit.stat_3321629045"
+ids = ["explicit.stat_3321629045"]
+slug = "increased_armour_and_energy_shield"
 text = "#% increased Armour and Energy Shield"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_2451402625"
+ids = ["explicit.stat_2451402625"]
+slug = "increased_armour_and_evasion"
 text = "#% increased Armour and Evasion"
 weight = 2
 
@@ -61,18 +79,21 @@ weight = 2
 name = "deflection"
 
 [[category.mod]]
-id = "explicit.stat_3033371881"
+ids = ["explicit.stat_3033371881"]
+slug = "gain_deflection_rating_equal_to_of_evasion_rating"
 text = "Gain Deflection Rating equal to #% of Evasion Rating"
 weight = 3
 note = "top chest mod"
 
 [[category.mod]]
-id = "explicit.stat_1752419596"
+ids = ["explicit.stat_1752419596"]
+slug = "gain_deflection_rating_equal_to_of_armour"
 text = "Gain Deflection Rating equal to #% of Armour"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_3040571529"
+ids = ["explicit.stat_3040571529"]
+slug = "increased_deflection_rating"
 text = "#% increased Deflection Rating"
 weight = 2
 
@@ -80,28 +101,34 @@ weight = 2
 name = "mitigation"
 
 [[category.mod]]
-id = "explicit.stat_3362812763"
+ids = ["explicit.stat_3362812763"]
+slug = "of_armour_also_applies_to_elemental_damage"
 text = "#% of Armour also applies to Elemental Damage"
 weight = 3
 note = "armour-stacker enabler"
 
 [[category.mod]]
-id = "explicit.stat_3972229254"
+ids = ["explicit.stat_3972229254"]
+slug = "of_armour_also_applies_to_chaos_damage"
 text = "#% of Armour also applies to Chaos Damage"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_4147897060"
+ids = ["explicit.stat_4147897060"]
+slug = "increased_block_chance"
 text = "#% increased Block chance"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_774059442"
+ids = ["explicit.stat_774059442", "explicit.stat_3336230913"]
+slug = "to_maximum_runic_ward"
 text = "# to maximum Runic Ward"
 weight = 2
+ambiguous = true  # matched by OR across these ids
 
 [[category.mod]]
-id = "explicit.stat_4273473110"
+ids = ["explicit.stat_4273473110"]
+slug = "increased_maximum_runic_ward"
 text = "#% increased maximum Runic Ward"
 weight = 1
 
@@ -109,28 +136,35 @@ weight = 1
 name = "spirit"
 
 [[category.mod]]
-id = "explicit.stat_3981240776"
+ids = ["explicit.stat_3981240776", "explicit.stat_2704225257"]
+slug = "to_spirit"
 text = "# to Spirit"
 weight = 3
+ambiguous = true  # matched by OR across these ids
 note = "gates every buff/minion build"
 
 [[category.mod]]
-id = "explicit.stat_3984865854"
+ids = ["explicit.stat_3984865854", "explicit.stat_1416406066"]
+slug = "increased_spirit"
 text = "#% increased Spirit"
 weight = 3
+ambiguous = true  # matched by OR across these ids
 
 [[category.mod]]
-id = "explicit.stat_53386210"
+ids = ["explicit.stat_53386210"]
+slug = "increased_spirit_reservation_efficiency_of_skills"
 text = "#% increased Spirit Reservation Efficiency of Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_1805633363"
+ids = ["explicit.stat_1805633363"]
+slug = "increased_reservation_efficiency_of_minion_skills"
 text = "#% increased Reservation Efficiency of Minion Skills"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1697191405"
+ids = ["explicit.stat_1697191405"]
+slug = "increased_reservation_efficiency_of_herald_skills"
 text = "#% increased Reservation Efficiency of Herald Skills"
 weight = 2
 
@@ -138,54 +172,64 @@ weight = 2
 name = "resistances"
 
 [[category.mod]]
-id = "pseudo.pseudo_total_elemental_resistance"
+ids = ["pseudo.pseudo_total_elemental_resistance"]
+slug = "total_elemental_resistance"
 text = "+#% total Elemental Resistance"
 weight = 2
 note = "pseudo; triple-res suffixes"
 
 [[category.mod]]
-id = "pseudo.pseudo_total_chaos_resistance"
+ids = ["pseudo.pseudo_total_chaos_resistance"]
+slug = "total_to_chaos_resistance"
 text = "+#% total to Chaos Resistance"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_3372524247"
+ids = ["explicit.stat_3372524247"]
+slug = "to_fire_resistance"
 text = "#% to Fire Resistance"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_4220027924"
+ids = ["explicit.stat_4220027924"]
+slug = "to_cold_resistance"
 text = "#% to Cold Resistance"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_1671376347"
+ids = ["explicit.stat_1671376347"]
+slug = "to_lightning_resistance"
 text = "#% to Lightning Resistance"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_2901986750"
+ids = ["explicit.stat_2901986750"]
+slug = "to_all_elemental_resistances"
 text = "#% to all Elemental Resistances"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_4095671657"
+ids = ["explicit.stat_4095671657"]
+slug = "to_maximum_fire_resistance"
 text = "#% to Maximum Fire Resistance"
 weight = 3
 note = "max-res is rare and pricey"
 
 [[category.mod]]
-id = "explicit.stat_3676141501"
+ids = ["explicit.stat_3676141501"]
+slug = "to_maximum_cold_resistance"
 text = "#% to Maximum Cold Resistance"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_1011760251"
+ids = ["explicit.stat_1011760251"]
+slug = "to_maximum_lightning_resistance"
 text = "#% to Maximum Lightning Resistance"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_1301765461"
+ids = ["explicit.stat_1301765461"]
+slug = "to_maximum_chaos_resistance"
 text = "#% to Maximum Chaos Resistance"
 weight = 3
 
@@ -193,38 +237,45 @@ weight = 3
 name = "recovery"
 
 [[category.mod]]
-id = "explicit.stat_1782086450"
+ids = ["explicit.stat_1782086450"]
+slug = "faster_start_of_energy_shield_recharge"
 text = "#% faster start of Energy Shield Recharge"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_2339757871"
+ids = ["explicit.stat_2339757871"]
+slug = "increased_energy_shield_recharge_rate"
 text = "#% increased Energy Shield Recharge Rate"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1030153674"
+ids = ["explicit.stat_1030153674"]
+slug = "recover_of_maximum_mana_on_kill"
 text = "Recover #% of maximum Mana on Kill"
 weight = 2
 note = "near-mandatory sustain"
 
 [[category.mod]]
-id = "explicit.stat_2023107756"
+ids = ["explicit.stat_2023107756"]
+slug = "recover_of_maximum_life_on_kill"
 text = "Recover #% of maximum Life on Kill"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_669069897"
+ids = ["explicit.stat_669069897"]
+slug = "leeches_of_physical_damage_as_mana"
 text = "Leeches #% of Physical Damage as Mana"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_55876295"
+ids = ["explicit.stat_55876295"]
+slug = "leeches_of_physical_damage_as_life"
 text = "Leeches #% of Physical Damage as Life"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_789117908"
+ids = ["explicit.stat_789117908"]
+slug = "increased_mana_regeneration_rate"
 text = "#% increased Mana Regeneration Rate"
 weight = 1
 
@@ -232,53 +283,63 @@ weight = 1
 name = "skill_levels"
 
 [[category.mod]]
-id = "explicit.stat_9187492"
+ids = ["explicit.stat_9187492"]
+slug = "to_level_of_all_melee_skills"
 text = "# to Level of all Melee Skills"
 weight = 3
 note = "best single scaler on jewellery"
 
 [[category.mod]]
-id = "explicit.stat_1202301673"
+ids = ["explicit.stat_1202301673"]
+slug = "to_level_of_all_projectile_skills"
 text = "# to Level of all Projectile Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_124131830"
+ids = ["explicit.stat_124131830"]
+slug = "to_level_of_all_spell_skills"
 text = "# to Level of all Spell Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_2162097452"
+ids = ["explicit.stat_2162097452"]
+slug = "to_level_of_all_minion_skills"
 text = "# to Level of all Minion Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_67169579"
+ids = ["explicit.stat_67169579"]
+slug = "to_level_of_all_chaos_skills"
 text = "# to Level of all Chaos Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_599749213"
+ids = ["explicit.stat_599749213"]
+slug = "to_level_of_all_fire_skills"
 text = "# to Level of all Fire Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_1078455967"
+ids = ["explicit.stat_1078455967"]
+slug = "to_level_of_all_cold_skills"
 text = "# to Level of all Cold Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_1147690586"
+ids = ["explicit.stat_1147690586"]
+slug = "to_level_of_all_lightning_skills"
 text = "# to Level of all Lightning Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_1600707273"
+ids = ["explicit.stat_1600707273"]
+slug = "to_level_of_all_physical_spell_skills"
 text = "# to Level of all Physical Spell Skills"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_3035140377"
+ids = ["explicit.stat_3035140377"]
+slug = "to_level_of_all_attack_skills"
 text = "# to Level of all Attack Skills"
 weight = 3
 
@@ -286,42 +347,50 @@ weight = 3
 name = "added_damage"
 
 [[category.mod]]
-id = "explicit.stat_1940865751"
+ids = ["explicit.stat_1940865751"]
+slug = "adds_to_physical_damage"
 text = "Adds # to # Physical Damage"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_709508406"
+ids = ["explicit.stat_709508406"]
+slug = "adds_to_fire_damage"
 text = "Adds # to # Fire Damage"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_1037193709"
+ids = ["explicit.stat_1037193709"]
+slug = "adds_to_cold_damage"
 text = "Adds # to # Cold Damage"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_3336890334"
+ids = ["explicit.stat_3336890334"]
+slug = "adds_to_lightning_damage"
 text = "Adds # to # Lightning Damage"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_3032590688"
+ids = ["explicit.stat_3032590688"]
+slug = "adds_to_physical_damage_to_attacks"
 text = "Adds # to # Physical Damage to Attacks"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1573130764"
+ids = ["explicit.stat_1573130764"]
+slug = "adds_to_fire_damage_to_attacks"
 text = "Adds # to # Fire damage to Attacks"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_4067062424"
+ids = ["explicit.stat_4067062424"]
+slug = "adds_to_cold_damage_to_attacks"
 text = "Adds # to # Cold damage to Attacks"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1754445556"
+ids = ["explicit.stat_1754445556"]
+slug = "adds_to_lightning_damage_to_attacks"
 text = "Adds # to # Lightning damage to Attacks"
 weight = 2
 
@@ -329,47 +398,56 @@ weight = 2
 name = "damage_scaling"
 
 [[category.mod]]
-id = "explicit.stat_1509134228"
+ids = ["explicit.stat_1509134228"]
+slug = "increased_physical_damage"
 text = "#% increased Physical Damage"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_2974417149"
+ids = ["explicit.stat_2974417149"]
+slug = "increased_spell_damage"
 text = "#% increased Spell Damage"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_387439868"
+ids = ["explicit.stat_387439868"]
+slug = "increased_elemental_damage_with_attacks"
 text = "#% increased Elemental Damage with Attacks"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1310194496"
+ids = ["explicit.stat_1310194496"]
+slug = "increased_global_physical_damage"
 text = "#% increased Global Physical Damage"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_3015669065"
+ids = ["explicit.stat_3015669065"]
+slug = "gain_of_damage_as_extra_fire_damage"
 text = "Gain #% of Damage as Extra Fire Damage"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_2505884597"
+ids = ["explicit.stat_2505884597"]
+slug = "gain_of_damage_as_extra_cold_damage"
 text = "Gain #% of Damage as Extra Cold Damage"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_3278136794"
+ids = ["explicit.stat_3278136794"]
+slug = "gain_of_damage_as_extra_lightning_damage"
 text = "Gain #% of Damage as Extra Lightning Damage"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_3398787959"
+ids = ["explicit.stat_3398787959"]
+slug = "gain_of_damage_as_extra_chaos_damage"
 text = "Gain #% of Damage as Extra Chaos Damage"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1839076647"
+ids = ["explicit.stat_1839076647"]
+slug = "increased_projectile_damage"
 text = "#% increased Projectile Damage"
 weight = 1
 
@@ -377,48 +455,57 @@ weight = 1
 name = "crit_and_speed"
 
 [[category.mod]]
-id = "explicit.stat_587431675"
+ids = ["explicit.stat_587431675"]
+slug = "increased_critical_hit_chance"
 text = "#% increased Critical Hit Chance"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_3556824919"
+ids = ["explicit.stat_3556824919"]
+slug = "increased_critical_damage_bonus"
 text = "#% increased Critical Damage Bonus"
 weight = 3
 
 [[category.mod]]
-id = "explicit.stat_681332047"
+ids = ["explicit.stat_681332047"]
+slug = "increased_attack_speed"
 text = "#% increased Attack Speed"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_2891184298"
+ids = ["explicit.stat_2891184298"]
+slug = "increased_cast_speed"
 text = "#% increased Cast Speed"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_2194114101"
+ids = ["explicit.stat_2194114101"]
+slug = "increased_critical_hit_chance_for_attacks"
 text = "#% increased Critical Hit Chance for Attacks"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_737908626"
+ids = ["explicit.stat_737908626"]
+slug = "increased_critical_hit_chance_for_spells"
 text = "#% increased Critical Hit Chance for Spells"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_803737631"
+ids = ["explicit.stat_803737631"]
+slug = "to_accuracy_rating"
 text = "# to Accuracy Rating"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_3759663284"
+ids = ["explicit.stat_3759663284"]
+slug = "increased_projectile_speed"
 text = "#% increased Projectile Speed"
 weight = 1
 note = "Twister meta scaler"
 
 [[category.mod]]
-id = "explicit.stat_280731498"
+ids = ["explicit.stat_280731498"]
+slug = "increased_area_of_effect"
 text = "#% increased Area of Effect"
 weight = 1
 
@@ -426,22 +513,26 @@ weight = 1
 name = "minions"
 
 [[category.mod]]
-id = "explicit.stat_1589917703"
+ids = ["explicit.stat_1589917703"]
+slug = "minions_deal_increased_damage"
 text = "Minions deal #% increased Damage"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_3091578504"
+ids = ["explicit.stat_3091578504"]
+slug = "minions_have_increased_attack_and_cast_speed"
 text = "Minions have #% increased Attack and Cast Speed"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_491450213"
+ids = ["explicit.stat_491450213"]
+slug = "minions_have_increased_critical_hit_chance"
 text = "Minions have #% increased Critical Hit Chance"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1854213750"
+ids = ["explicit.stat_1854213750"]
+slug = "minions_have_increased_critical_damage_bonus"
 text = "Minions have #% increased Critical Damage Bonus"
 weight = 2
 
@@ -449,44 +540,52 @@ weight = 2
 name = "utility"
 
 [[category.mod]]
-id = "pseudo.pseudo_increased_movement_speed"
+ids = ["pseudo.pseudo_increased_movement_speed"]
+slug = "increased_movement_speed"
 text = "#% increased Movement Speed"
 weight = 3
 note = "boots gate"
 
 [[category.mod]]
-id = "explicit.stat_3917489142"
+ids = ["explicit.stat_3917489142"]
+slug = "increased_rarity_of_items_found"
 text = "#% increased Rarity of Items found"
 weight = 2
 note = "150%+ IIR target"
 
 [[category.mod]]
-id = "explicit.stat_4101445926"
+ids = ["explicit.stat_4101445926"]
+slug = "increased_mana_cost_efficiency"
 text = "#% increased Mana Cost Efficiency"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1050105434"
+ids = ["explicit.stat_1050105434"]
+slug = "to_maximum_mana"
 text = "# to maximum Mana"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_3377888098"
+ids = ["explicit.stat_3377888098"]
+slug = "increased_skill_effect_duration"
 text = "#% increased Skill Effect Duration"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_4080418644"
+ids = ["explicit.stat_4080418644"]
+slug = "to_strength"
 text = "# to Strength"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_3261801346"
+ids = ["explicit.stat_3261801346"]
+slug = "to_dexterity"
 text = "# to Dexterity"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_328541901"
+ids = ["explicit.stat_328541901"]
+slug = "to_intelligence"
 text = "# to Intelligence"
 weight = 1
 
@@ -494,27 +593,32 @@ weight = 1
 name = "ailments"
 
 [[category.mod]]
-id = "explicit.stat_2487305362"
+ids = ["explicit.stat_2487305362"]
+slug = "increased_magnitude_of_poison_you_inflict"
 text = "#% increased Magnitude of Poison you inflict"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_3166958180"
+ids = ["explicit.stat_3166958180"]
+slug = "increased_magnitude_of_bleeding_you_inflict"
 text = "#% increased Magnitude of Bleeding you inflict"
 weight = 2
 
 [[category.mod]]
-id = "explicit.stat_1303248024"
+ids = ["explicit.stat_1303248024"]
+slug = "increased_magnitude_of_ailments_you_inflict"
 text = "#% increased Magnitude of Ailments you inflict"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_473429811"
+ids = ["explicit.stat_473429811"]
+slug = "increased_freeze_buildup"
 text = "#% increased Freeze Buildup"
 weight = 1
 
 [[category.mod]]
-id = "explicit.stat_293638271"
+ids = ["explicit.stat_293638271"]
+slug = "increased_chance_to_shock"
 text = "#% increased chance to Shock"
 weight = 1
 

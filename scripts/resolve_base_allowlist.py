@@ -15,6 +15,7 @@ Usage:
 """
 
 import json
+import re
 import sys
 from collections import OrderedDict
 
@@ -90,6 +91,15 @@ ATTRIBUTE_RULES = [
 #   Runemastered — 218 bases, which carry 214 of the game's 464 uniques
 RUNE_PREFIXES = ("Runeforged ", "Runemastered ")
 
+def normalize_name(text):
+    """Fold case/whitespace so a patch that re-cases a name cannot drop it.
+
+    Mirrors scripts/resolve_allowlist.py::normalize. Item and unique names are
+    proper nouns and rarely churn, but the cost of tolerating it is one regex.
+    """
+    return re.sub(r"\s+", " ", text.casefold()).strip()
+
+
 
 def load_bases(items):
     """Base types only — entries carrying a `name` are uniques, not bases."""
@@ -101,9 +111,20 @@ def load_bases(items):
     return bases
 
 
+def lookup(name, bases_by_norm):
+    """Return the table's canonical spelling, or None.
+
+    Matching is normalized so re-casing in a patch cannot drop a base, and the
+    canonical spelling is what gets written out — the generated file always
+    tracks the live table rather than whatever we typed here.
+    """
+    return bases_by_norm.get(normalize_name(name))
+
+
 def main():
     items = json.load(open(sys.argv[1]))
     bases = load_bases(items)
+    bases_by_norm = {normalize_name(b): b for b in bases}
     rune_counts = {
         prefix.strip(): len([b for b in bases if b.startswith(prefix)])
         for prefix in RUNE_PREFIXES
@@ -135,19 +156,21 @@ def main():
     out.append("# Bases named outright by 0.5 build guides.")
     out.append("")
     for name, weight, note in NAMED_BASES:
-        if name not in bases:
+        canonical = lookup(name, bases_by_norm)
+        if canonical is None:
             missing.append(name)
             continue
-        out += ["[[named_base]]", f'name = "{name}"', f"weight = {weight}"]
+        out += ["[[named_base]]", f'name = "{canonical}"', f"weight = {weight}"]
         if note:
             out.append(f'note = "{note}"')
         out.append("")
 
     for name, note in AVOID_BASES:
-        if name not in bases:
+        canonical = lookup(name, bases_by_norm)
+        if canonical is None:
             missing.append(name)
             continue
-        out += ["[[avoid_base]]", f'name = "{name}"', f'note = "{note}"', ""]
+        out += ["[[avoid_base]]", f'name = "{canonical}"', f'note = "{note}"', ""]
 
     out.append("# 0.5 rune bases are distinct items from their plain twins.")
     out.append("# Runemastered bases are what most uniques are built on.")
@@ -178,6 +201,7 @@ def main():
         print("# UNRESOLVED (not present in the live item table):", file=sys.stderr)
         for name in missing:
             print(f"#   {name}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":

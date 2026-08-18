@@ -90,12 +90,28 @@ Result: **92 mods across 13 categories, all 92 resolved to verified stat ids**
 `scripts/resolve_allowlist.py`, which fails loudly on any text that does not
 match the live table — it will not emit an unverified id.
 
-Two capitalization traps the resolver caught, both real and both preserved in
-the generator:
+Two capitalization traps the resolver caught, both real:
 
 - `Adds # to # Physical Damage to Attacks` (capital D) vs
   `Adds # to # Fire damage to Attacks` (lowercase d).
 - `#% increased chance to Shock` is lowercase "chance".
+
+These are no longer hand-maintained hazards — matching now folds case,
+whitespace and a leading `+`, and resolved ids are locked by a slug derived
+from our own text so rewording cannot drop an entry. See "Surviving patches"
+in the spec.
+
+Chasing that down exposed a worse problem than capitalization: **the same mod
+text can map to several stat ids**. `# to Spirit`, `#% increased Spirit` and
+`# to maximum Runic Ward` each have two, with no distinguishing field:
+
+```json
+{"id": "explicit.stat_3981240776", "text": "# to Spirit", "type": "explicit"}
+{"id": "explicit.stat_2704225257", "text": "# to Spirit", "type": "explicit"}
+```
+
+The first version of the resolver silently took whichever came first — a coin
+flip on two weight-3 mods. They now emit an OR group across both ids.
 
 ## Crafting bases and item level
 
