@@ -141,11 +141,22 @@ the index ships the ranges.
    aggregate **roll score**.
 3. Escalate to a live trade search if **any** of:
    - `corrupted: true`
-   - roll score in the top band
-   - `CurrentPrice` ≥ threshold (chase uniques)
-   - the unique is inherently swingy — `max/min` ratio across its mods
-     exceeds a cutoff (this is the Ventor's case, detected structurally)
+   - `CurrentPrice` ≥ 5000 ex (chase uniques)
+   - spread ≥ 2.0 **and** our roll ≥ 75th percentile (the Ventor's case)
 4. Otherwise take `CurrentPrice` from the index. No call.
+
+Spread on its own is deliberately **not** enough. Measured against live
+data, 219 of 449 priced uniques (49%) spread ≥ 2.0, and Thunderfist
+spreads ×111 while selling for ~3 ex — a wide range on a worthless item
+stays worthless. Requiring a good roll on *our* copy is what keeps the
+budget on items where the index is actually wrong about us.
+
+`src/sox/data/unique_allowlist.toml` carries the 38 uniques 0.5 build
+guides name outright (verified against the live item table, enriched with
+index price / listing quantity / spread). They get priority within the
+unique search budget. Listing quantity is retained as a liquidity signal:
+Temporalis has 41 listings against Mageblood's 5,808, so its index number
+is far weaker evidence and is reported as such rather than as fact.
 
 Escalated uniques search by name + base + the roll constraints that
 actually drive price, so a high-roll copy and a floor copy get different
@@ -230,7 +241,7 @@ search if base_score >= 4
 | ilvl | 82 → 3 (all T1 mods roll), 81 → 2, 80 → 1, below → 0 |
 | slot | 19 tracked categories, 2–3 by defence budget |
 | named base | 14 bases guides call out by name (+1/+2) |
-| Runeforged | +2 — 0.5 Runeforging yields a parallel base for 427 item types, a distinct item from its plain twin |
+| rune family | +2 — `Runeforged` (428 bases) and `Runemastered` (218 bases, carrying 214 of 464 uniques); both are distinct items from their plain twins |
 
 An `avoid_base` list carries bases guides warn against (e.g. Dreaming
 Quarterstaff — higher base damage, 0% base crit), so budget is not spent

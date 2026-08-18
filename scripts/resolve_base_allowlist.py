@@ -65,6 +65,8 @@ NAMED_BASES = [
     ("Omen Sceptre", 2, "Malice / crit chance implicit"),
     ("Primed Quiver", 2, "attack speed"),
     ("Pearlescent Amulet", 2, "+projectile skill levels target"),
+    ("Absent Amulet", 2, "Eternal Rage implicit; enables Rage scaling"),
+    ("Rattling Sceptre", 1, "Skeletal Warriors foundation for minion builds"),
     ("Ancestral Tiara", 2, "highest-ES helmet base"),
     ("Kamasan Tiara", 2, "budget ES helmet; sells near Ancestral on total ES"),
     ("Sorcerous Tiara", 1, None),
@@ -83,7 +85,10 @@ ATTRIBUTE_RULES = [
     ("int", "#% faster start of Energy Shield Recharge (body armour)"),
 ]
 
-RUNEFORGED_PREFIX = "Runeforged "
+# 0.5 rune bases come in two families, and BOTH matter:
+#   Runeforged   — 428 bases, the crafting-target variants
+#   Runemastered — 218 bases, which carry 214 of the game's 464 uniques
+RUNE_PREFIXES = ("Runeforged ", "Runemastered ")
 
 
 def load_bases(items):
@@ -99,7 +104,10 @@ def load_bases(items):
 def main():
     items = json.load(open(sys.argv[1]))
     bases = load_bases(items)
-    runeforged = {b for b in bases if b.startswith(RUNEFORGED_PREFIX)}
+    rune_counts = {
+        prefix.strip(): len([b for b in bases if b.startswith(prefix)])
+        for prefix in RUNE_PREFIXES
+    }
 
     missing = []
     out = [
@@ -141,15 +149,17 @@ def main():
             continue
         out += ["[[avoid_base]]", f'name = "{name}"', f'note = "{note}"', ""]
 
-    out.append("# 0.5 Runeforging produces a parallel base for many item types.")
-    out.append("# A Runeforged base is a distinct item from its plain twin.")
-    out += [
-        "[runeforged]",
-        f'prefix = "{RUNEFORGED_PREFIX.strip()}"',
-        "bonus_weight = 2",
-        f"count = {len(runeforged)}",
-        "",
-    ]
+    out.append("# 0.5 rune bases are distinct items from their plain twins.")
+    out.append("# Runemastered bases are what most uniques are built on.")
+    out.append("")
+    for prefix, count in rune_counts.items():
+        out += [
+            "[[rune_family]]",
+            f'prefix = "{prefix}"',
+            "bonus_weight = 2",
+            f"count = {count}",
+            "",
+        ]
 
     out.append("# Attribute type of an armour base gates its premium mods.")
     out.append("")
@@ -159,7 +169,7 @@ def main():
     print("\n".join(out))
 
     print(
-        f"# {len(bases)} bases in table ({len(runeforged)} Runeforged); "
+        f"# {len(bases)} bases in table ({rune_counts}); "
         f"{len(NAMED_BASES) + len(AVOID_BASES) - len(missing)}"
         f"/{len(NAMED_BASES) + len(AVOID_BASES)} named bases verified",
         file=sys.stderr,

@@ -168,6 +168,16 @@ weight = 2
 note = "+projectile skill levels target"
 
 [[named_base]]
+name = "Absent Amulet"
+weight = 2
+note = "Eternal Rage implicit; enables Rage scaling"
+
+[[named_base]]
+name = "Rattling Sceptre"
+weight = 1
+note = "Skeletal Warriors foundation for minion builds"
+
+[[named_base]]
 name = "Ancestral Tiara"
 weight = 2
 note = "highest-ES helmet base"
@@ -190,12 +200,18 @@ note = "premium jewel base"
 name = "Dreaming Quarterstaff"
 note = "higher base damage but 0% base crit — guides say skip"
 
-# 0.5 Runeforging produces a parallel base for many item types.
-# A Runeforged base is a distinct item from its plain twin.
-[runeforged]
+# 0.5 rune bases are distinct items from their plain twins.
+# Runemastered bases are what most uniques are built on.
+
+[[rune_family]]
 prefix = "Runeforged"
 bonus_weight = 2
 count = 428
+
+[[rune_family]]
+prefix = "Runemastered"
+bonus_weight = 2
+count = 218
 
 # Attribute type of an armour base gates its premium mods.
 

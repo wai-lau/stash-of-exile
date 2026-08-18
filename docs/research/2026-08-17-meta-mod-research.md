@@ -135,9 +135,52 @@ Kamasan and Sorcerous Tiara; Time-Lost Diamond. Guides explicitly warn off
 recorded as an `avoid_base`.
 
 A useful sanity result: four names the guides mentioned (Nazir's Judgement,
-Splinterheart, Slivertongue, Mist Whisper) did **not** resolve, correctly —
-they are uniques, not bases, and the resolver filters on entries without a
-`name` field.
+Splinterheart, Slivertongue, Mist Whisper) did **not** resolve as bases,
+correctly — they are uniques, and the resolver filters on entries without a
+`name` field. They are tracked in the unique allowlist below instead.
+
+**Two rune families, not one.** 0.5 produces `Runeforged` (428 bases, the
+crafting-target variants) *and* `Runemastered` (218 bases), and the latter is
+what **214 of the game's 464 uniques** are built on. Both are tracked.
+
+## Uniques the meta actually uses
+
+The guides named uniques constantly, and those names are the shortlist worth
+pricing precisely. 38 verified against the live item table, enriched from the
+poe2scout index, in `src/sox/data/unique_allowlist.toml`.
+
+**The index price is a floor, not a price.** poe2scout reports one number per
+unique, but many uniques roll across wide ranges, so that number reflects the
+common (bad) copy:
+
+| Unique | Index price | Spread | Listings |
+|---|---|---|---|
+| Ventor's Gamble | 7 ex | ×2.5 | 26,747 |
+| Mageblood | 135,417 ex | ×3.0 | 5,808 |
+| Headhunter | 29,279 ex | ×3.0 | 1,096 |
+| Temporalis | 1,428,643 ex | ×6.0 | 41 |
+| Thunderfist | 3 ex | ×111 | 10,179 |
+
+Ventor's Gamble is the case that motivated this: 7 exalted is what a floor copy
+fetches, while a good one sells for many Divine. Any tool that reports 7 ex for
+your copy is simply wrong.
+
+**Spread alone must not trigger a search.** Thunderfist spreads ×111 and is
+worth ~3 exalted — wide ranges on a worthless item stay worthless. Of 449
+priced uniques, **219 (49%) have spread ≥ 2.0**, so a spread-only rule would
+blow the entire search budget on junk. Escalation therefore requires:
+
+```
+corrupted
+  OR index_price >= 5000 ex                       (chase uniques)
+  OR (spread >= 2.0 AND our roll >= 75th pct)     (the Ventor's case)
+```
+
+Everything else takes the index price directly, at zero API cost.
+
+Liquidity is recorded too: Temporalis has 41 listings against Mageblood's
+5,808, so its index number is far less trustworthy — thin markets get flagged
+rather than reported as fact.
 
 Base scoring lives in `src/sox/data/base_allowlist.toml`:
 
