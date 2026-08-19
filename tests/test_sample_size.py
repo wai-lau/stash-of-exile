@@ -173,12 +173,11 @@ def test_only_cohering_mods_are_searched():
     assert "#% increased Attack Speed" not in stats
 
 
-def test_low_scoring_items_are_still_priced():
-    """The score says whether an item is worth LISTING, not whether to answer.
+def test_low_scoring_items_are_called_junk_not_searched():
+    """Searches are rate limited, so junk is skipped rather than confirmed.
 
-    Copying an item is a request for its price. A cheap rare that scores
-    below the search threshold must still come back with a number, or the one
-    question actually asked goes unanswered.
+    The point is the wording: a skipped item has a verdict ("junk"), which is
+    different from the tool failing to find a price.
     """
     from sox.cli import wants_search
     from sox.valuation import candidates
@@ -192,5 +191,6 @@ def test_low_scoring_items_are_still_priced():
         "--------\nCorrupted\n"
     )
     verdict = candidates.assess(item, None, MODS, load_bases(), load_uniques())
-    assert not verdict.should_search, "scores too low to be worth listing"
-    assert wants_search(verdict, None, item), "but must still be priced on request"
+    assert not verdict.should_search, "scores too low to be worth a search"
+    assert not wants_search(verdict, None, item), "so no search is spent"
+    assert wants_search(verdict, None, item, force=True), "--force overrides"

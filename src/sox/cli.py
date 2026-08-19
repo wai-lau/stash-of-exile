@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import httpx
@@ -40,12 +41,16 @@ def build_parser() -> argparse.ArgumentParser:
     price = sub.add_parser("price", help="price item text (Ctrl+C in game, then paste)")
     price.add_argument("-f", "--file", type=Path, help="file of item texts, blank-line separated")
     price.add_argument("--no-trade", action="store_true", help="index only; no trade calls")
+    price.add_argument("--force", action="store_true",
+                       help="search even items scored as not worth it")
 
     watcher = sub.add_parser("watch", help="live-price every item you copy")
     watcher.add_argument("--poll", type=int, default=400,
                          help="clipboard poll interval in milliseconds")
     watcher.add_argument("--no-trade", action="store_true",
                          help="index only; no trade calls")
+    watcher.add_argument("--force", action="store_true",
+                         help="search even items scored as not worth it")
 
     sub.add_parser("leagues", help="show the current league and divine rate")
     return parser
@@ -60,6 +65,8 @@ def _read_items(path: Path | None) -> list[str]:
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     cfg = load_config(args.config)
+    if getattr(args, "force", False):
+        cfg = replace(cfg, force=True)
 
     cache = Cache(cfg.cache_path)
     scout = ScoutClient(httpx.Client(timeout=30), cache, cfg.user_agent)
@@ -105,11 +112,15 @@ def main(argv: list[str] | None = None) -> int:
         cache.close()
 
 
-def wants_search(verdict, entry, item) -> bool:
-    """Search when escalation calls for it, or when nothing else can price it."""
-    if verdict.should_search:
-        return True
-    return entry is None and category_for(item) is not None
+def wants_search(verdict, entry, item, force: bool = False) -> bool:
+    """Whether to spend a search on this item.
+
+    A low-scoring item is deliberately NOT searched: searches are rate
+    limited to 5 per 10 seconds, and spending one to confirm that a junk rare
+    is junk is a bad trade. It is reported as not worth searching rather than
+    left looking like a failure. --force overrides.
+    """
+    return bool(force or verdict.should_search)
 
 
 def run_watch(args, cfg, cache, scout, league) -> int:
@@ -146,9 +157,16 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                 name = f"{name}  [{item.get('baseType')}]"
             entry_ = index_price_for(item, index)
             verdict = candidates.assess(item, entry_, mod_index, base_rules, unique_rules)
-            searching = wants_search(verdict, entry_, item) and trade is not None
-            print(watch_ui.detected(name, "searching…" if searching else "index"),
-                  flush=True)
+            searching = wants_search(verdict, entry_, item,
+                                     force=getattr(cfg, "force", False)) \
+                and trade is not None
+            if searching:
+                note = "searching…"
+            elif entry_ is not None:
+                note = "index"
+            else:
+                note = "junk"
+            print(watch_ui.detected(name, note), flush=True)
 
             try:
                 priced = _price_item(item, index, rates, mod_index, base_rules,
@@ -159,7 +177,8 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                 continue
 
             body = report.render(item, priced, league.divine_price_ex)
-            stats.record(name, priced.price_ex, priced.searches_used)
+            stats.record(name, priced.price_ex, priced.searches_used,
+                         junk=priced.tag == "junk")
             print(watch_ui.body_lines(body), flush=True)
             print(watch_ui.status(stats, league.divine_price_ex), flush=True)
     except KeyboardInterrupt:
@@ -183,11 +202,8 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
 
     verdict = candidates.assess(item, entry, mod_index, base_rules, unique_rules)
 
-    # The score decides whether an item is WORTH listing, not whether to
-    # answer. Copying an item is a request for its price, so anything the
-    # index cannot price gets searched regardless of how it scored — refusing
-    # would leave the one question that was actually asked unanswered.
-    if wants_search(verdict, entry, item) and trade is not None:
+    if wants_search(verdict, entry, item, force=getattr(cfg, "force", False)) \
+            and trade is not None:
         category = category_for(item)
         if category:
             result = price_by_search(
@@ -221,10 +237,18 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             roll_pct=roll_pct,
         )
 
-    tag = "unpriced:unknown-class" if item_class is ItemClass.UNKNOWN else "unpriced:no-index"
+    if item_class is ItemClass.UNKNOWN:
+        tag = "unpriced:unknown-class"
+    elif not verdict.should_search:
+        # Scored too low to be worth one of a limited number of searches.
+        # Called junk rather than unpriced: "unpriced" reads as a failure,
+        # when the tool in fact reached a confident verdict about the item.
+        tag = "junk"
+    else:
+        tag = "unpriced:no-index"
     return report.PricedItem(
         name=display_name(item), item_class=item_class, price_ex=None,
-        source="unpriced", tag=tag, reason=verdict.reason,
+        source="unpriced", tag=tag, reason=verdict.reason, score=verdict.score,
     )
 
 

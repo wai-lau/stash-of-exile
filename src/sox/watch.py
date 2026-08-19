@@ -26,6 +26,7 @@ NOTABLE_VALUE_EX = 500.0
 @dataclass
 class Session:
     priced: int = 0
+    junk: int = 0
     unpriced: int = 0
     searches: int = 0
     total_ex: float = 0.0
@@ -33,10 +34,16 @@ class Session:
     best_ex: float = 0.0
     started: datetime = field(default_factory=datetime.now)
 
-    def record(self, name: str, price_ex: float | None, searches: int) -> None:
+    def record(self, name: str, price_ex: float | None, searches: int,
+               junk: bool = False) -> None:
         self.searches += searches
         if price_ex is None:
-            self.unpriced += 1
+            # Junk is a verdict, not a failure, so it is counted apart from
+            # items the tool genuinely could not price.
+            if junk:
+                self.junk += 1
+            else:
+                self.unpriced += 1
             return
         self.priced += 1
         self.total_ex += price_ex
@@ -101,6 +108,7 @@ def entry(body: str, price_ex: float | None, divine_ex: float) -> str:
 def status(session: Session, divine_ex: float) -> str:
     parts = [
         f"{session.priced} priced",
+        f"{session.junk} junk" if session.junk else "",
         f"{session.unpriced} unpriced" if session.unpriced else "",
         f"{session.searches} searches",
     ]

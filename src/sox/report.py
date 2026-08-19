@@ -25,6 +25,7 @@ class PricedItem:
     confidence: str = "firm"
     skewed: bool = False
     relax_used: int = 0
+    score: int = 0
     suggested_ask_ex: float | None = None
     searches_used: int = 0
     quantity: int = 0
@@ -50,10 +51,17 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
     ]
 
     if priced.price_ex is None:
-        lines.append(f"  price      not priced ({priced.tag or 'unknown'})")
-        if priced.tag == "unpriced:above-market":
+        if priced.tag == "junk":
+            lines.append(f"  verdict    JUNK — not worth searching  "
+                         f"(coherence {priced.score}, needs 6)")
+            lines.append("             searches are rate limited, so junk is "
+                         "skipped rather than confirmed — use --force to price it")
+        elif priced.tag == "unpriced:above-market":
+            lines.append("  price      no comparable listing")
             lines.append("             nothing at least as good is listed — "
                          "price this one by hand, it may be the good one")
+        else:
+            lines.append(f"  price      not priced ({priced.tag or 'unknown'})")
     elif priced.source == "trade":
         # Put a weak sample FIRST and in capitals. Buried under the numbers it
         # reads as a footnote, and the number gets believed anyway.

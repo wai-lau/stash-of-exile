@@ -26,6 +26,7 @@ class Config:
     max_searches: int = 4          # per item; one per relaxation rung
     cache_path: Path = DEFAULT_CACHE_PATH
     user_agent: str = USER_AGENT
+    force: bool = False            # search even low-scoring items
 
     @property
     def league_or_current(self) -> str | None:
