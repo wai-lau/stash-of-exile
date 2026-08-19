@@ -16,7 +16,7 @@ import re
 from functools import lru_cache
 
 from sox.valuation.allowlists import ModEntry, load_skills
-from sox.valuation.classify import ItemClass, classify, rarity_of
+from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
 from sox.valuation.mods import match_mod, select_synergistic
 from sox.valuation.rolls import parse_values
 
@@ -717,9 +717,16 @@ def build_query(
         # mods. Lumping them together priced each against the others' market.
         type_filters["rarity"] = {"option": rarity.value}
 
+    # Item level constrains a CRAFT BASE and nothing else. A normal or magic
+    # item is bought for the tiers its level can roll, so the level is the
+    # good itself and is pinned exactly — an ilvl 79 base is a different
+    # product from an ilvl 82 one, not a cheaper copy of it. A rare is bought
+    # on the mods it already rolled and a unique on its roll; there the level
+    # excludes comparables while describing nothing a buyer shops for.
     ilvl = int(item.get("ilvl") or 0)
-    if ilvl:
-        type_filters["ilvl"] = {"min": int(ilvl * scale)}
+    if ilvl and rarity in (Rarity.NORMAL, Rarity.MAGIC):
+        pinned = int(ilvl * scale)
+        type_filters["ilvl"] = {"min": pinned, "max": pinned}
 
     # Quality only on gems. Everywhere else currency takes an item to 20%, so
     # pinning it excludes cheaper copies a buyer would happily quality up
