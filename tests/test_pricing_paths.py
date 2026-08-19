@@ -338,3 +338,37 @@ def test_searched_mods_are_reported_in_the_items_own_wording():
     assert "Adds 121 to 183 Cold Damage" in actual, "item wording, not the template"
     assert "+21 to Intelligence" not in actual
     assert len(actual) == len(canonical)
+
+
+def test_endgame_families_map_to_a_search_category():
+    """An Inscribed Ultimatum came back JUNK with no category at all.
+
+    The endgame Item Class strings are irregular — "Inscribed Ultimatum" is
+    its own class — so the base name carries the family instead. 20 items in
+    the map group have no index price and reach a price only this way.
+    """
+    from sox.valuation.query import category_for
+
+    cases = {
+        "Inscribed Ultimatum": "map.ultimatum",
+        "Djinn Barya": "map.barya",
+        "Test of Will Barya": "map.barya",
+        "Breachstone": "map.breachstone",
+        "Expedition Logbook": "map.logbook",
+        "Primary Calamity Fragment": "map.fragment",
+        "Simulacrum": "map.fragment",
+        "Waystone (Tier 15)": "map.waystone",
+        "Abyss Tablet": "map.tablet",
+    }
+    for base, expected in cases.items():
+        item = {"itemClass": base, "baseType": base}
+        assert category_for(item) == expected, base
+
+
+def test_endgame_families_classify_as_endgame():
+    from sox.valuation.classify import ItemClass, classify
+
+    for base in ("Inscribed Ultimatum", "Djinn Barya", "Breachstone",
+                 "Expedition Logbook", "Simulacrum", "Waystone (Tier 15)"):
+        item = {"itemClass": base, "baseType": base, "frameType": 0}
+        assert classify(item) is ItemClass.ENDGAME, base

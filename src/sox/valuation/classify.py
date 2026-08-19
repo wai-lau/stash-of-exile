@@ -15,7 +15,10 @@ from enum import StrEnum
 FRAME_NORMAL, FRAME_MAGIC, FRAME_RARE, FRAME_UNIQUE, FRAME_GEM, FRAME_CURRENCY = range(6)
 
 # Classes with no index coverage — docs/research/2026-08-17-coverage-audit.md.
-ENDGAME_MARKERS = ("Waystone", "Tablet", "Relic", "Charm")
+ENDGAME_MARKERS = (
+    "Waystone", "Tablet", "Relic", "Charm", "Ultimatum", "Barya",
+    "Breachstone", "Logbook", "Fragment", "Simulacrum",
+)
 UNKNOWN_MARKERS = ("Wombgift",)
 JEWEL_MARKERS = ("Jewel",)
 

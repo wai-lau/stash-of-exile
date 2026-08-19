@@ -256,8 +256,33 @@ def searchable_mods(item: dict) -> list[str]:
     )
 
 
+# Fallback when the Item Class is unrecognised. The endgame item classes are
+# many and irregular — "Inscribed Ultimatum" is its own Item Class — but the
+# base name carries the family reliably.
+BASE_NAME_CATEGORIES = (
+    ("waystone", "map.waystone"),
+    ("tablet", "map.tablet"),
+    ("barya", "map.barya"),
+    ("ultimatum", "map.ultimatum"),
+    ("breachstone", "map.breachstone"),
+    ("logbook", "map.logbook"),
+    ("fragment", "map.fragment"),
+    ("simulacrum", "map.fragment"),
+    ("relic", "sanctum.relic"),
+    ("charm", "flask.charm"),
+    ("jewel", "jewel"),
+)
+
+
 def category_for(item: dict) -> str | None:
-    return ITEM_CLASS_CATEGORIES.get((item.get("itemClass") or "").casefold())
+    by_class = ITEM_CLASS_CATEGORIES.get((item.get("itemClass") or "").casefold())
+    if by_class:
+        return by_class
+    haystack = f"{item.get('itemClass') or ''} {item.get('baseType') or ''}".casefold()
+    for needle, category in BASE_NAME_CATEGORIES:
+        if needle in haystack:
+            return category
+    return None
 
 
 def _property(item: dict, name: str) -> int | None:
