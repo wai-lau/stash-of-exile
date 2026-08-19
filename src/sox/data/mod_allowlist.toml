@@ -392,6 +392,40 @@ weight = 3
 tags = ["physical"]
 
 [[category.mod]]
+ids = ["explicit.stat_3962278098"]
+slug = "increased_fire_damage"
+text = "#% increased Fire Damage"
+weight = 3
+tags = ["elemental"]
+
+[[category.mod]]
+ids = ["explicit.stat_3291658075"]
+slug = "increased_cold_damage"
+text = "#% increased Cold Damage"
+weight = 3
+tags = ["elemental"]
+
+[[category.mod]]
+ids = ["explicit.stat_2231156303"]
+slug = "increased_lightning_damage"
+text = "#% increased Lightning Damage"
+weight = 3
+tags = ["elemental"]
+
+[[category.mod]]
+ids = ["explicit.stat_1002362373"]
+slug = "increased_melee_damage"
+text = "#% increased Melee Damage"
+weight = 2
+
+[[category.mod]]
+ids = ["explicit.stat_2768835289"]
+slug = "increased_spell_physical_damage"
+text = "#% increased Spell Physical Damage"
+weight = 2
+tags = ["physical"]
+
+[[category.mod]]
 ids = ["explicit.stat_2974417149"]
 slug = "increased_spell_damage"
 text = "#% increased Spell Damage"

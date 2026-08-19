@@ -125,6 +125,14 @@ ALLOWLIST = OrderedDict(
             "damage_scaling",
             [
                 (3, "#% increased Physical Damage", None),
+                # Per-element damage was missing while the generic Elemental
+                # and Chaos versions were present. On an element-focused
+                # weapon this is the strongest mod on the item.
+                (3, "#% increased Fire Damage", None),
+                (3, "#% increased Cold Damage", None),
+                (3, "#% increased Lightning Damage", None),
+                (2, "#% increased Melee Damage", None),
+                (2, "#% increased Spell Physical Damage", None),
                 (2, "#% increased Spell Damage", None),
                 (2, "#% increased Elemental Damage with Attacks", None),
                 (2, "#% increased Global Physical Damage", None),
