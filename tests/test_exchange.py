@@ -29,6 +29,9 @@ STATIC = {"result": [
     {"id": "Ritual", "label": "Ritual", "entries": [
         {"id": "omen-of-the-sovereign", "text": "Omen of the Sovereign"},
     ]},
+    {"id": "Abyss", "label": "Abyss", "entries": [
+        {"id": "preserved-cranium", "text": "Preserved Cranium"},
+    ]},
 ]}
 
 
@@ -177,3 +180,35 @@ def test_exalted_is_one_exalted_without_asking_anyone(tmp_path):
 
     client = two_sided(tmp_path, ask_pairs=[(7, 1, 5)], bid_pairs=[(1, 7, 5)])
     assert price_by_exchange("Exalted Orb", client).price_ex == 1.0
+
+
+def test_a_crossed_book_is_not_a_price(tmp_path):
+    """Preserved Cranium: 100 bait asks at 1 ex under a 500 ex bid.
+
+    Every offer on the cheapest page was "1 Exalted Orb for 1 Preserved
+    Cranium" — 331 offers deep, all 148 visible units — so depth had nothing
+    to step over TO and the ask came back 1. Against a real 500 ex bid the
+    midpoint printed 250 ex for an item the index prices at 3,449.
+
+    Bid above ask is an arbitrage that cannot exist: buy at 1, sell at 500,
+    forever. One side is bait and the book does not say which, so there is no
+    price here to report and the index answers instead.
+    """
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = two_sided(tmp_path, ask_pairs=[(1, 1, 148)],
+                       bid_pairs=[(1, 500, 6644)])
+    assert price_by_exchange("Preserved Cranium", client) is None
+
+
+def test_a_bid_under_the_ask_is_an_ordinary_spread(tmp_path):
+    """Divine sat at ask 420, bid 301, and chaos at 40 against 25.
+
+    A healthy book is one where buying costs more than selling. Only the
+    crossed case is refused, so the ordinary spread still prices.
+    """
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = two_sided(tmp_path, ask_pairs=[(40, 1, 6654)],
+                       bid_pairs=[(1, 25, 57980)])
+    assert price_by_exchange("Divine Orb", client).price_ex == pytest.approx(32.5)

@@ -64,7 +64,8 @@ def price_by_exchange(name: str, exchange) -> BulkPrice | None:
     not a single buyer — and there the ask is the only evidence there is.
 
     None is the signal to fall back to the index: uniques, gear and jewels
-    have no exchange book, and neither do items nobody is offering.
+    have no exchange book, neither do items nobody is offering, and neither
+    does a book whose two sides cross.
     """
     item_id = exchange.ids().get(name)
     if item_id is None:
@@ -83,6 +84,20 @@ def price_by_exchange(name: str, exchange) -> BulkPrice | None:
     bids = exchange.book(UNIT, have=item_id)
     per_exalted = stock_weighted_quantile(bids.offers, QUANTILE)
     bid = 1 / per_exalted if per_exalted else None
+
+    # A book that crosses is not a market. Depth only steps over the bait at
+    # the bottom of a book if the page it reads reaches past it, and for
+    # Preserved Cranium it did not: all 100 offers on the cheapest page, every
+    # visible unit of the 331-deep book, were "1 Exalted Orb for 1 Preserved
+    # Cranium". The ask came back 1 against a real 500 ex bid, and the
+    # midpoint printed 250 ex for an item the index prices at 3,449.
+    #
+    # Buy at the ask, sell at the bid, forever: no market survives that, so
+    # one of the two sides is bait. The book does not say which, and guessing
+    # is how the 250 got printed — so the exchange declines and the index,
+    # which is a wholly separate measurement, answers instead.
+    if bid is not None and bid > ask:
+        return None
 
     return BulkPrice(
         price_ex=(ask + bid) / 2 if bid else ask,
