@@ -246,7 +246,16 @@ def _parse_section(section: list[str], item: dict) -> None:
             if not _looks_like_mod(line):
                 continue
             field = _KIND_TO_FIELD.get(marker or "", "explicitMods")
-            item[field].append(strip_rolls(stripped))
+            plain = strip_rolls(stripped)
+            item[field].append(plain)
+            # Advanced descriptions inline the roll range here too, not only
+            # inside a "{ ... Modifier }" block. Missing them left desecrated
+            # and rune mods with no roll quality, which decides both the roll
+            # score and which mods a search keeps.
+            rolls = parse_rolls(stripped)
+            if rolls:
+                actual, lo, hi = max(rolls, key=lambda r: r[2] - r[1])
+                item["modRanges"][plain] = (actual, lo, hi)
 
 
 # A copied trade listing carries the seller's asking price as a note. It is

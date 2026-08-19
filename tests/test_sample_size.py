@@ -432,3 +432,42 @@ def test_every_mod_source_feeds_the_pseudo_total():
     )
     totals = dict((pid, value) for pid, value, _ in pseudo_totals(item, MODS))
     assert totals["pseudo.pseudo_total_life"] == 20 + 96 + 40 + 15
+
+
+def test_desecrated_mods_reach_the_query():
+    """A revealed desecrated roll is often the strongest mod on the item.
+
+    It was counted by the score and then never searched on, which valued a
+    1-divine quarterstaff at 3 exalted.
+    """
+    from sox.valuation.query import searchable_mods, searched_item_texts
+
+    item = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "Adds 121(115-125) to 183(175-190) Cold Damage\n"
+        "--------\n98(78-118)% increased Cold Damage (desecrated)\n"
+    )
+    assert "98% increased Cold Damage" in searchable_mods(item)
+    assert "98% increased Cold Damage" in searched_item_texts(item, MODS, NOTABLES)
+
+
+def test_a_weak_roll_is_dropped_before_a_strong_one():
+    """Roll quality decides what survives widening.
+
+    "Adds 6 to 102 Lightning" sits at the 7th percentile of its range and
+    says little about the item; the search keeps the strong rolls instead.
+    """
+    from sox.valuation.query import explain_selection
+
+    item = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier (Tier: 1) }\nAdds 121(115-125) to 183(175-190) Cold Damage\n"
+        "{ Prefix Modifier (Tier: 1) }\nAdds 6(4-40) to 102(95-190) Lightning Damage\n"
+        "--------\n98(78-118)% increased Cold Damage (desecrated)\n"
+    )
+    _, kept = explain_selection(item, MODS, NOTABLES, relax=2)   # rung keeps 2
+    assert "Adds # to # Cold Damage" in kept
+    assert "#% increased Cold Damage" in kept
+    assert "Adds # to # Lightning Damage" not in kept, "the 7th-percentile roll goes first"

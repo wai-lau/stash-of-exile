@@ -126,6 +126,7 @@ def select_synergistic(
     limit: int,
     tiers: dict[str, int] | None = None,
     texts: dict[int, str] | None = None,
+    rolls: dict[str, tuple[float, float, float]] | None = None,
 ) -> tuple[list[ModEntry], str]:
     """Pick only the mods that cohere, best tier first.
 
@@ -148,11 +149,26 @@ def select_synergistic(
 
     cohering = [e for e in entries if key in coherence_keys(e)]
 
-    def rank(entry: ModEntry) -> tuple[int, int]:
+    def rank(entry: ModEntry) -> tuple[int, float, int]:
         text = (texts or {}).get(id(entry))
         tier = (tiers or {}).get(text or "", 99)
-        # Best tier first; weight breaks ties when no tier is reported.
-        return (tier, -entry.weight)
+        # Roll quality decides between mods of equal tier. A weak roll is the
+        # first thing a buyer stops filtering on: "Adds 6 to 102 Lightning"
+        # sits near the floor of its range and says little about the item,
+        # while a near-max roll is what makes it worth listing.
+        percentile = 0.5
+        span = (rolls or {}).get(text or "")
+        if span:
+            actual, low, high = span
+            if high > low:
+                percentile = min(max((actual - low) / (high - low), 0.0), 1.0)
+        # Roll quality leads, tier breaks ties. Tier is the bracket the mod
+        # rolled in; the percentile is how good THIS roll is inside it, and a
+        # tier-1 mod sitting at the floor of its range — "Adds 6 to 102
+        # Lightning" — says less about the item than a strong roll in a lower
+        # bracket. Ranking by tier first also buries any mod the item reports
+        # without one.
+        return (-percentile, tier, -entry.weight)
 
     cohering.sort(key=rank)
     return cohering[:limit], key

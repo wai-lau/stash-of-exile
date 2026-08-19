@@ -144,3 +144,19 @@ def test_trade_note_is_not_a_modifier():
     )
     assert item["note"] == "~b/o 1 aug"
     assert not any("Note:" in m for m in item["explicitMods"])
+
+
+def test_roll_ranges_are_captured_outside_modifier_blocks():
+    """Desecrated and rune mods print their range inline, with no header.
+
+    Without the range they carry no roll quality, which decides both the roll
+    score and which mods survive when a search widens.
+    """
+    item = parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "98(78-118)% increased Cold Damage (desecrated)\n"
+        "16(12-20)% increased Freeze Buildup (desecrated)\n"
+    )
+    assert item["modRanges"]["98% increased Cold Damage"] == (98.0, 78.0, 118.0)
+    assert "98% increased Cold Damage" in item["desecratedMods"]

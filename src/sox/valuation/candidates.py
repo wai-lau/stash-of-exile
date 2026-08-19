@@ -195,7 +195,8 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
     open_bonus, open_why = open_affix_bonus(item, mod_score, has_premium)
     if open_bonus:
         slots = open_why.replace("open", "")
-        rows.append((f"{slots} open affixes", open_bonus, ""))
+        plural = "" if slots == "1" else "es"
+        rows.append((f"{slots} open affix{plural}", open_bonus, ""))
     return rows
 
 

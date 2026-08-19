@@ -240,6 +240,22 @@ def pseudo_totals(item: dict, index=None) -> list[tuple[str, int, list[str]]]:
     return out
 
 
+def searchable_mods(item: dict) -> list[str]:
+    """Every mod that can go into a query, from every source.
+
+    Desecrated mods were missing here while being counted by the score, so a
+    revealed desecrated roll — often the strongest mod on the item — was
+    scored and then never searched on.
+    """
+    return (
+        list(item.get("explicitMods") or [])
+        + list(item.get("fracturedMods") or [])
+        + list(item.get("runeMods") or [])
+        + list(item.get("desecratedMods") or [])
+        + list(item.get("enchantMods") or [])
+    )
+
+
 def category_for(item: dict) -> str | None:
     return ITEM_CLASS_CATEGORIES.get((item.get("itemClass") or "").casefold())
 
@@ -288,11 +304,7 @@ def build_query(
     and_filters: list[dict] = []
     or_groups: list[dict] = []
 
-    all_mods = (
-        list(item.get("explicitMods") or [])
-        + list(item.get("fracturedMods") or [])
-        + list(item.get("runeMods") or [])
-    )
+    all_mods = searchable_mods(item)
 
     # Notables ARE the value of a Megalomaniac, so they outrank every mod and
     # are trimmed last. They still take part in the ladder: an exact pair is
@@ -349,6 +361,7 @@ def build_query(
         [e for _, _, e in mod_items], max_stats,
         tiers=item.get("modTiers") or {},
         texts={id(e): t for _, t, e in mod_items},
+        rolls=item.get("modRanges") or {},
     )
     by_entry = {id(e): t for _, t, e in mod_items}
 
@@ -413,11 +426,7 @@ def explain_selection(
 
     max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
 
-    all_mods = (
-        list(item.get("explicitMods") or [])
-        + list(item.get("fracturedMods") or [])
-        + list(item.get("runeMods") or [])
-    )
+    all_mods = searchable_mods(item)
     notable_texts = [
         t for t in all_mods
         if t.startswith("Allocates ") and notables.get(t[len("Allocates "):].strip())
@@ -433,7 +442,8 @@ def explain_selection(
         if entry is not None:
             texts.setdefault(id(entry), text)
     chosen, group = select_synergistic(
-        entries, max_stats, tiers=item.get("modTiers") or {}, texts=texts
+        entries, max_stats, tiers=item.get("modTiers") or {}, texts=texts,
+        rolls=item.get("modRanges") or {},
     )
     return (group or None), [e.text for e in chosen]
 
@@ -449,11 +459,7 @@ def defence_mod_texts(item: dict) -> list[str]:
     for prop_name, (_id, flat, percent) in DEFENCE_PROPERTIES.items():
         if _property(item, prop_name) is None:
             continue
-        for text in (
-            list(item.get("explicitMods") or [])
-            + list(item.get("fracturedMods") or [])
-            + list(item.get("runeMods") or [])
-        ):
+        for text in searchable_mods(item):
             if (flat.search(text) or percent.search(text)) and text not in out:
                 out.append(text)
     return out
@@ -471,11 +477,7 @@ def searched_item_texts(item: dict, index, notables, relax: int = 0) -> list[str
     _, canonical = explain_selection(item, index, notables, relax=relax)
     wanted = {normalize_mod(text) for text in canonical}
     out = []
-    for text in (
-        list(item.get("explicitMods") or [])
-        + list(item.get("fracturedMods") or [])
-        + list(item.get("runeMods") or [])
-    ):
+    for text in searchable_mods(item):
         if normalize_mod(text) in wanted:
             out.append(text)
     return out
