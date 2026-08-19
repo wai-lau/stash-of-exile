@@ -36,6 +36,7 @@ class TradeResult:
     relax_used: int = 0           # which ladder rung produced this
     p25_ex: float | None = None   # lower quartile; the ask is based on this
     skewed: bool = False          # low is far below the body of the market
+    from_cache: bool = False      # replayed, so it cost nothing this time
 
 
 def _confidence(count: int) -> str:
@@ -85,7 +86,9 @@ def price_by_search(
 
         cached = cache.get("trade_price", key)
         if cached is not None:
-            return TradeResult(**cached)
+            # Replaying a stored result costs no API call, so the search count
+            # recorded when it was first computed must not be reported again.
+            return TradeResult(**{**cached, "searches_used": 0, "from_cache": True})
 
         query_id, hashes = trade.search(query)
         searches += 1

@@ -20,6 +20,7 @@ class PricedItem:
     tag: str | None
     reason: str = ""
     listings: int = 0
+    from_cache: bool = False
     median_ex: float | None = None
     p25_ex: float | None = None
     confidence: str = "firm"
@@ -140,7 +141,9 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                          f"{priced.coherence_group}{gain}")
         elif priced.breakdown:
             lines.append("  coherence  none — the mods serve different builds")
-    if priced.searches_used:
+    if priced.from_cache:
+        lines.append("  cost       cached (no API call)")
+    elif priced.searches_used:
         lines.append(f"  cost       {priced.searches_used} search"
                      f"{'es' if priced.searches_used != 1 else ''}")
     return "\n".join(lines)

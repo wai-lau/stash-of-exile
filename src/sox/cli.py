@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
 from dataclasses import replace
 from pathlib import Path
 
@@ -31,6 +32,9 @@ from sox.valuation.query import category_for, explain_selection
 from sox.valuation.trade_pricer import price_by_search
 
 ITEM_SEPARATOR = "\n\n"
+
+# How long an item may take before the feed says it is working on it.
+SLOW_SEARCH_SECONDS = 0.6
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -189,17 +193,25 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                                      unique_rules, notables, trade, cache, cfg)
             except (GGGError, httpx.HTTPError) as exc:
                 # One bad lookup must not end the session; the next copy retries.
+                timer.cancel()
                 print(watch_ui.error(f"{type(exc).__name__}: {exc}"), flush=True)
                 continue
             except Exception as exc:  # noqa: BLE001 - the feed must survive
+                timer.cancel()
                 print(watch_ui.error(f"unexpected {type(exc).__name__}: {exc}"),
                       flush=True)
                 continue
+            timer.cancel()
 
             body = report.render(item, priced, league.divine_price_ex)
             stats.record(name, priced.price_ex, priced.searches_used,
                          junk=priced.tag == "junk")
-            print(watch_ui.body_lines(body), flush=True)
+            if announced.is_set():
+                # The header is already on screen; only the detail is left.
+                print(watch_ui.body_lines(body), flush=True)
+            else:
+                print(watch_ui.entry(body, priced.price_ex, league.divine_price_ex),
+                      flush=True)
             print(watch_ui.status(stats, league.divine_price_ex), flush=True)
     except KeyboardInterrupt:
         print()
@@ -244,7 +256,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 confidence=result.confidence, skewed=result.skewed,
                 relax_used=result.relax_used,
                 suggested_ask_ex=result.suggested_ask_ex,
-                searches_used=result.searches_used,
+                searches_used=result.searches_used, from_cache=result.from_cache,
                 searched_group=group, searched_stats=stats,
             )
 

@@ -266,3 +266,22 @@ def test_default_status_includes_offline_sellers():
     assert Config().status == "any"
     query = build_query(ITEM, category_for(ITEM), MODS, NOTABLES)
     assert query["query"]["status"]["option"] == "any"
+
+
+def test_a_cached_price_does_not_claim_a_search(tmp_path):
+    """Replaying a stored result costs no API call.
+
+    Reporting the count from when it was first computed makes a free lookup
+    look like a fresh one, which hides how much of a session was cached.
+    """
+    cache = Cache(tmp_path / "c.sqlite")
+    first = ScriptedTrade([(12, [5.0, 6.0, 7.0])])
+    price_by_search(ITEM, category_for(ITEM), MODS, NOTABLES, first, cache, RATES)
+    assert first.searches == 1
+
+    second = ScriptedTrade([(12, [5.0, 6.0, 7.0])])
+    result = price_by_search(ITEM, category_for(ITEM), MODS, NOTABLES, second,
+                             cache, RATES)
+    assert second.searches == 0, "must not hit the API again"
+    assert result.from_cache is True
+    assert result.searches_used == 0
