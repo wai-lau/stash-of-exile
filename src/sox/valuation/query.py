@@ -197,11 +197,16 @@ def pseudo_totals(item: dict, index=None) -> list[tuple[str, int, list[str]]]:
     one scraped from a single weak roll.
     """
     ranges = item.get("modRanges") or {}
+    # EVERY source counts toward a total. A buyer filtering on total life does
+    # not care whether it came from an explicit roll, a desecrated one, a rune
+    # or the base's implicit — the stat is the stat.
     mods = (
         list(item.get("explicitMods") or [])
         + list(item.get("fracturedMods") or [])
         + list(item.get("runeMods") or [])
         + list(item.get("implicitMods") or [])
+        + list(item.get("desecratedMods") or [])
+        + list(item.get("enchantMods") or [])
     )
 
     out = []

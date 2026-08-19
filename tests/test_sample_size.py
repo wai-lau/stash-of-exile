@@ -410,3 +410,25 @@ def test_notables_outrank_pseudo_totals_and_mods():
         ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
         assert ids, f"rung {rung} dropped every filter"
         assert all("stat_2954116742" in i for i in ids), "notables must survive"
+
+
+def test_every_mod_source_feeds_the_pseudo_total():
+    """A buyer filtering on total life does not care where the life came from.
+
+    Explicit, desecrated, rune, fractured and implicit all contribute to the
+    same total, so all of them must be summed.
+    """
+    from sox.valuation.query import pseudo_totals
+
+    item = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Rare\nX\nVaal Cuirass\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Implicit Modifier }\n+20 to maximum Life\n"
+        "--------\n"
+        "{ Prefix Modifier }\n+96 to maximum Life\n"
+        "{ Desecrated Prefix Modifier }\n+40 to maximum Life\n"
+        "--------\n"
+        "+15 to maximum Life (rune)\n"
+    )
+    totals = dict((pid, value) for pid, value, _ in pseudo_totals(item, MODS))
+    assert totals["pseudo.pseudo_total_life"] == 20 + 96 + 40 + 15
