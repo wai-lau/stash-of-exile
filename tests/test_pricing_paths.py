@@ -533,13 +533,10 @@ def test_twice_corrupted_reads_as_corrupted():
     item = itemtext.parse(_warden_text())
     assert item["corrupted"] is True and item["twiceCorrupted"] is True
 
+    # Nothing is pinned once ours is touched — not twice_corrupted either. A
+    # second corruption is as likely to have ruined the item as improved it.
     filters = build_query(item, category_for(item), MODS, NOTABLES)
-    # Corrupted and sanctified go unconstrained once ours is touched, but
-    # twice-corrupted is pinned: it is the only way to carry a Corruption
-    # Enhancement, so a singly-corrupted copy is not a comparable.
-    assert filters["query"]["filters"]["misc_filters"]["filters"] == {
-        "twice_corrupted": {"option": "true"}
-    }
+    assert "misc_filters" not in filters["query"]["filters"]
     assert should_search_unique_of(item) == "corrupted"
 
 
@@ -647,3 +644,20 @@ def test_quality_is_searched_on_gems_only():
     types = build_query(warden, category_for(warden), MODS, NOTABLES)[
         "query"]["filters"]["type_filters"]["filters"]
     assert "quality" not in types
+
+
+def test_a_corruption_enhancement_is_an_enchant_not_an_explicit():
+    """It occupies no affix slot, and the trade API files it under the enchant
+    group — the same place the notables turned out to live.
+
+    Searched as explicit it returned 0 listings live where the enchant group
+    returned thousands, so the mod silently contributed nothing.
+    """
+    from sox.valuation.query import regroup
+
+    item = itemtext.parse(_warden_text())
+    assert item["enchantMods"] == ["40% increased Thorns damage"]
+    assert "40% increased Thorns damage" not in item["explicitMods"]
+    assert regroup(("explicit.stat_1315743832",), "enchant") == (
+        "enchant.stat_1315743832",
+    )

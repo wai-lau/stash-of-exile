@@ -159,6 +159,18 @@ class _Notable:
 LOCAL_CATEGORY_PREFIXES = ("armour.", "weapon.")
 
 
+def regroup(ids: tuple[str, ...], group: str) -> tuple[str, ...]:
+    """The same numeric stats, read from another group's table.
+
+    Group and stat id are independent: `explicit.stat_1315743832` and
+    `enchant.stat_1315743832` are the same stat sourced two ways, and asking
+    the wrong one returns nothing rather than erroring. The allowlist resolves
+    every id from the explicit table, so a mod that reached the item by
+    another route has to be re-pointed.
+    """
+    return tuple(f"{group}.{i.split('.', 1)[-1]}" for i in ids)
+
+
 def stat_ids_for(entry: ModEntry, category: str) -> tuple[str, ...]:
     """The ids to search, choosing the local twin where the item provides it.
 
@@ -508,11 +520,18 @@ def build_query(
     pseudo_filters = [{"id": pid, "value": {"min": value}}
                       for pid, value, _ in totals]
 
+    # A Corruption Enhancement reads like an explicit mod but is filed under
+    # the enchant group; searching it as explicit returned 0 listings where
+    # enchant returned thousands.
+    enchant_texts = set(item.get("enchantMods") or [])
+
     mod_filters = []
     for entry in chosen_entries:
         text = by_entry[id(entry)]
         minimum = round(filter_value(entry.text, parse_values(text)) * scale, 2)
         ids = stat_ids_for(entry, category)
+        if text in enchant_texts:
+            ids = regroup(ids, "enchant")
         if len(ids) > 1:
             or_groups.append({
                 "type": "count",
@@ -549,19 +568,15 @@ def build_query(
     # Pinned only when ours is neither. Once the item has been touched at all
     # the whole market is comparable again, so both stay unconstrained rather
     # than pinning the one flag we happen not to carry.
-    misc: dict = {}
+    # Twice corrupted is deliberately NOT pinned. It reads as scarcer, and the
+    # narrowed search does return dearer listings, but a second corruption is
+    # as likely to have ruined the item as improved it — the dearer listings
+    # are ones that survived it, not proof that ours did.
     if not item.get("corrupted") and not item.get("sanctified"):
-        misc["corrupted"] = {"option": "false"}
-        misc["sanctified"] = {"option": "false"}
-    # Twice corrupted is the one corruption state that is strictly scarcer
-    # rather than merely different: it is the only way an item carries a
-    # Corruption Enhancement, so a singly-corrupted copy is not a comparable.
-    # On a twice-corrupted Forgotten Warden it is the whole price — 196
-    # matches from 4 divine without it, 64 from 10 with a 22 divine quartile.
-    if item.get("twiceCorrupted"):
-        misc["twice_corrupted"] = {"option": "true"}
-    if misc:
-        query["query"]["filters"]["misc_filters"] = {"filters": misc}
+        query["query"]["filters"]["misc_filters"] = {"filters": {
+            "corrupted": {"option": "false"},
+            "sanctified": {"option": "false"},
+        }}
     if item.get("name") and classify(item) is ItemClass.UNIQUE:
         query["query"]["name"] = item["name"]
     return query

@@ -38,8 +38,12 @@ SEPARATOR = re.compile(r"^-{3,}$")
 # "{ Unique Modifier - Defences }"
 # "{ Desecrated Suffix Modifier "of Amanamu" (Tier: 1) - ... }"  <- TWO words
 # before "Modifier", so the kind must not be a single \w+.
+# "Enhancement" as well as "Modifier": a Corruption Enhancement heads its
+# block as "{ Corruption Enhancement — Damage }", with no "Modifier" anywhere,
+# so the header went unrecognised and its stat line fell through as an
+# ordinary explicit mod.
 MOD_HEADER = re.compile(
-    r"^\{\s*(?P<kind>\w+)(?:\s+\w+)*?\s+Modifier"
+    r"^\{\s*(?P<kind>\w+)(?:\s+\w+)*?\s+(?:Modifier|Enhancement)"
     r'(?:\s+"(?P<name>[^"]*)")?'
     r"(?:\s*\(Tier:\s*(?P<tier>\d+)\))?"
     r".*\}$"
@@ -224,7 +228,7 @@ def _parse_section(section: list[str], item: dict) -> None:
         # Keep it: it is the seller's own asking price, worth reporting.
         item["note"] = note.group(1).strip()
         return
-    if "modifier" in joined and "{" in joined:
+    if ("modifier" in joined or "enhancement" in joined) and "{" in joined:
         _parse_mod_section(section, item)
         return
     if any(line.strip().lower() in FLAGS for line in section):
@@ -300,6 +304,10 @@ _KIND_TO_FIELD = {
     "rune": "runeMods",
     "desecrated": "desecratedMods",
     "enchant": "enchantMods",
+    # A Corruption Enhancement is not an affix — it occupies no prefix or
+    # suffix slot — and the trade API files it under the enchant group, the
+    # same place the notables turned out to live.
+    "corruption": "enchantMods",
     "crafted": "explicitMods",
 }
 
