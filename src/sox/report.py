@@ -108,6 +108,10 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                      f"listings, {priced.tag}")
         else:
             found = f"{priced.listings} listings, {priced.tag}"
+        # A replayed price cost no API call and can be stale, which is worth
+        # a word — but not a row of its own.
+        if priced.from_cache:
+            found += ", cached"
         lines.append(f"             {found}")
         if priced.rune_inflated:
             lines.append(f"             {priced.rune_inflated} skipped — met your "
@@ -164,9 +168,4 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                          f"{priced.coherence_group}{gain}")
         elif priced.breakdown:
             lines.append("  coherence  none — the mods serve different builds")
-    if priced.from_cache:
-        lines.append("  cost       cached (no API call)")
-    elif priced.searches_used:
-        lines.append(f"  cost       {priced.searches_used} search"
-                     f"{'es' if priced.searches_used != 1 else ''}")
     return "\n".join(lines)
