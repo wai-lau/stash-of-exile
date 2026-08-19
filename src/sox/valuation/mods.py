@@ -54,6 +54,30 @@ def matched(item_mods: list[str], index: dict[str, ModEntry]) -> list[ModEntry]:
     return out
 
 
+def explain_score(item_mods: list[str], index: dict[str, ModEntry]) -> list[tuple[str, int | None]]:
+    """Every mod with the weight it contributed, or None if unrecognised.
+
+    A verdict of junk is only trustworthy if you can see what produced it —
+    and an unrecognised mod is as likely to be a gap in the allowlist as a
+    worthless roll.
+    """
+    out: list[tuple[str, int | None]] = []
+    supporting = 0
+    for text in item_mods:
+        entry = match_mod(text, index)
+        if entry is None:
+            out.append((text, None))
+            continue
+        weight = entry.weight
+        if weight == 1:
+            if supporting >= SUPPORTING_CAP:
+                out.append((text, 0))  # capped: contributed nothing
+                continue
+            supporting += weight
+        out.append((text, weight))
+    return out
+
+
 def score_mods(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[int, dict[str, int]]:
     total = 0
     supporting = 0

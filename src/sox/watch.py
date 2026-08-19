@@ -65,6 +65,8 @@ def banner(league: str, divine_ex: float, backend: str) -> str:
         f"{BOLD}sox watch{RESET}  ·  {league}  ·  1 div = {divine_ex:,.0f} ex",
         f"{DIM}clipboard: {backend}{RESET}",
         f"{DIM}copy an item in game (Ctrl+C) and it is priced here · Ctrl-C to stop{RESET}",
+        f"{DIM}junk is skipped to save the rate limit — restart with --force "
+        f"to price everything{RESET}",
         rule("═"),
     ])
 

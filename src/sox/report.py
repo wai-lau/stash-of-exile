@@ -26,6 +26,7 @@ class PricedItem:
     skewed: bool = False
     relax_used: int = 0
     score: int = 0
+    breakdown: tuple[tuple[str, object], ...] = ()
     suggested_ask_ex: float | None = None
     searches_used: int = 0
     quantity: int = 0
@@ -52,10 +53,18 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
 
     if priced.price_ex is None:
         if priced.tag == "junk":
-            lines.append(f"  verdict    JUNK — not worth searching  "
-                         f"(coherence {priced.score}, needs 6)")
-            lines.append("             searches are rate limited, so junk is "
-                         "skipped rather than confirmed — use --force to price it")
+            # The generic advice about --force lives in the watch banner; on
+            # every junk item it is noise. What is worth showing is what this
+            # particular item scored, and why.
+            lines.append(f"  verdict    JUNK  (coherence {priced.score}, needs 6)")
+            for text, weight in priced.breakdown:
+                if weight is None:
+                    note = "not in allowlist"
+                elif weight == 0:
+                    note = "capped, added nothing"
+                else:
+                    note = f"+{weight}"
+                lines.append(f"             {note:<16} {text}")
         elif priced.tag == "unpriced:above-market":
             lines.append("  price      no comparable listing")
             lines.append("             nothing at least as good is listed — "

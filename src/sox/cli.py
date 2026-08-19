@@ -25,7 +25,7 @@ from sox.valuation import candidates
 from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_uniques
 from sox.valuation.classify import ItemClass, classify, display_name
 from sox.valuation.index_pricer import index_price_for
-from sox.valuation.mods import build_index
+from sox.valuation.mods import build_index, explain_score
 from sox.valuation.rolls import roll_score, roll_score_from_item
 from sox.valuation.query import category_for, explain_selection
 from sox.valuation.trade_pricer import price_by_search
@@ -249,6 +249,8 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
     return report.PricedItem(
         name=display_name(item), item_class=item_class, price_ex=None,
         source="unpriced", tag=tag, reason=verdict.reason, score=verdict.score,
+        breakdown=tuple(explain_score(candidates.item_mods(item), mod_index))
+        if tag == "junk" else (),
     )
 
 
