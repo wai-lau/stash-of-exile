@@ -231,11 +231,14 @@ def _parse_section(section: list[str], item: dict) -> None:
     # that look like a stat are kept.
     if not matched_property:
         for line in section:
-            if not _looks_like_mod(line):
-                continue
             stripped, marker = split_marker(line)
+            # Checked BEFORE _looks_like_mod: "Unrevealed Suffix Modifier"
+            # carries no number, so the mod-shape filter would drop it and the
+            # affix slot it occupies would look free.
             if UNREVEALED.match(stripped):
                 item["unrevealedMods"].append(stripped)
+                continue
+            if not _looks_like_mod(line):
                 continue
             field = _KIND_TO_FIELD.get(marker or "", "explicitMods")
             item[field].append(strip_rolls(stripped))

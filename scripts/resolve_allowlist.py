@@ -91,6 +91,8 @@ ALLOWLIST = OrderedDict(
                 (2, "Leeches #% of Physical Damage as Mana", None),
                 (2, "Leeches #% of Physical Damage as Life", None),
                 (1, "#% increased Mana Regeneration Rate", None),
+                (2, "Gain # Life per Enemy Killed", None),
+                (2, "Gain # Mana per Enemy Killed", None),
             ],
         ),
         (

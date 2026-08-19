@@ -90,12 +90,12 @@ def score_gear(item: dict, index: dict[str, ModEntry], base_rules: BaseRules) ->
 
     mod_score, _ = score_mods(mods, index)
     if mod_score:
-        reasons.append(f"coherence={mod_score}")
+        reasons.append(f"mods {mod_score}")
 
     bonus, why = coherence_bonus(mods, index)
     if bonus:
         mod_score += bonus
-        reasons.append(why)
+        reasons.append(f"{why} +{bonus}")
 
     has_premium = any(
         (entry := match_mod(text, index)) is not None and entry.weight >= 3
@@ -104,7 +104,7 @@ def score_gear(item: dict, index: dict[str, ModEntry], base_rules: BaseRules) ->
     open_bonus, open_why = open_affix_bonus(item, mod_score, has_premium)
     if open_bonus:
         mod_score += open_bonus
-        reasons.append(open_why)
+        reasons.append(f"{open_why} +{open_bonus}")
 
     base_score = 0
     for min_ilvl, weight in base_rules.ilvl_tiers:
@@ -133,7 +133,10 @@ def score_gear(item: dict, index: dict[str, ModEntry], base_rules: BaseRules) ->
         total = mod_score + (1 if base_score >= 4 else 0)
     else:
         total = base_score + mod_score
-    return total, ",".join(reasons) or "none"
+    # Lead with the total, then how it was reached, so the number is
+    # answerable from the line itself.
+    detail = " · ".join(reasons) if reasons else "nothing recognised"
+    return total, f"{total}  ({detail})"
 
 
 def qualifies(item: dict, score: int) -> bool:

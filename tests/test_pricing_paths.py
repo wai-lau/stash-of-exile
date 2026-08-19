@@ -234,3 +234,39 @@ def test_roll_score_from_advanced_descriptions_needs_no_index():
         "{ Unique Modifier }\n100(100-150)% increased Armour\n"
     )
     assert roll_score_from_item(floor) == 0.0
+
+
+def test_unrevealed_mod_without_a_number_still_occupies_a_slot():
+    """"Unrevealed Suffix Modifier" carries no digits.
+
+    The mod-shape filter drops lines with no number, which silently gave the
+    item a free affix slot it does not have.
+    """
+    from sox.valuation.candidates import used_affixes
+
+    item = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nDragon Bane\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "Adds 121 to 183 Cold Damage\n"
+        "Adds 6 to 102 Lightning Damage\n"
+        "+21 to Intelligence\n"
+        "Leeches 8.66% of Physical Damage as Life\n"
+        "Gain 66 Life per enemy killed\n"
+        "Unrevealed Suffix Modifier\n"
+    )
+    assert item["unrevealedMods"] == ["Unrevealed Suffix Modifier"]
+    assert used_affixes(item) == 6, "5 revealed + 1 unrevealed fills the item"
+
+
+def test_score_line_shows_how_the_total_was_reached():
+    from sox.valuation.allowlists import load_bases
+    from sox.valuation.candidates import score_gear
+
+    item = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nDragon Bane\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "Adds 121 to 183 Cold Damage\nAdds 6 to 102 Lightning Damage\n"
+    )
+    total, reason = score_gear(item, MODS, load_bases())
+    assert reason.startswith(str(total)), "the total must lead the line"
+    assert "mods" in reason and "elemental" in reason

@@ -56,7 +56,7 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
             # The generic advice about --force lives in the watch banner; on
             # every junk item it is noise. What is worth showing is what this
             # particular item scored, and why.
-            lines.append(f"  verdict    JUNK  (coherence {priced.score}, needs 6)")
+            lines.append(f"  verdict    JUNK  (score {priced.score}, needs 6)")
             for text, weight in priced.breakdown:
                 if weight is None:
                     mark, note = "?", "  (not in allowlist)"
@@ -119,7 +119,7 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         for stat in priced.searched_stats:
             lines.append(f"             - {stat}")
     if priced.reason:
-        lines.append(f"  why        {priced.reason}")
+        lines.append(f"  coherence  {priced.reason}")
     if priced.searches_used:
         lines.append(f"  cost       {priced.searches_used} search"
                      f"{'es' if priced.searches_used != 1 else ''}")
