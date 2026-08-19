@@ -16,14 +16,37 @@ from sox.valuation.query import RELAX_STEPS, build_query, query_hash
 SUGGESTED_ASK_FACTOR = 0.9
 FETCH_LIMIT = 10  # one fetch call is enough to price the cheap end
 
+# A handful of listings is not a market. With three results the cheapest can
+# easily be a mispriced outlier or a far better item, which is how a
+# quarterstaff worth ~3ex once reported 320ex. Keep relaxing until the sample
+# is big enough to mean something, and label the confidence when it is not.
+MIN_SAMPLE = 8
+THIN_SAMPLE = 3
+
 
 @dataclass(frozen=True)
 class TradeResult:
-    ceiling_ex: float | None
+    ceiling_ex: float | None      # cheapest comparable listing
+    median_ex: float | None       # middle of the sample; outlier-resistant
     suggested_ask_ex: float | None
     tag: str
     listings: int
     searches_used: int
+    confidence: str = "firm"      # firm | thin | very-thin
+
+
+def _confidence(count: int) -> str:
+    if count >= MIN_SAMPLE:
+        return "firm"
+    return "thin" if count >= THIN_SAMPLE else "very-thin"
+
+
+def _median(values: list[float]) -> float:
+    ordered = sorted(values)
+    middle = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[middle]
+    return (ordered[middle - 1] + ordered[middle]) / 2
 
 
 def price_by_search(
@@ -39,8 +62,11 @@ def price_by_search(
     max_searches: int = 4,
 ) -> TradeResult:
     searches = 0
+    best: TradeResult | None = None
+    best_key: str | None = None
+    rungs = min(len(RELAX_STEPS), max_searches)
 
-    for step in range(min(len(RELAX_STEPS), max_searches)):
+    for step in range(rungs):
         query = build_query(item, category, index, notables, status=status, relax=step)
         key = query_hash(query)
 
@@ -50,10 +76,6 @@ def price_by_search(
 
         query_id, hashes = trade.search(query)
         searches += 1
-        # One genuine listing already establishes a ceiling. Demanding a
-        # thicker market here was rejecting exactly the scarce items whose
-        # price is hardest to guess — a Megalomaniac with a specific notable
-        # has a handful of listings, not dozens.
         if len(hashes) < min_results:
             continue
 
@@ -65,12 +87,26 @@ def price_by_search(
         cheapest = min(prices)
         result = TradeResult(
             ceiling_ex=round(cheapest, 2),
+            median_ex=round(_median(prices), 2),
             suggested_ask_ex=round(cheapest * SUGGESTED_ASK_FACTOR, 2),
             tag="exact" if step == 0 else f"relaxed:{step}",
             listings=len(prices),
             searches_used=searches,
+            confidence=_confidence(len(hashes)),
         )
-        cache.put("trade_price", key, result.__dict__, ttl=TTL["trade_price"])
-        return result
+        # Keep the first usable answer, but keep relaxing while the sample is
+        # too small to trust — a wider search finds the ordinary listings that
+        # actually set the price.
+        if best is None:
+            best, best_key = result, key
+        if result.confidence == "firm":
+            best, best_key = result, key
+            break
 
-    return TradeResult(None, None, "unpriced:above-market", 0, searches)
+    if best is None:
+        return TradeResult(None, None, None, "unpriced:above-market", 0, searches)
+
+    best = TradeResult(**{**best.__dict__, "searches_used": searches})
+    if best_key:
+        cache.put("trade_price", best_key, best.__dict__, ttl=TTL["trade_price"])
+    return best

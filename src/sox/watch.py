@@ -111,9 +111,6 @@ def status(session: Session, divine_ex: float) -> str:
     line = f"{CYAN}total {total}{RESET}" + separator + separator.join(
         p for p in parts if p
     )
-    if session.best_name:
-        best = f"{session.best_ex:,.0f} ex"
-        line += f"\n{DIM}best so far: {session.best_name} at {best}{RESET}"
     return f"{rule()}\n{line}\n{rule()}"
 
 

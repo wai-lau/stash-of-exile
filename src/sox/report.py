@@ -20,6 +20,8 @@ class PricedItem:
     tag: str | None
     reason: str = ""
     listings: int = 0
+    median_ex: float | None = None
+    confidence: str = "firm"
     suggested_ask_ex: float | None = None
     searches_used: int = 0
     quantity: int = 0
@@ -50,14 +52,18 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
             lines.append("             nothing at least as good is listed — "
                          "price this one by hand, it may be the good one")
     elif priced.source == "trade":
-        lines.append(f"  ceiling    {fmt_price(priced.price_ex, divine_ratio)}"
+        market = f"low {fmt_price(priced.price_ex, divine_ratio)}"
+        if priced.median_ex is not None:
+            market += f"  ·  median {fmt_price(priced.median_ex, divine_ratio)}"
+        lines.append(f"  market     {market}")
+        lines.append(f"  ask        {fmt_price(priced.suggested_ask_ex, divine_ratio)}"
                      f"   ({priced.listings} listings, {priced.tag})")
-        lines.append(f"  ask        {fmt_price(priced.suggested_ask_ex, divine_ratio)}")
-        lines.append("             cheapest listing at least as good as yours, "
-                     "so treat it as a ceiling, not a comp")
-        if priced.listings < 3:
-            lines.append("             thin evidence — only a couple of comparable "
-                         "listings exist, so treat this as a rough bound")
+        if priced.confidence == "very-thin":
+            lines.append("             VERY THIN — almost nothing comparable is "
+                         "listed, so this number is a guess, not a price")
+        elif priced.confidence == "thin":
+            lines.append("             thin sample — few comparable listings, so "
+                         "the low end may be an outlier")
     else:
         lines.append(f"  index      {fmt_price(priced.price_ex, divine_ratio)}"
                      + (f"   ({priced.quantity:,} listed)" if priced.quantity else ""))
