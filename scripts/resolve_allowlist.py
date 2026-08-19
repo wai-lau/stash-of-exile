@@ -30,9 +30,6 @@ ALLOWLIST = OrderedDict(
                 (2, "#% increased Energy Shield", None),
                 (1, "#% increased Evasion Rating", None),
                 (1, "#% increased Armour", None),
-                # Flat defences, which were missing while flat ES was present.
-                (2, "# to Evasion Rating", None),
-                (2, "# to Armour", None),
                 (2, "#% increased Evasion and Energy Shield", "hybrid bases"),
                 (2, "#% increased Armour and Energy Shield", None),
                 (2, "#% increased Armour and Evasion", None),
@@ -91,8 +88,6 @@ ALLOWLIST = OrderedDict(
                 (2, "Leeches #% of Physical Damage as Mana", None),
                 (2, "Leeches #% of Physical Damage as Life", None),
                 (1, "#% increased Mana Regeneration Rate", None),
-                (2, "Gain # Life per Enemy Killed", None),
-                (2, "Gain # Mana per Enemy Killed", None),
             ],
         ),
         (

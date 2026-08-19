@@ -66,22 +66,6 @@ local_ids = ["explicit.stat_1062208444"]
 tags = ["armour", "defence"]
 
 [[category.mod]]
-ids = ["explicit.stat_2144192055"]
-slug = "to_evasion_rating"
-text = "# to Evasion Rating"
-weight = 2
-local_ids = ["explicit.stat_53045048"]
-tags = ["defence", "evasion"]
-
-[[category.mod]]
-ids = ["explicit.stat_809229260"]
-slug = "to_armour"
-text = "# to Armour"
-weight = 2
-local_ids = ["explicit.stat_3484657501"]
-tags = ["armour", "defence"]
-
-[[category.mod]]
 ids = ["explicit.stat_1999113824"]
 slug = "increased_evasion_and_energy_shield"
 text = "#% increased Evasion and Energy Shield"
@@ -336,19 +320,6 @@ ids = ["explicit.stat_789117908"]
 slug = "increased_mana_regeneration_rate"
 text = "#% increased Mana Regeneration Rate"
 weight = 1
-tags = ["mana"]
-
-[[category.mod]]
-ids = ["explicit.stat_3695891184"]
-slug = "gain_life_per_enemy_killed"
-text = "Gain # Life per Enemy Killed"
-weight = 2
-
-[[category.mod]]
-ids = ["explicit.stat_1368271171"]
-slug = "gain_mana_per_enemy_killed"
-text = "Gain # Mana per Enemy Killed"
-weight = 2
 tags = ["mana"]
 
 [[category]]

@@ -205,15 +205,15 @@ def test_armour_uses_the_local_stat_id():
     from sox.valuation.mods import normalize_mod
     from sox.valuation.query import build_query, category_for, stat_ids_for
 
-    entry = MODS[normalize_mod("+145 to Evasion Rating")]
-    assert entry.local_ids, "flat evasion must know its local twin"
+    entry = MODS[normalize_mod("+120 to maximum Energy Shield")]
+    assert entry.local_ids, "flat ES must know its local twin"
     assert stat_ids_for(entry, "armour.helmet") == entry.local_ids
     assert stat_ids_for(entry, "accessory.amulet") == tuple(entry.ids)
 
     helmet = itemtext.parse(
         "Item Class: Helmets\nRarity: Rare\nDragon Visor\nFreebooter Cap\n"
-        "--------\nEvasion Rating: 582\n--------\nItem Level: 81\n--------\n"
-        "{ Prefix Modifier }\n+145 to Evasion Rating\n"
+        "--------\nEnergy Shield: 120\n--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n+120 to maximum Energy Shield\n"
     )
     query = build_query(helmet, category_for(helmet), MODS, NOTABLES)
     ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
@@ -225,7 +225,8 @@ def test_local_defences_do_not_leak_onto_jewellery():
     from sox.valuation.mods import normalize_mod
     from sox.valuation.query import stat_ids_for
 
-    for text in ("# to Armour", "# to maximum Energy Shield", "#% increased Attack Speed"):
+    for text in ("#% increased Armour", "# to maximum Energy Shield",
+                 "#% increased Attack Speed"):
         entry = MODS[normalize_mod(text)]
         assert stat_ids_for(entry, "accessory.ring") == tuple(entry.ids)
 
