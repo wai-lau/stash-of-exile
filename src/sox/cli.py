@@ -13,7 +13,7 @@ from pathlib import Path
 
 import httpx
 
-from sox import itemtext, report
+from sox import clipboard, itemtext, report, watch as watch_ui
 from sox.cache import Cache
 from sox.config import load_config
 from sox.ggg.governor import RateGovernor
@@ -40,6 +40,12 @@ def build_parser() -> argparse.ArgumentParser:
     price.add_argument("-f", "--file", type=Path, help="file of item texts, blank-line separated")
     price.add_argument("--no-trade", action="store_true", help="index only; no trade calls")
 
+    watcher = sub.add_parser("watch", help="live-price every item you copy")
+    watcher.add_argument("--poll", type=int, default=400,
+                         help="clipboard poll interval in milliseconds")
+    watcher.add_argument("--no-trade", action="store_true",
+                         help="index only; no trade calls")
+
     sub.add_parser("leagues", help="show the current league and divine rate")
     return parser
 
@@ -63,6 +69,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"current league : {league.value} ({league.short})")
             print(f"1 divine       : {league.divine_price_ex:,.1f} exalted")
             return 0
+
+        if args.command == "watch":
+            return run_watch(args, cfg, cache, scout, league)
 
         blocks = _read_items(args.file)
         if not blocks:
@@ -95,9 +104,65 @@ def main(argv: list[str] | None = None) -> int:
         cache.close()
 
 
+def run_watch(args, cfg, cache, scout, league) -> int:
+    """Price every item copied to the clipboard, until interrupted."""
+    index = scout.prices(league.short)
+    rates = scout.currency_rates(index)
+    mod_index = build_index(load_mods())
+    base_rules, unique_rules = load_bases(), load_uniques()
+    notables = load_notables()
+
+    trade = None
+    if not args.no_trade:
+        session = GGGSession(RateGovernor(), httpx.Client(timeout=30), cfg.user_agent)
+        trade = TradeClient(session, cache, cfg.league or league.value)
+
+    print(watch_ui.banner(league.value, league.divine_price_ex,
+                          clipboard.describe_backend()), flush=True)
+    stats = watch_ui.Session()
+
+    try:
+        for text in clipboard.watch(args.poll):
+            if not clipboard.looks_like_item(text):
+                continue
+            try:
+                body, price_ex, searches = price_and_measure(
+                    text, index, rates, mod_index, base_rules, unique_rules,
+                    notables, trade, cache, cfg, league.divine_price_ex,
+                )
+            except (GGGError, httpx.HTTPError) as exc:
+                # One bad lookup must not end the session; the next copy retries.
+                print(watch_ui.error(str(exc)), flush=True)
+                continue
+            stats.record(body.splitlines()[0], price_ex, searches)
+            print(watch_ui.entry(body, price_ex, league.divine_price_ex), flush=True)
+            print(watch_ui.status(stats, league.divine_price_ex), flush=True)
+    except KeyboardInterrupt:
+        print()
+        print(watch_ui.status(stats, league.divine_price_ex))
+    return 0
+
+
+def price_and_measure(block, index, rates, mod_index, base_rules, unique_rules,
+                      notables, trade, cache, cfg, divine_ratio):
+    """Price one item and report its value and search cost for the tally."""
+    item = itemtext.parse(block)
+    priced = _price_item(item, index, rates, mod_index, base_rules,
+                         unique_rules, notables, trade, cache, cfg)
+    return (report.render(item, priced, divine_ratio),
+            priced.price_ex, priced.searches_used)
+
+
 def price_one(block, index, rates, mod_index, base_rules, unique_rules,
               notables, trade, cache, cfg, divine_ratio) -> str:
     item = itemtext.parse(block)
+    priced = _price_item(item, index, rates, mod_index, base_rules,
+                         unique_rules, notables, trade, cache, cfg)
+    return report.render(item, priced, divine_ratio)
+
+
+def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
+                notables, trade, cache, cfg) -> report.PricedItem:
     item_class = classify(item)
     entry = index_price_for(item, index)
 
@@ -111,7 +176,7 @@ def price_one(block, index, rates, mod_index, base_rules, unique_rules,
                 status=cfg.status, max_searches=cfg.max_searches,
             )
             group, stats = explain_selection(item, mod_index, notables)
-            priced = report.PricedItem(
+            return report.PricedItem(
                 name=display_name(item), item_class=item_class,
                 price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",
                 tag=result.tag, reason=verdict.reason, listings=result.listings,
@@ -119,21 +184,18 @@ def price_one(block, index, rates, mod_index, base_rules, unique_rules,
                 searches_used=result.searches_used,
                 searched_group=group, searched_stats=stats,
             )
-            return report.render(item, priced, divine_ratio)
 
     if entry is not None:
-        priced = report.PricedItem(
+        return report.PricedItem(
             name=display_name(item), item_class=item_class, price_ex=entry.price_ex,
             source="index", tag=None, reason=verdict.reason, quantity=entry.quantity,
         )
-        return report.render(item, priced, divine_ratio)
 
     tag = "unpriced:unknown-class" if item_class is ItemClass.UNKNOWN else "unpriced:no-index"
-    priced = report.PricedItem(
+    return report.PricedItem(
         name=display_name(item), item_class=item_class, price_ex=None,
         source="unpriced", tag=tag, reason=verdict.reason,
     )
-    return report.render(item, priced, divine_ratio)
 
 
 if __name__ == "__main__":

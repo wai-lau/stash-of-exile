@@ -122,3 +122,25 @@ def test_explain_selection_reports_notables_for_jewels():
     group, stats = explain_selection(load("MegalomaniacJewel"), MODS, NOTABLES)
     assert group == "notable"
     assert all(s.startswith("Allocates ") for s in stats)
+
+
+def test_clipboard_detects_item_text_and_ignores_prose():
+    from sox.clipboard import looks_like_item
+
+    assert looks_like_item((FIXTURES / "RareItem.txt").read_text())
+    assert looks_like_item("Rarity: Unique\nMageblood\nUtility Belt")
+    assert not looks_like_item("just some text I copied from a wiki")
+    assert not looks_like_item("")
+
+
+def test_watch_session_tracks_totals_and_best():
+    from sox.watch import Session
+
+    s = Session()
+    s.record("Cheap Thing", 10.0, searches=1)
+    s.record("Mageblood", 135416.0, searches=2)
+    s.record("Unpriceable", None, searches=3)
+    assert s.priced == 2 and s.unpriced == 1
+    assert s.searches == 6
+    assert s.best_name == "Mageblood"
+    assert round(s.total_ex) == 135426

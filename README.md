@@ -3,11 +3,57 @@
 Prices Path of Exile 2 items from the text the game puts on your clipboard.
 
 ```
-# copy an item in game with Ctrl+C, then:
-uv run sox price          # paste, then Ctrl-D
+uv run sox watch          # live feed: every item you copy gets priced
+uv run sox price          # one-shot: paste, then Ctrl-D
 uv run sox price -f items.txt
 uv run sox leagues
 ```
+
+## Watch mode
+
+Park a terminal on a second monitor and run `sox watch`. Copy any item in
+game with Ctrl+C and its price appears, with a running session total:
+
+```
+sox watch  ·  Runes of Aldur  ·  1 div = 320 ex
+────────────────────────────────────────────────────────────────
+20:14:28  Megalomaniac  [Diamond]
+          class      unique  ilvl 80
+          ceiling    333 ex (1.0 div)   (3 listings, relaxed:3)
+          ask        300.1 ex
+          searched   as notable
+                     - Allocates Barbaric Strength
+                     - Allocates Kite Runner
+────────────────────────────────────────────────────────────────
+total 333 ex (1.0 div)  ·  1 priced  ·  4 searches
+```
+
+On WSL the Windows clipboard is read through a single long-lived
+powershell.exe, because starting one per poll costs about half a second.
+Native Linux (wl-paste, xclip, xsel) and macOS (pbpaste) are polled directly.
+Non-item text is ignored, and whatever was on the clipboard before startup is
+skipped.
+
+## What makes it different from an overlay
+
+Exiled Exchange 2 is the mature PoE2 price-check overlay and better at
+ergonomics. But by its own documentation you supply the judgement: "You tick
+the checkboxes and relevant filters for the item yourself. Choose stats that
+synergize well, this knowledge only comes from playing different build
+archetypes."
+
+sox encodes that. It picks the stats to search on by finding the item's
+dominant archetype rather than its heaviest mods, and prints what it chose:
+
+```
+  searched   as spell
+             - # to Level of all Spell Skills
+             - #% increased Cast Speed
+             - #% increased Spell Damage
+```
+
+Picking by weight alone would have taken Attack Speed over Spell Damage on
+that amulet and described a buyer who does not exist.
 
 ## Why the clipboard
 
