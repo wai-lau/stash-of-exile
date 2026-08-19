@@ -544,24 +544,41 @@ LOCAL_DAMAGE_MODS = (
 )
 
 
-def _property_text(item: dict, name: str) -> str | None:
+def _property_texts(item: dict, name: str) -> list[str]:
+    """Every value under a property, matched through its markup.
+
+    Both halves cost real damage. A listing names the line
+    "[Physical] Damage", so an exact-name lookup found no physical damage on
+    ANY listing and computed a mace's dps from its elemental alone — 124.7
+    against the 216.78 the API had already worked out.
+
+    And a weapon carrying two elemental types stops printing them by name:
+    both collapse into one "Elemental Damage" line holding a range apiece,
+    "9-13, 6-86", which read at its first value alone loses the rest. The two
+    of them are 88.35 edps, and the first is 17.
+    """
     for prop in item.get("properties") or []:
-        if prop.get("name") == name:
-            values = prop.get("values") or []
-            if values and values[0]:
-                return str(values[0][0])
-    return None
+        if clean_markup(prop.get("name", "")) == name:
+            return [str(value[0]) for value in (prop.get("values") or []) if value]
+    return []
+
+
+def _property_text(item: dict, name: str) -> str | None:
+    values = _property_texts(item, name)
+    return values[0] if values else None
 
 
 def _average_range(text: str | None) -> float:
-    """The midpoint of "74-231". A damage range is shopped on its average."""
+    """The midpoint of "74-231", summed over every range on the line.
+
+    The clipboard writes a weapon's two elemental types as one line —
+    "Elemental Damage: 43-56, 2-27" — so reading the first range alone lost
+    the second: 49.5 of the 64 the weapon actually adds.
+    """
     if not text:
         return 0.0
-    match = DAMAGE_RANGE.search(text)
-    if not match:
-        return 0.0
-    low, high = (float(g.replace(",", "")) for g in match.groups())
-    return (low + high) / 2
+    return sum((float(low.replace(",", "")) + float(high.replace(",", ""))) / 2
+               for low, high in DAMAGE_RANGE.findall(text))
 
 
 # Local damage mods: the tooltip has already folded these into the damage
@@ -571,12 +588,23 @@ def _average_range(text: str | None) -> float:
 NEVER = re.compile(r"(?!)")
 _FLAT = r"^adds \d[\d.,]* to \d[\d.,]* {} damage$"
 PHYSICAL_DAMAGE = ("Physical Damage",)
+# One elemental group, not three. A weapon with a single elemental type names
+# it — "Fire Damage: 66-106" — and one with two stops: they become an
+# "Elemental Damage" line carrying a range each. Reading only the named lines
+# lost every multi-element weapon's elemental damage entirely, which is how
+# exalting a lightning roll onto a fire mace DROPPED its dps floor and moved
+# the search from 2,659 listings to 5,083 cheaper ones.
+#
+# The three share a flat pattern and have no weapon-local percent between
+# them, so merging them changes nothing else. A weapon never prints both a
+# named line and the combined one.
+ELEMENTAL_DAMAGE = ("Fire Damage", "Cold Damage", "Lightning Damage",
+                    "Elemental Damage")
 RUNE_DAMAGE_TYPES = (
     (PHYSICAL_DAMAGE, re.compile(_FLAT.format("physical"), re.I),
      re.compile(r"^\d[\d.]*% increased physical damage$", re.I)),
-    (("Fire Damage",), re.compile(_FLAT.format("fire"), re.I), NEVER),
-    (("Cold Damage",), re.compile(_FLAT.format("cold"), re.I), NEVER),
-    (("Lightning Damage",), re.compile(_FLAT.format("lightning"), re.I), NEVER),
+    (ELEMENTAL_DAMAGE,
+     re.compile(_FLAT.format("(?:fire|cold|lightning)"), re.I), NEVER),
     (("Chaos Damage",), re.compile(_FLAT.format("chaos"), re.I), NEVER),
 )
 ATTACK_SPEED_PCT = re.compile(r"^\d[\d.]*% increased attack speed$", re.I)
@@ -643,7 +671,8 @@ def rune_free_dps(item: dict) -> float | None:
         return None
     combined = 0.0
     for names, flat, percent in RUNE_DAMAGE_TYPES:
-        shown = sum(_average_range(_property_text(item, n)) for n in names)
+        shown = sum(_average_range(text)
+                    for n in names for text in _property_texts(item, n))
         if shown <= 0:
             continue
         free = _strip_runes(shown, *_own_and_rune_totals(item, flat, percent))

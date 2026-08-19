@@ -7,6 +7,8 @@ Pricing must keep widening until the sample means something.
 
 from pathlib import Path
 
+import pytest
+
 from sox import itemtext
 from sox.cache import Cache
 from sox.ggg.trade import Listing
@@ -993,8 +995,6 @@ def test_physical_dps_is_filed_at_twenty_percent_quality_and_elemental_is_not():
     lightning is filed at 4.4 edps, exactly as shown: quality raises physical
     damage and nothing else.
     """
-    import pytest
-
     from sox.valuation.query import rune_free_dps
 
     head = ("Item Class: Two Hand Maces\nRarity: Rare\nX\nY\n--------\n"
@@ -1054,3 +1054,61 @@ def test_a_genuine_hybrid_is_still_no_cluster():
     tied = [entry("elemental", 3), entry("elemental", 2),
             entry("physical", 3), entry("physical", 2)]
     assert dominant_archetype(tied) == (None, 2)
+
+
+def _listed_weapon(physical, elemental, aps):
+    """A weapon listing shaped the way the fetch endpoint returns one.
+
+    Measured live: this is a real mace, 64-91 physical and two elemental
+    types at 9-13 and 6-86, 1.55 aps. Its `extended` block — what the dps
+    filter reads — says dps 232.5, pdps 144.15, edps 88.35.
+    """
+    return {
+        "properties": [
+            {"name": "[Physical] Damage", "values": [[physical, 1]]},
+            {"name": "[ElementalDamage|Elemental] Damage",
+             "values": [[low_high, n] for n, low_high in enumerate(elemental, 5)]},
+            {"name": "Attacks per Second", "values": [[str(aps), 0]]},
+        ],
+        "explicitMods": [],
+        "runeMods": [],
+    }
+
+
+def test_a_listings_damage_is_read_through_its_markup():
+    """A listing names the line "[Physical] Damage", and an exact-name lookup
+    found no physical damage on ANY listing — a mace's dps came out 124.7
+    against the 216.78 the API had already worked out from the same item."""
+    from sox.valuation.query import rune_free_dps
+
+    mace = _listed_weapon("64-91", ["9-13", "6-86"], 1.55)
+    assert rune_free_dps(mace) == pytest.approx(232.5, abs=0.5)
+
+
+def test_a_second_elemental_type_is_not_lost_with_the_first():
+    """One elemental type is named — "Fire Damage: 66-106" — and two are not:
+    both collapse into an "Elemental Damage" line carrying a range apiece.
+
+    Read at the named lines alone, a weapon with two of them had NO elemental
+    damage at all, so exalting a lightning roll onto a fire mace dropped its
+    dps floor instead of raising it and moved the search from 2,659 listings
+    to 5,083 cheaper ones. The score went up and the price went down.
+    """
+    from sox.valuation.query import rune_free_dps
+
+    head = ("Item Class: One Hand Maces\nRarity: Rare\nFoe Blow\nMarauding Mace\n"
+            "--------\nPhysical Damage: 45-85\n{elemental}\n"
+            "Attacks per Second: 1.25\n--------\nItem Level: 82\n")
+    fire = itemtext.parse(head.format(elemental="Fire Damage: 43-56"))
+    both = itemtext.parse(head.format(elemental="Elemental Damage: 43-56, 2-27"))
+    assert rune_free_dps(both) > rune_free_dps(fire), "a roll added is damage added"
+    # 65 physical filed at 20% quality, plus 49.5 fire and 14.5 lightning.
+    assert rune_free_dps(both) == pytest.approx((65 * 1.2 + 64) * 1.25, abs=0.05)
+
+
+def test_every_range_on_one_line_counts():
+    from sox.valuation.query import _average_range
+
+    assert _average_range("43-56, 2-27") == 49.5 + 14.5
+    assert _average_range("45-85") == 65.0
+    assert _average_range(None) == 0.0
