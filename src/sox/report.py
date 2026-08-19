@@ -127,7 +127,7 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                 # through the item's total, and that must not read as ignored.
                 mark, note = "+0", f"({tag})" if tag else ""
             elif weight == 0:
-                mark, note = "·", "(minor-mod cap reached)"
+                mark, note = "·", "(mod cap)"
             else:
                 mark, note = f"+{weight}", f"({tag})" if tag else ""
             row = f"{mark:<3} {str(text):<{width}}  {note}".rstrip()
