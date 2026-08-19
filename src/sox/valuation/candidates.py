@@ -146,11 +146,24 @@ def score_gear(item: dict, index: dict[str, ModEntry], base_rules: BaseRules) ->
     return total, detail
 
 
-def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
-    """Every line that adds up to the coherence total.
+def coherence_of(item: dict, index) -> tuple[str | None, int, int]:
+    """The archetype the item's mods cluster around: (name, count, bonus).
 
-    One row per mod with the archetype it serves, then a row per bonus. The
-    rows sum to the total, so the number needs no separate explanation.
+    Coherence is that clustering — not the score. Mods serving one archetype
+    mean a single buyer wants the whole item, which is what a price-check
+    overlay leaves to the player to judge.
+    """
+    entries = matched(item_mods(item), index)
+    name, count = dominant_archetype(entries)
+    bonus, _ = coherence_bonus(item_mods(item), index)
+    return name, count, bonus
+
+
+def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
+    """Every line that adds up to the score.
+
+    One row per mod with the archetype it serves, then a row per bonus other
+    than coherence, which is reported on its own.
     """
     mods = item_mods(item)
     entries = matched(mods, index)
@@ -165,10 +178,8 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
         rows.append((text, weight, tag))
 
     mod_score, _ = score_mods(mods, index)
-    bonus, why = coherence_bonus(mods, index)
+    bonus, _ = coherence_bonus(mods, index)
     if bonus:
-        count = why.split("x")[-1] if "x" in why else "?"
-        rows.append((f"{count} mods share {dominant}", bonus, ""))
         mod_score += bonus
 
     has_premium = any(

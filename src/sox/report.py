@@ -27,6 +27,9 @@ class PricedItem:
     relax_used: int = 0
     score: int = 0
     breakdown: tuple[tuple[str, object], ...] = ()
+    coherence_group: str | None = None
+    coherence_count: int = 0
+    coherence_bonus: int = 0
     suggested_ask_ex: float | None = None
     searches_used: int = 0
     quantity: int = 0
@@ -119,16 +122,24 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         for stat in priced.searched_stats:
             lines.append(f"             - {stat}")
     if priced.breakdown:
-        lines.append(f"  coherence  {priced.score}")
+        lines.append(f"  score      {priced.score}")
         width = max((len(str(t)) for t, _, _ in priced.breakdown), default=0)
         for text, weight, tag in priced.breakdown:
             if weight is None:
-                mark, note = "?", "(not in allowlist)"
+                # Shown as +0 rather than "?": every row states what it
+                # contributed, and these rows sum to the total.
+                mark, note = "+0", "(not in allowlist)"
             elif weight == 0:
                 mark, note = "·", "(minor-mod cap reached)"
             else:
                 mark, note = f"+{weight}", f"({tag})" if tag else ""
             lines.append(f"             {mark:<3} {str(text):<{width}}  {note}".rstrip())
+        if priced.coherence_group and priced.coherence_count > 1:
+            gain = f"  +{priced.coherence_bonus}" if priced.coherence_bonus else ""
+            lines.append(f"  coherence  {priced.coherence_count} mods cluster on "
+                         f"{priced.coherence_group}{gain}")
+        elif priced.breakdown:
+            lines.append("  coherence  none — the mods serve different builds")
     if priced.searches_used:
         lines.append(f"  cost       {priced.searches_used} search"
                      f"{'es' if priced.searches_used != 1 else ''}")

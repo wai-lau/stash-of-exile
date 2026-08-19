@@ -274,10 +274,15 @@ def test_score_line_shows_how_the_total_was_reached():
     assert total > 0
 
 
-def test_breakdown_rows_sum_to_the_total():
-    """The rows ARE the explanation, so they must add up to the number."""
+def test_breakdown_rows_plus_coherence_sum_to_the_total():
+    """The rows ARE the explanation, so they must add up to the number.
+
+    Coherence is reported on its own line rather than as a row, so it is
+    added back here — if it were double counted or dropped, the printed
+    breakdown would stop matching the score.
+    """
     from sox.valuation.allowlists import load_bases
-    from sox.valuation.candidates import score_gear, score_rows
+    from sox.valuation.candidates import coherence_of, score_gear, score_rows
 
     item = itemtext.parse(
         "Item Class: Quarterstaves\nRarity: Rare\nDragon Bane\nBolting Quarterstaff\n"
@@ -292,7 +297,8 @@ def test_breakdown_rows_sum_to_the_total():
     base_rules = load_bases()
     total, _ = score_gear(item, MODS, base_rules)
     rows = score_rows(item, MODS, base_rules)
-    assert sum(w for _, w, _ in rows if isinstance(w, int)) == total
+    _, _, bonus = coherence_of(item, MODS)
+    assert sum(w for _, w, _ in rows if isinstance(w, int)) + bonus == total
 
 
 def test_mods_carry_the_archetype_they_serve():
