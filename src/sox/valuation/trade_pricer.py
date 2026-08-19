@@ -33,6 +33,9 @@ class TradeResult:
     listings: int
     searches_used: int
     confidence: str = "firm"      # firm | thin | very-thin
+    relax_used: int = 0           # which ladder rung produced this
+    p25_ex: float | None = None   # lower quartile; the ask is based on this
+    skewed: bool = False          # low is far below the body of the market
 
 
 def _confidence(count: int) -> str:
@@ -47,6 +50,16 @@ def _median(values: list[float]) -> float:
     if len(ordered) % 2:
         return ordered[middle]
     return (ordered[middle - 1] + ordered[middle]) / 2
+
+
+def _percentile(values: list[float], fraction: float) -> float:
+    ordered = sorted(values)
+    index = min(int(len(ordered) * fraction), len(ordered) - 1)
+    return ordered[index]
+
+
+# A low this far under the median is a dump listing, not the market price.
+SKEW_RATIO = 10.0
 
 
 def price_by_search(
@@ -85,14 +98,25 @@ def price_by_search(
             continue
 
         cheapest = min(prices)
+        middle = _median(prices)
+        quartile = _percentile(prices, 0.25)
+        skewed = middle > 0 and cheapest * SKEW_RATIO < middle
+
+        # Base the ask on the lower quartile, not the single cheapest listing.
+        # One person dumping an item at 0.2ex does not make it worth 0.2ex,
+        # and an ask derived from that tells you to give the item away.
+        basis = quartile if skewed else cheapest
         result = TradeResult(
             ceiling_ex=round(cheapest, 2),
-            median_ex=round(_median(prices), 2),
-            suggested_ask_ex=round(cheapest * SUGGESTED_ASK_FACTOR, 2),
+            median_ex=round(middle, 2),
+            p25_ex=round(quartile, 2),
+            suggested_ask_ex=round(basis * SUGGESTED_ASK_FACTOR, 2),
             tag="exact" if step == 0 else f"relaxed:{step}",
             listings=len(prices),
             searches_used=searches,
             confidence=_confidence(len(hashes)),
+            relax_used=step,
+            skewed=skewed,
         )
         # Keep the first usable answer, but keep relaxing while the sample is
         # too small to trust — a wider search finds the ordinary listings that

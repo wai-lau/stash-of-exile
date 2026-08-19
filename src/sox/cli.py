@@ -183,12 +183,16 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 item, category, mod_index, notables, trade, cache, rates,
                 status=cfg.status, max_searches=cfg.max_searches,
             )
-            group, stats = explain_selection(item, mod_index, notables)
+            # Explain the rung that actually produced the price, not rung 0.
+            group, stats = explain_selection(item, mod_index, notables,
+                                             relax=result.relax_used)
             return report.PricedItem(
                 name=display_name(item), item_class=item_class,
                 price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",
                 tag=result.tag, reason=verdict.reason, listings=result.listings,
-                median_ex=result.median_ex, confidence=result.confidence,
+                median_ex=result.median_ex, p25_ex=result.p25_ex,
+                confidence=result.confidence, skewed=result.skewed,
+                relax_used=result.relax_used,
                 suggested_ask_ex=result.suggested_ask_ex,
                 searches_used=result.searches_used,
                 searched_group=group, searched_stats=stats,

@@ -78,3 +78,44 @@ def test_median_is_reported_alongside_the_low(tmp_path):
 
 def test_firm_requires_a_real_sample():
     assert MIN_SAMPLE >= 8
+
+
+def test_ask_ignores_a_dump_listing(tmp_path):
+    """One person dumping at 0.2ex does not make the item worth 0.2ex.
+
+    A low far under the body of the market is a dump, and an ask derived from
+    it tells you to give the item away.
+    """
+    trade = ScriptedTrade([(12, [0.2, 30.0, 36.0, 40.0, 45.0])])
+    result = price(trade, tmp_path)
+    assert result.ceiling_ex == 0.2, "the low is still reported"
+    assert result.skewed is True
+    assert result.suggested_ask_ex > 1.0, "ask must not follow the dump listing"
+
+
+def test_ask_follows_the_low_when_the_market_is_tight(tmp_path):
+    trade = ScriptedTrade([(12, [10.0, 11.0, 12.0, 13.0])])
+    result = price(trade, tmp_path)
+    assert result.skewed is False
+    assert result.suggested_ask_ex == 9.0     # 10 * 0.9
+
+
+def test_result_records_which_rung_priced_it(tmp_path):
+    """The explanation must describe the search that actually ran."""
+    trade = ScriptedTrade([
+        (0, []),
+        (0, []),
+        (12, [5.0, 6.0, 7.0]),
+    ])
+    result = price(trade, tmp_path)
+    assert result.relax_used == 2
+    assert result.tag == "relaxed:2"
+
+
+def test_explanation_matches_the_rung_used():
+    """Rung 2 keeps 2 stats, so the display must not show 3."""
+    from sox.valuation.query import RELAX_STEPS, explain_selection
+
+    _, at_rung_2 = RELAX_STEPS[2]
+    _, stats = explain_selection(ITEM, MODS, NOTABLES, relax=2)
+    assert len(stats) <= at_rung_2

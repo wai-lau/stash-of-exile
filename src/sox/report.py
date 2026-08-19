@@ -21,7 +21,10 @@ class PricedItem:
     reason: str = ""
     listings: int = 0
     median_ex: float | None = None
+    p25_ex: float | None = None
     confidence: str = "firm"
+    skewed: bool = False
+    relax_used: int = 0
     suggested_ask_ex: float | None = None
     searches_used: int = 0
     quantity: int = 0
@@ -53,11 +56,19 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                          "price this one by hand, it may be the good one")
     elif priced.source == "trade":
         market = f"low {fmt_price(priced.price_ex, divine_ratio)}"
+        if priced.p25_ex is not None:
+            market += f"  ·  25th {fmt_price(priced.p25_ex, divine_ratio)}"
         if priced.median_ex is not None:
             market += f"  ·  median {fmt_price(priced.median_ex, divine_ratio)}"
         lines.append(f"  market     {market}")
         lines.append(f"  ask        {fmt_price(priced.suggested_ask_ex, divine_ratio)}"
                      f"   ({priced.listings} listings, {priced.tag})")
+        if priced.skewed:
+            lines.append("             the low is far under the rest of the market — "
+                         "someone is dumping, so the ask uses the 25th percentile")
+        if priced.relax_used:
+            lines.append("             found only after widening, so these comparables "
+                         "are weaker than your item — read the price as a floor")
         if priced.confidence == "very-thin":
             lines.append("             VERY THIN — almost nothing comparable is "
                          "listed, so this number is a guess, not a price")
