@@ -33,7 +33,7 @@ class Config:
     # online sellers cut one search from 918 listings to 1, which then priced
     # a 3ex item in the hundreds.
     status: str = "securable"
-    max_searches: int = 4          # per item; one per relaxation rung
+    max_searches: int = 5          # per item; one per relaxation rung
     cache_path: Path = DEFAULT_CACHE_PATH
     user_agent: str = USER_AGENT
     force: bool = False            # search even low-scoring items

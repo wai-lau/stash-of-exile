@@ -783,3 +783,54 @@ def test_the_search_asks_for_the_rarity_the_item_actually_is():
         types = build_query(item, category_for(item), MODS, NOTABLES)[
             "query"]["filters"]["type_filters"]["filters"]
         assert types["rarity"] == {"option": expected}, rarity
+
+
+def test_a_mod_covered_by_an_equipment_filter_is_tagged_as_one():
+    """The mod IS searched, but through the item's total.
+
+    Naming its buyer group instead implied a stat filter that is not in the
+    query: a mace showed its cold roll as "(elemental)" and its physical roll
+    as "(filter)" when both had become the one DPS filter.
+    """
+    from sox.valuation.candidates import score_rows
+
+    mace = itemtext.parse(
+        "Item Class: One Hand Maces\nRarity: Rare\nPain Ram\nBandit Mace\n"
+        "--------\nPhysical Damage: 100-211\nCold Damage: 58-97\n"
+        "Attacks per Second: 1.45\n--------\nItem Level: 80\n--------\n"
+        "{ Prefix Modifier }\nAdds 58(40-60) to 97(80-110) Cold Damage\n"
+        "{ Prefix Modifier }\n127(100-129)% increased Physical Damage\n"
+        "{ Suffix Modifier }\n+2 to Level of all Attack Skills\n"
+    )
+    tags = {text: tag for text, _weight, tag in score_rows(mace, MODS, load_bases())}
+    assert tags["Adds 58 to 97 Cold Damage"] == "filter"
+    assert tags["127% increased Physical Damage"] == "filter"
+    assert tags["+2 to Level of all Attack Skills"] == ""
+
+
+def test_the_ladder_can_widen_all_the_way_to_no_mods():
+    """What is left is still a real search — category, rarity, item level,
+    requirements, and the totals in the equipment filters.
+
+    On a weapon those totals are most of the item: DPS and requirements alone
+    is how you would search for a mace by hand. Without this rung a weapon
+    whose exact mods nobody else rolled came back unpriced while comparable
+    maces were listed at 10 divine.
+    """
+    from sox.valuation.query import RELAX_STEPS, build_query, category_for
+
+    assert RELAX_STEPS[-1] == 0
+    mace = itemtext.parse(
+        "Item Class: One Hand Maces\nRarity: Rare\nPain Ram\nBandit Mace\n"
+        "--------\nPhysical Damage: 100-211\nAttacks per Second: 1.45\n"
+        "--------\nRequires: Level 60, 104 Str\n"
+        "--------\nItem Level: 80\n--------\n"
+        "{ Suffix Modifier }\n+2 to Level of all Attack Skills\n"
+    )
+    last = build_query(mace, category_for(mace), MODS, NOTABLES,
+                       relax=len(RELAX_STEPS) - 1)
+    assert last["query"]["stats"][0]["filters"] == [], "no mods left"
+    filters = last["query"]["filters"]
+    assert filters["equipment_filters"]["filters"]["dps"]["min"] > 0
+    assert filters["req_filters"]["filters"] == {"lvl": {"max": 60},
+                                                 "str": {"max": 104}}

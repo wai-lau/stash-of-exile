@@ -300,9 +300,15 @@ def test_a_damage_mod_covered_by_dps_is_not_also_a_stat_filter():
     assert ids == ["explicit.stat_3035140377"], "only the attack-level mod is left"
 
 
-def test_a_weapon_dps_takes_its_runes_off():
-    """The buyer sockets their own, so a rune's contribution is not part of
-    what is being sold — the same rule the defences already follow."""
+def test_a_weapon_dps_keeps_its_runes():
+    """DPS is where the rune rule parts company with the defences.
+
+    The API computes a listing's dps from its displayed damage, runes
+    included, so a rune-free minimum asks the wrong question: it admits every
+    weapon between our real DPS and our stripped one. On one mace that gap was
+    448 against 482, and the cheapest match went from 1 divine to 29 exalted —
+    a weaker weapon that only cleared the floor because we had lowered it.
+    """
     from sox.valuation.query import damage_filters
 
     text = ("Item Class: Crossbows\nRarity: Rare\nX\nSiege Crossbow\n"
@@ -311,9 +317,33 @@ def test_a_weapon_dps_takes_its_runes_off():
             "{ Prefix Modifier }\n100(80-120)% increased Physical Damage\n")
     bare = itemtext.parse(text)
     runed = itemtext.parse(text + "--------\n36% increased Physical Damage (rune)\n")
-    # 728.5 average * 2.07 = 1508 shown; the rune's 36% divides back out.
+    # 728.5 average * 2.07. The rune is already inside the displayed range,
+    # and it is inside the listings' displayed ranges too.
     assert damage_filters(bare)["dps"] == {"min": 1508.0}
-    assert damage_filters(runed)["dps"] == {"min": 1108.8}
+    assert damage_filters(runed)["dps"] == {"min": 1508.0}
+
+
+def test_requirements_are_capped_not_floored():
+    """A requirement is a cost, not a benefit.
+
+    An item demanding less than ours is strictly easier to equip and is a
+    comparable; one demanding more is not. It is also what separates a Bandit
+    Mace from the whole one-handed mace category.
+    """
+    from sox.valuation.query import build_query, category_for
+
+    mace = itemtext.parse(
+        "Item Class: One Hand Maces\nRarity: Rare\nPain Ram\nBandit Mace\n"
+        "--------\nPhysical Damage: 100-211\nAttacks per Second: 1.45\n"
+        "--------\nRequires: Level 60, 104 Str\n"
+        "--------\nItem Level: 80\n--------\n"
+        "{ Suffix Modifier }\n+2 to Level of all Attack Skills\n"
+    )
+    assert mace["requirements"] == {"lvl": 60, "str": 104}
+    filters = build_query(mace, category_for(mace), MODS, NOTABLES)["query"]["filters"]
+    assert filters["req_filters"]["filters"] == {
+        "lvl": {"max": 60}, "str": {"max": 104}
+    }
 
 
 def test_added_damage_filters_on_the_average():

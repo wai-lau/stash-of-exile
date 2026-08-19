@@ -27,7 +27,14 @@ from sox.valuation.rolls import parse_values
 # down. Widening instead drops the weakest mod — by the game's own tier where
 # the item reports one — so every rung still describes an item at least as
 # good as yours on the stats that remain.
-RELAX_STEPS = (4, 3, 2, 1)
+#
+# The last rung keeps NO mods. What is left is still a real search — category,
+# rarity, item level, requirements, and the totals in the equipment filters —
+# and on a weapon those totals are most of the item: a mace priced on DPS and
+# requirements alone is exactly how you would search for one by hand. Without
+# this rung a weapon whose exact mods nobody else rolled came back unpriced
+# while comparable maces were listed at 10 divine.
+RELAX_STEPS = (4, 3, 2, 1, 0)
 
 # Clipboard property name -> (equipment_filters id, regex matching the flat
 # mods that feed it). Verified against /api/trade2/data/filters.
@@ -452,14 +459,6 @@ DAMAGE_PROPERTIES = {
     "chaos": ("Chaos Damage",),
 }
 DAMAGE_RANGE = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*-\s*(\d[\d,]*(?:\.\d+)?)")
-# Rune wording for the two ways a rune inflates a weapon's damage.
-RUNE_ADDS = {
-    "physical": re.compile(r"adds .* physical damage", re.I),
-    "elemental": re.compile(r"adds .* (?:fire|cold|lightning) damage", re.I),
-    "chaos": re.compile(r"adds .* chaos damage", re.I),
-}
-RUNE_INCREASES_PHYSICAL = re.compile(r"increased physical damage", re.I)
-
 # Weapon-local damage mods, which the tooltip has already folded into the
 # damage ranges the DPS filters are computed from. "to Attacks" is the global
 # form worn on a ring or gloves and is NOT local, so it stays a stat filter.
@@ -493,10 +492,14 @@ def _average_range(text: str | None) -> float:
 def damage_filters(item: dict) -> dict[str, dict]:
     """Total DPS, with the socketed runes taken back out.
 
-    Same rule as the defences: the buyer sockets their own runes, so a rune's
-    added damage is not part of what is being sold. Physical is recovered
-    through any rune that increases it, elemental by subtracting what the
-    rune adds outright.
+    Runes are NOT taken out, and this is where DPS parts company with the
+    defences. The API computes a listing's dps from its displayed damage,
+    runes included, so a rune-free minimum is asking the wrong question: it
+    admits every weapon between our real DPS and our stripped one. On one mace
+    that gap was 448 against 482, and the cheapest match went from 1 divine to
+    29 exalted — a weaker weapon that only cleared the floor because we had
+    lowered it. The defences can strip runes because the listings are stripped
+    too, client-side; there is no equivalent pass here.
 
     Total DPS only, not pdps and edps alongside it. Splitting it pins the
     SOURCE of the damage: a weapon reaching the same DPS through fire instead
@@ -518,24 +521,11 @@ def damage_filters(item: dict) -> dict[str, dict]:
     if not aps:
         return {}
 
-    rune_texts = list(item.get("runeMods") or [])
-    by_kind: dict[str, float] = {}
-    for kind, names in DAMAGE_PROPERTIES.items():
-        total = sum(_average_range(_property_text(item, n)) for n in names)
-        rune_flat = sum(
-            _average_range(t) for t in rune_texts if RUNE_ADDS[kind].search(t)
-        )
-        if kind == "physical":
-            # A rune that increases physical damage multiplies the whole
-            # weapon, so it has to be divided back out rather than subtracted.
-            pct = sum(
-                (parse_values(t) or [0])[0] for t in rune_texts
-                if RUNE_INCREASES_PHYSICAL.search(t)
-            )
-            total = total / (1 + pct / 100) if pct else total
-        by_kind[kind] = max(total - rune_flat, 0.0)
-
-    combined = sum(by_kind.values())
+    combined = sum(
+        _average_range(_property_text(item, name))
+        for names in DAMAGE_PROPERTIES.values()
+        for name in names
+    )
     if combined <= 0:
         return {}
     return {"dps": {"min": round(combined * aps, 1)}}
@@ -653,6 +643,15 @@ def build_query(
         quality = _property(item, "Quality")
         if quality:
             type_filters["quality"] = {"min": quality}
+
+    # Requirements are a COST, not a benefit, so they take a max where every
+    # other filter takes a min. An item demanding less than ours is strictly
+    # easier to equip and is a comparable; one demanding more is not, and it
+    # is also what separates a Bandit Mace from the whole one-handed category.
+    requirements = {
+        key: {"max": value}
+        for key, value in (item.get("requirements") or {}).items()
+    }
 
     equipment: dict = dict(damage_filters(item))
     for prop_name, (filter_id, flat, percent) in DEFENCE_PROPERTIES.items():
@@ -779,7 +778,12 @@ def build_query(
     # widen the search, it would change what is being searched for: a Level 20
     # Chaos Bolt wand priced without the Chaos Bolt is priced as a bare wand.
     skill_filters = [f for f in (granted_skill_filter(item),) if f]
-    and_filters = skill_filters + (notable_filters + pseudo_filters + mod_filters)[:max_stats]
+    ranked = notable_filters + pseudo_filters + mod_filters
+    # The no-mods rung still keeps one notable. A notable-granting jewel IS
+    # its notables — priced without them it is one of ~25,000 Megalomaniacs
+    # the index already reports as worth 1 exalted.
+    keep = max(max_stats, 1) if notable_filters else max_stats
+    and_filters = skill_filters + ranked[:keep]
 
     query: dict = {
         "query": {
@@ -791,6 +795,8 @@ def build_query(
     }
     if equipment:
         query["query"]["filters"]["equipment_filters"] = {"filters": equipment}
+    if requirements:
+        query["query"]["filters"]["req_filters"] = {"filters": requirements}
 
     # A corrupted or sanctified listing is not "at least as good" as an
     # untouched copy — corruption closes off every further craft, and a

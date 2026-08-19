@@ -190,12 +190,15 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
     for text, weight in explain_score(mods, index):
         entry = match_mod(text, index)
         tag = ""
-        if entry is not None and dominant and dominant in coherence_keys(entry):
-            tag = dominant
-        elif text in via_equipment:
-            # Scores nothing, but the search does use it — as the item's
-            # total, through equipment_filters.
+        if text in via_equipment:
+            # Checked BEFORE the archetype: the mod IS searched, but through
+            # the item's total, and naming its buyer group instead implied a
+            # stat filter that is not in the query. A mace showed its cold
+            # roll as "(elemental)" and its physical roll as "(filter)" when
+            # both had become the one DPS filter.
             tag = "filter"
+        elif entry is not None and dominant and dominant in coherence_keys(entry):
+            tag = dominant
         rows.append((text, weight, tag))
 
     mod_score, _ = score_mods(mods, index)

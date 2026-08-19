@@ -81,7 +81,7 @@ def price_by_search(
     rates: dict[str, float],
     status: str = "any",
     min_results: int = 1,
-    max_searches: int = 4,
+    max_searches: int = 5,
 ) -> TradeResult:
     searches = 0
     best: TradeResult | None = None

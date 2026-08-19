@@ -103,6 +103,28 @@ def _split_sections(text: str) -> list[list[str]]:
     return [s for s in sections if s]
 
 
+# "Requires: Level 78, 163 (unmet) Dex" on one line, or a "Requirements:"
+# header with "Level: 78" / "Dex: 67" beneath it. Both appear.
+_PARENTHETICAL = re.compile(r"\s*\([^)]*\)")
+_REQ_LEVEL = re.compile(r"\blevel:?\s*(\d+)", re.I)
+_REQ_ATTR_SUFFIX = re.compile(r"(\d+)\s+(str|dex|int)\b", re.I)
+_REQ_ATTR_PREFIX = re.compile(r"\b(str|dex|int):\s*(\d+)", re.I)
+
+
+def parse_requirements(section: list[str]) -> dict[str, int]:
+    """What the item demands of its wearer, as trade's req_filter keys."""
+    joined = _PARENTHETICAL.sub("", " ".join(section))
+    out: dict[str, int] = {}
+    level = _REQ_LEVEL.search(joined)
+    if level:
+        out["lvl"] = int(level.group(1))
+    for value, attr in _REQ_ATTR_SUFFIX.findall(joined):
+        out[attr.lower()] = int(value)
+    for attr, value in _REQ_ATTR_PREFIX.findall(joined):
+        out[attr.lower()] = int(value)
+    return out
+
+
 def _strip_augmented(value: str) -> str:
     return re.sub(r"\s*\((?:augmented|unmet)\)", "", value).strip()
 
@@ -147,6 +169,7 @@ def parse(text: str) -> dict:
         "typeLine": None,
         "baseType": None,
         "identified": True,
+        "requirements": {},
         "corrupted": False,
         "twiceCorrupted": False,
         "sanctified": False,
@@ -221,7 +244,11 @@ def _parse_section(section: list[str], item: dict) -> None:
         raw = section[0].split(":", 1)[1].split("/")[0]
         item["stackSize"] = int(re.sub(r"\D", "", raw) or 1)
         return
-    if section[0].startswith("Requires"):
+    # "Requires:" on one line, or a "Requirements:" header with the values
+    # beneath it. Matching only the first spelling let the second fall through
+    # and land "Level: 78" in the property list.
+    if section[0].startswith("Requir"):
+        item["requirements"] = parse_requirements(section)
         return
     note = NOTE_LINE.match(section[0].strip())
     if note:
