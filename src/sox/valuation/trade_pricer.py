@@ -70,7 +70,7 @@ def price_by_search(
     trade,
     cache: Cache,
     rates: dict[str, float],
-    status: str = "online",
+    status: str = "any",
     min_results: int = 1,
     max_searches: int = 4,
 ) -> TradeResult:

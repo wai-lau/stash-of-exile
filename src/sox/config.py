@@ -22,7 +22,11 @@ USER_AGENT = "sox/0.1 (personal item pricer; +https://github.com/wai-lau/stash-o
 @dataclass(frozen=True)
 class Config:
     league: str | None = None      # None -> resolve the current league at runtime
-    status: str = "online"
+    # "any", not "online". PoE2 trade is asynchronous — buyers message a
+    # seller and wait — so most of the market is offline at any moment and
+    # buyers browse it regardless. Filtering to online sellers cut one search
+    # from 918 listings to 1, which then priced a 3ex item in the hundreds.
+    status: str = "any"
     max_searches: int = 4          # per item; one per relaxation rung
     cache_path: Path = DEFAULT_CACHE_PATH
     user_agent: str = USER_AGENT
@@ -43,7 +47,7 @@ def load_config(path: Path | None = None) -> Config:
 
     cfg = Config(
         league=raw.get("league"),
-        status=raw.get("status", "online"),
+        status=raw.get("status", "any"),
         max_searches=int(raw.get("max_searches", 4)),
     )
     if cfg.status not in VALID_STATUS:

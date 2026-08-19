@@ -228,3 +228,40 @@ def test_local_defences_do_not_leak_onto_jewellery():
     for text in ("# to Armour", "# to maximum Energy Shield", "#% increased Attack Speed"):
         entry = MODS[normalize_mod(text)]
         assert stat_ids_for(entry, "accessory.ring") == tuple(entry.ids)
+
+
+def test_added_damage_filters_on_the_average():
+    """The API compares the average of "Adds X to Y", not the low roll.
+
+    Verified live: cold min=121 (the low) returns 29 results while min=152
+    (the average) returns 8. Passing the low asks for items at least as good
+    as the BOTTOM of the range, which is a different question.
+    """
+    from sox.valuation.query import build_query, category_for, filter_value
+
+    assert filter_value("Adds # to # Cold Damage", [121.0, 183.0]) == 152.0
+    assert filter_value("# to maximum Life", [96.0]) == 96.0
+
+    item = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\nAdds 121 to 183 Cold Damage\n"
+    )
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    mins = [f["value"]["min"] for f in query["query"]["stats"][0]["filters"]]
+    assert 152.0 in mins
+
+
+def test_default_status_includes_offline_sellers():
+    """PoE2 trade is asynchronous, so most of the market is offline.
+
+    Verified live on one query: status=online returned 1 listing while
+    status=any returned 918, cheapest 1 exalted. Pricing off the online
+    slice put a 3ex item in the hundreds.
+    """
+    from sox.config import Config
+    from sox.valuation.query import build_query, category_for
+
+    assert Config().status == "any"
+    query = build_query(ITEM, category_for(ITEM), MODS, NOTABLES)
+    assert query["query"]["status"]["option"] == "any"

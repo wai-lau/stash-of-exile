@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 
 from sox.valuation.allowlists import ModEntry
 from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
@@ -84,6 +85,20 @@ def stat_ids_for(entry: ModEntry, category: str) -> tuple[str, ...]:
     return tuple(entry.ids)
 
 
+# "Adds 121 to 183 Cold Damage" is filtered by the AVERAGE of the two
+# numbers, verified live: min=121 returns 29 results, min=152 (the average)
+# returns 8. Passing the low roll asks for items at least as good as the
+# BOTTOM of the range, which is not the same question.
+ADDED_RANGE = re.compile(r"^Adds # to #", re.I)
+
+
+def filter_value(entry_text: str, values: list[float]) -> float:
+    """The number the trade API compares this mod against."""
+    if ADDED_RANGE.match(entry_text) and len(values) >= 2:
+        return (values[0] + values[1]) / 2
+    return values[0]
+
+
 def category_for(item: dict) -> str | None:
     return ITEM_CLASS_CATEGORIES.get((item.get("itemClass") or "").casefold())
 
@@ -105,7 +120,7 @@ def build_query(
     category: str,
     index: dict[str, ModEntry],
     notables: dict[str, str],
-    status: str = "online",
+    status: str = "any",
     relax: int = 0,
 ) -> dict:
     max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
@@ -179,7 +194,7 @@ def build_query(
         if isinstance(entry, _Notable):
             and_filters.append({"id": entry.stat_id, "value": {}})
             continue
-        minimum = round(parse_values(text)[0] * scale, 2)
+        minimum = round(filter_value(entry.text, parse_values(text)) * scale, 2)
         ids = stat_ids_for(entry, category)
         if len(ids) > 1:
             or_groups.append({
