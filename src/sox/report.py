@@ -52,9 +52,10 @@ class PricedItem:
     best_roll_pct: float | None = None
 
 
-# Largest unit first. In PoE2 chaos sits BETWEEN exalted and divine — about
-# 33 ex against divine's 340 — so it is a real middle rung, not a fraction.
-PRICE_UNITS = (("divine", "div"), ("chaos", "chaos"))
+# Exalted and divine only. Chaos does sit between them in PoE2 — about 33 ex
+# against divine's 340 — but nobody quotes an item in chaos, so pricing into
+# it is a conversion the reader has to undo.
+PRICE_UNITS = (("divine", "div"),)
 
 
 def fmt_price(ex: float | None, rates: dict[str, float]) -> str:

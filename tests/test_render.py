@@ -9,7 +9,7 @@ import pytest
 from sox.report import PricedItem, render
 from sox.valuation.classify import ItemClass
 
-# Live rates: chaos sits between exalted and divine in PoE2.
+# Live rates. Chaos is present in the table but never quoted into.
 RATES = {"exalted": 1.0, "chaos": 33.4, "divine": 340.6}
 
 ITEM = {"name": "Doom Shield", "baseType": "Tower Shield", "ilvl": 70}
@@ -78,12 +78,14 @@ def test_a_price_is_quoted_in_one_currency():
 
     assert fmt_price(0.5, RATES) == "0.5 ex"
     assert fmt_price(26.5, RATES) == "26.5 ex"
-    assert fmt_price(120.0, RATES) == "3.59 chaos"
+    # Chaos is in the rate table but is never quoted into: nobody prices an
+    # item in chaos, so it would be a conversion the reader has to undo.
+    assert fmt_price(120.0, RATES) == "120 ex"
     assert fmt_price(1600.0, RATES) == "4.7 div"
     assert fmt_price(150000.0, RATES) == "440 div"
     assert fmt_price(None, RATES) == "—"
-    # No chaos rate yet: fall through rather than crash.
-    assert fmt_price(120.0, {"divine": 340.6}) == "120 ex"
+    # No divine rate yet: fall through rather than crash.
+    assert fmt_price(1600.0, {"exalted": 1.0}) == "1,600 ex"
 
 
 def test_a_market_row_is_quoted_in_one_unit():
@@ -95,6 +97,7 @@ def test_a_market_row_is_quoted_in_one_unit():
     assert fmt_row([9.0, 32.23, 117.0], RATES) == ["9 ex", "32.23 ex", "117 ex"]
     assert fmt_row([1600.0, 2240.0, 4480.0], RATES) == [
         "4.7 div", "6.58 div", "13.15 div"]
-    # Anchored on the low: the largest would push it to "0.27 chaos".
-    assert fmt_row([9.0, 32.23, 117.0], RATES)[0] == "9 ex"
+    # Anchored on the low: the largest would render this row in divine and
+    # turn the low into "0.03 div".
+    assert fmt_row([9.0, 32.23, 4480.0], RATES)[0] == "9 ex"
     assert fmt_row([None, None, None], RATES) == ["—", "—", "—"]
