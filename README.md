@@ -26,17 +26,23 @@ Park a terminal on a second monitor and run `sox watch`. Copy any item in
 game with Ctrl+C and its price appears, with a running session total:
 
 ```
-sox watch  ·  Runes of Aldur  ·  1 div = 320 ex
+════════════════════════════════════════════════════════════════
+sox watch  ·  Runes of Aldur  ·  1 div = 382 ex
+clipboard: powershell.exe
+copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
+════════════════════════════════════════════════════════════════
+18:04:07 Megalomaniac  [Diamond]
+            type       Jewels → jewel   ilvl 80
+            searched   as notable
+            score      0
+                       +0  Allocates Barbaric Strength
+                       +0  Allocates Kite Runner
+            coherence  none — the mods serve different builds
+            market     low 4.72 div  ·  25th 4.72 div  ·  median 8.97 div
+                       cheapest 10 of 759 listings, relaxed:3
 ────────────────────────────────────────────────────────────────
-20:14:28  Megalomaniac  [Diamond]
-          class      unique  ilvl 80
-          ceiling    333 ex (1.0 div)   (3 listings, relaxed:3)
-          ask        300.1 ex
-          searched   as notable
-                     - Allocates Barbaric Strength
-                     - Allocates Kite Runner
+total 1,802 ex (4.7 div)  ·  1 priced  ·  1 search
 ────────────────────────────────────────────────────────────────
-total 333 ex (1.0 div)  ·  1 priced  ·  4 searches
 ```
 
 On WSL the Windows clipboard is read through a single long-lived
@@ -54,17 +60,29 @@ synergize well, this knowledge only comes from playing different build
 archetypes."
 
 sox encodes that. It picks the stats to search on by finding the item's
-dominant archetype rather than its heaviest mods, and prints what it chose:
+dominant archetype rather than its heaviest mods, prints what it chose, and
+marks every mod the price actually rests on:
 
 ```
-  searched   as spell
-             - # to Level of all Spell Skills
-             - #% increased Cast Speed
-             - #% increased Spell Damage
+Corruption Hold  [Amethyst Ring]
+  type       Rings → accessory.ring   ilvl 80
+  searched   as minion
+  score      12
+             +0  +13% to Chaos Resistance                        (implicit)
+             +2  Minions deal 22% increased Damage               (minion)
+             +2  Adds 9 to 18 Physical Damage to Attacks
+             +2  Minions have 37% increased Critical Hit Chance   (minion)
+             +2  Minions have 10% increased Attack and Cast Speed (minion)
+             +2  +23% to Chaos Resistance
+             +0  Minions deal 25% increased Damage if you've Hit Recently
+  coherence  3 mods cluster on minion  +2
+  market     low 5 div  ·  25th 8 div  ·  median 10 div
+             cheapest 10 of 175 listings, relaxed:1
 ```
 
-Picking by weight alone would have taken Attack Speed over Spell Damage on
-that amulet and described a buyer who does not exist.
+Picking by weight alone would have kept that chaos resistance roll and
+dropped the minion crit and the minion attack speed, describing a buyer who
+does not exist. It priced the ring at 65 ex.
 
 ## Why the clipboard
 
@@ -87,17 +105,22 @@ session, so sox holds no credentials at all.
 | Waystones, tablets, relics, charms | trade search; no index covers them |
 | Notable jewels (Megalomaniac) | searched by the exact notables they allocate |
 
-Prices are reported as a **ceiling**, not a comp: every listing returned is at
+The market row is a **ceiling**, not a comp: every listing returned is at
 least as good as your item on every constrained axis, so the cheapest one
-bounds what you can ask.
+bounds what you can ask. The lower quartile and the median come with it,
+because a single cheapest listing is as often a dump as a price.
 
 A Megalomaniac the index prices at 1 ex, priced by its notables instead:
 
 ```
 Megalomaniac  [Diamond]
-  class      unique  ilvl 80
-  ceiling    1,009 ex (3.0 div)   (4 listings, relaxed:3)
-  ask        908 ex (2.7 div)
+  type       Jewels → jewel   ilvl 80
+  searched   as notable
+  score      0
+             +0  Allocates Barbaric Strength
+             +0  Allocates Kite Runner
+  market     low 5 div  ·  25th 5 div  ·  median 9.5 div
+             cheapest 10 of 759 listings, relaxed:3
 ```
 
 ## Data files

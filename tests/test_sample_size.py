@@ -959,8 +959,12 @@ def test_a_defence_floor_is_filed_at_twenty_percent_quality():
 
 
 def test_spirit_and_block_are_left_at_face_value():
-    """Only ar, es and ev were measured against a quality item. Normalising
-    the rest on the strength of an analogy would be guessing at the filter."""
+    """These three are compared at face value, which was measured.
+
+    `extended` reports ar, es and ev and nothing else. Pinning `spirit` to
+    exactly 100 returns sceptres SHOWING 100 at +10%, +11%, +12%, +13% and
+    +14% quality alike; a filed filter would have excluded every one of them.
+    """
     from sox.valuation.query import DEFENCE_PROPERTIES, equipment_minimum
 
     _, flat, percent = DEFENCE_PROPERTIES["Spirit"]

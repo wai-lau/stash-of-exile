@@ -86,10 +86,12 @@ DEFENCE_PROPERTIES = {
 # pair of boots, 29 carried no rune at all.
 QUALITY_BASELINE = 20
 
-# Only the three the `extended` block reports and that quality scales on an
-# armour base. Spirit, Runic Ward and Block chance were never measured against
-# a quality item, and normalising them on the strength of an analogy would be
-# guessing at the filter's arithmetic.
+# Only the three, and it was measured rather than assumed. `extended` reports
+# ar, es and ev and nothing else: a sceptre's block carries no derived value
+# at all, and `spirit` pinned to exactly 100 returns sceptres SHOWING 100 at
+# +10%, +11%, +12%, +13% and +14% quality alike — a filed filter would have
+# excluded every one of them. Spirit, Runic Ward and Block chance are compared
+# at face value.
 QUALITY_SCALED = ("ar", "es", "ev")
 
 
