@@ -150,6 +150,83 @@ def filter_value(entry_text: str, values: list[float]) -> float:
     return values[0]
 
 
+# Stats GGG aggregates for us. Searching the TOTAL is strictly better than
+# searching one mod: an item carrying fire resistance on both a fire roll and
+# an all-elemental roll satisfies a buyer looking for fire resistance, and a
+# single-mod filter misses it. Measured on helmets: single-mod fire res >= 60
+# returns 871 listings, the pseudo total returns 2,128.
+#
+# Each entry lists the mod patterns that feed the total. Values are taken at
+# each mod's MINIMUM roll, for the same reason the equipment filters are —
+# the identical item with worse rolls is still a comparable.
+PSEUDO_TOTALS = [
+    ("pseudo.pseudo_total_life", [re.compile(r"to maximum Life$", re.I)]),
+    ("pseudo.pseudo_total_mana", [re.compile(r"to maximum Mana$", re.I)]),
+    ("pseudo.pseudo_total_fire_resistance",
+     [re.compile(r"to Fire Resistance$", re.I),
+      re.compile(r"to all Elemental Resistances$", re.I)]),
+    ("pseudo.pseudo_total_cold_resistance",
+     [re.compile(r"to Cold Resistance$", re.I),
+      re.compile(r"to all Elemental Resistances$", re.I)]),
+    ("pseudo.pseudo_total_lightning_resistance",
+     [re.compile(r"to Lightning Resistance$", re.I),
+      re.compile(r"to all Elemental Resistances$", re.I)]),
+    ("pseudo.pseudo_total_chaos_resistance",
+     [re.compile(r"to Chaos Resistance$", re.I)]),
+    ("pseudo.pseudo_total_strength",
+     [re.compile(r"to Strength$", re.I), re.compile(r"to all Attributes$", re.I)]),
+    ("pseudo.pseudo_total_dexterity",
+     [re.compile(r"to Dexterity$", re.I), re.compile(r"to all Attributes$", re.I)]),
+    ("pseudo.pseudo_total_intelligence",
+     [re.compile(r"to Intelligence$", re.I), re.compile(r"to all Attributes$", re.I)]),
+]
+
+
+def pseudo_totals(item: dict, index=None) -> list[tuple[str, int, list[str]]]:
+    """(pseudo id, floor total, contributing mod texts), most important first.
+
+    Ranked by the heaviest contributing mod, then by how many mods feed the
+    total — a total assembled from two mods describes the item better than
+    one scraped from a single weak roll.
+    """
+    ranges = item.get("modRanges") or {}
+    mods = (
+        list(item.get("explicitMods") or [])
+        + list(item.get("fracturedMods") or [])
+        + list(item.get("runeMods") or [])
+        + list(item.get("implicitMods") or [])
+    )
+
+    out = []
+    for pseudo_id, patterns in PSEUDO_TOTALS:
+        total = 0.0
+        used: list[str] = []
+        for text in mods:
+            if not any(p.search(text) for p in patterns):
+                continue
+            values = parse_values(text)
+            if not values:
+                continue
+            # Floor roll where the item reports one, else the value shown.
+            floor = ranges.get(text, (values[0], values[0], values[0]))[1]
+            total += floor
+            used.append(text)
+        if total > 0:
+            out.append((pseudo_id, int(round(total)), used))
+
+    def rank(entry):
+        _pid, _value, texts = entry
+        weights = [0]
+        if index is not None:
+            from sox.valuation.mods import match_mod
+            weights += [e.weight for t in texts
+                        if (e := match_mod(t, index)) is not None]
+        return (-max(weights), -len(texts))
+
+    out.sort(key=rank)
+    return out
+
+
 def category_for(item: dict) -> str | None:
     return ITEM_CLASS_CATEGORIES.get((item.get("itemClass") or "").casefold())
 
@@ -215,6 +292,25 @@ def build_query(
     # filter covers it, but global on an amulet, where it must stay a stat.
     covered = set(defence_mod_texts(item))
 
+    # Stats with a pseudo total are searched as that total instead, so their
+    # mods must not also appear individually.
+    # Pseudo totals obey the same rule as mods: only what coheres. An
+    # Intelligence total on an elemental weapon constrains the search to items
+    # carrying Intelligence, which most comparables do not — that alone moved
+    # a 3ex quarterstaff to a 50ex median.
+    from sox.valuation.mods import coherence_keys, dominant_archetype, matched
+
+    dominant, _count = dominant_archetype(matched(all_mods, index))
+    totals = []
+    for pseudo_id, value, used in pseudo_totals(item, index):
+        if dominant is not None:
+            entries = [e for t in used if (e := match_mod(t, index)) is not None]
+            if not any(dominant in coherence_keys(e) for e in entries):
+                continue
+        totals.append((pseudo_id, value, used))
+    for _pseudo_id, _value, used in totals:
+        covered.update(used)
+
     scored: list[tuple[int, str, object]] = []
     for text in all_mods:
         if text in covered:
@@ -236,23 +332,24 @@ def build_query(
     notable_items = [(w, t, e) for w, t, e in scored if isinstance(e, _Notable)]
     mod_items = [(w, t, e) for w, t, e in scored if not isinstance(e, _Notable)]
 
-    tiers = item.get("modTiers") or {}
-    texts = {id(e): t for _, t, e in mod_items}
     chosen_entries, _group = select_synergistic(
-        [e for _, _, e in mod_items],
-        max(max_stats - len(notable_items), 0),
-        tiers=tiers,
-        texts=texts,
+        [e for _, _, e in mod_items], max_stats,
+        tiers=item.get("modTiers") or {},
+        texts={id(e): t for _, t, e in mod_items},
     )
     by_entry = {id(e): t for _, t, e in mod_items}
-    selected = notable_items[:max_stats] + [
-        (0, by_entry[id(e)], e) for e in chosen_entries
-    ]
 
-    for _, text, entry in selected[:max_stats]:
-        if isinstance(entry, _Notable):
-            and_filters.append({"id": entry.stat_id, "value": {}})
-            continue
+    # Three sources of stat filters, in the order they survive widening:
+    # notables identify the item outright, pseudo totals describe it more
+    # faithfully than any single mod, and individual mods come last.
+    notable_filters = [{"id": e.stat_id, "value": {}} for _, _, e in notable_items]
+
+    pseudo_filters = [{"id": pid, "value": {"min": value}}
+                      for pid, value, _ in totals]
+
+    mod_filters = []
+    for entry in chosen_entries:
+        text = by_entry[id(entry)]
         minimum = round(filter_value(entry.text, parse_values(text)) * scale, 2)
         ids = stat_ids_for(entry, category)
         if len(ids) > 1:
@@ -264,7 +361,9 @@ def build_query(
                 ],
             })
         else:
-            and_filters.append({"id": ids[0], "value": {"min": minimum}})
+            mod_filters.append({"id": ids[0], "value": {"min": minimum}})
+
+    and_filters = (notable_filters + pseudo_filters + mod_filters)[:max_stats]
 
     query: dict = {
         "query": {

@@ -95,9 +95,6 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
             market += f"  ·  median {fmt_price(priced.median_ex, divine_ratio)}"
         lines.append(f"  market     {market}")
         lines.append(f"             {priced.listings} listings, {priced.tag}")
-        if priced.skewed:
-            lines.append("             the low is far under the rest of the market — "
-                         "someone is dumping, so the ask uses the 25th percentile")
         if priced.relax_used:
             lines.append("             found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")

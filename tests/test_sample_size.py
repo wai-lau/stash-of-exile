@@ -371,3 +371,43 @@ def test_a_local_mod_is_never_constrained_twice():
     query = build_query(amulet, category_for(amulet), MODS, NOTABLES)
     assert "equipment_filters" not in query["query"]["filters"]
     assert all_stats(query), "must stay a stat filter here"
+
+
+def test_pseudo_totals_replace_the_mods_that_feed_them():
+    """Fire resistance from two mods is one total, not two filters.
+
+    Measured on helmets: single-mod fire res >= 60 returns 871 listings while
+    the pseudo total returns 2,128 — the difference is items carrying the
+    stat across several mods, which a per-mod filter cannot see.
+    """
+    from sox.valuation.query import build_query, category_for, pseudo_totals
+
+    item = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nX\nFreebooter Cap\n"
+        "--------\nItem Level: 81\n--------\n"
+        "{ Suffix Modifier }\n+31(26-35)% to Fire Resistance\n"
+        "{ Suffix Modifier }\n+18(15-20)% to all Elemental Resistances\n"
+    )
+    totals = dict((pid, value) for pid, value, _ in pseudo_totals(item, MODS))
+    # Floor rolls: 26 from the fire mod, 15 from the all-elemental mod.
+    assert totals["pseudo.pseudo_total_fire_resistance"] == 41
+    assert totals["pseudo.pseudo_total_cold_resistance"] == 15
+
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
+    assert any(i.startswith("pseudo.") for i in ids)
+    assert not any("stat_3372524247" in i for i in ids), "fire mod is in the total"
+
+
+def test_notables_outrank_pseudo_totals_and_mods():
+    """A notable identifies the item; it must survive the whole ladder."""
+    from sox.valuation.query import RELAX_STEPS, build_query, category_for
+
+    from pathlib import Path
+    fixtures = Path(__file__).parent / "fixtures" / "items"
+    item = itemtext.parse((fixtures / "MegalomaniacJewel.txt").read_text())
+    for rung in range(len(RELAX_STEPS)):
+        query = build_query(item, category_for(item), MODS, NOTABLES, relax=rung)
+        ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
+        assert ids, f"rung {rung} dropped every filter"
+        assert all("stat_2954116742" in i for i in ids), "notables must survive"
