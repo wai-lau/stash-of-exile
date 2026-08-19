@@ -27,65 +27,11 @@ tags = ["defence", "life"]
 note = "universal after the 0.5 ES nerfs"
 
 [[category.mod]]
-ids = ["explicit.stat_3489782002"]
-slug = "to_maximum_energy_shield"
-text = "# to maximum Energy Shield"
-weight = 2
-local_ids = ["explicit.stat_4052037485"]
-tags = ["defence", "es"]
-note = "still core for ES builds"
-
-[[category.mod]]
 ids = ["explicit.stat_983749596"]
 slug = "increased_maximum_life"
 text = "#% increased maximum Life"
 weight = 2
 tags = ["defence", "life"]
-
-[[category.mod]]
-ids = ["explicit.stat_4015621042"]
-slug = "increased_energy_shield"
-text = "#% increased Energy Shield"
-weight = 2
-tags = ["defence", "es"]
-
-[[category.mod]]
-ids = ["explicit.stat_2106365538"]
-slug = "increased_evasion_rating"
-text = "#% increased Evasion Rating"
-weight = 1
-local_ids = ["explicit.stat_124859000"]
-tags = ["defence", "evasion"]
-
-[[category.mod]]
-ids = ["explicit.stat_2866361420"]
-slug = "increased_armour"
-text = "#% increased Armour"
-weight = 1
-local_ids = ["explicit.stat_1062208444"]
-tags = ["armour", "defence"]
-
-[[category.mod]]
-ids = ["explicit.stat_1999113824"]
-slug = "increased_evasion_and_energy_shield"
-text = "#% increased Evasion and Energy Shield"
-weight = 2
-tags = ["defence", "es", "evasion"]
-note = "hybrid bases"
-
-[[category.mod]]
-ids = ["explicit.stat_3321629045"]
-slug = "increased_armour_and_energy_shield"
-text = "#% increased Armour and Energy Shield"
-weight = 2
-tags = ["armour", "defence", "es"]
-
-[[category.mod]]
-ids = ["explicit.stat_2451402625"]
-slug = "increased_armour_and_evasion"
-text = "#% increased Armour and Evasion"
-weight = 2
-tags = ["armour", "defence", "evasion"]
 
 [[category]]
 name = "deflection"

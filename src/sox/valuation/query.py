@@ -27,16 +27,46 @@ from sox.valuation.rolls import parse_values
 # good as yours on the stats that remain.
 RELAX_STEPS = (4, 3, 2, 1)
 
-# Clipboard property name -> equipment_filters id, verified against
-# /api/trade2/data/filters.
+# Clipboard property name -> (equipment_filters id, regex matching the flat
+# mods that feed it). Verified against /api/trade2/data/filters.
+#
+# Local defences are searched HERE, not as stats. The displayed total already
+# includes every flat and percent modifier on the item, so the total is the
+# honest measure of the item and needs no stat filter beside it.
+#
+# damage, aps, crit and rune_sockets are deliberately absent: a weapon's
+# damage is dominated by its base and quality, so constraining it excludes
+# comparable items for no gain.
 DEFENCE_PROPERTIES = {
-    "Energy Shield": "es",
-    "Armour": "ar",
-    "Evasion Rating": "ev",
-    "Evasion": "ev",
-    "Runic Ward": "ward",
-    "Spirit": "spirit",
+    "Energy Shield": ("es", re.compile(r"to maximum Energy Shield$", re.I)),
+    "Armour": ("ar", re.compile(r"to Armour$", re.I)),
+    "Evasion Rating": ("ev", re.compile(r"to Evasion Rating$", re.I)),
+    "Evasion": ("ev", re.compile(r"to Evasion Rating$", re.I)),
+    "Runic Ward": ("ward", re.compile(r"to maximum Runic Ward$", re.I)),
+    "Spirit": ("spirit", re.compile(r"to Spirit$", re.I)),
+    "Block chance": ("block", re.compile(r"increased Block chance$", re.I)),
 }
+
+
+def equipment_minimum(item: dict, property_name: str, pattern) -> int | None:
+    """The item's total for this defence, normalised to its worst roll.
+
+    An item showing 485 Evasion whose "+145 to Evasion Rating" could have
+    rolled as low as 117 is really a 457-Evasion item that got lucky. Asking
+    for 485 would exclude the identical item with a worse roll, which is a
+    comparable, so the minimum is:
+
+        total - what the mod actually rolled + the least it could have rolled
+    """
+    total = _property(item, property_name)
+    if total is None:
+        return None
+
+    adjustment = 0.0
+    for text, (actual, low, _high) in (item.get("modRanges") or {}).items():
+        if pattern.search(text):
+            adjustment += low - actual
+    return max(int(round(total + adjustment)), 1)
 
 # Item Class -> trade category. Item Class comes straight from the clipboard.
 ITEM_CLASS_CATEGORIES = {
@@ -139,10 +169,10 @@ def build_query(
         type_filters["ilvl"] = {"min": int(ilvl * scale)}
 
     equipment: dict = {}
-    for prop_name, filter_id in DEFENCE_PROPERTIES.items():
-        value = _property(item, prop_name)
+    for prop_name, (filter_id, pattern) in DEFENCE_PROPERTIES.items():
+        value = equipment_minimum(item, prop_name, pattern)
         if value:
-            equipment[filter_id] = {"min": int(value * scale)}
+            equipment[filter_id] = {"min": value}
 
     and_filters: list[dict] = []
     or_groups: list[dict] = []
@@ -265,6 +295,27 @@ def explain_selection(
         entries, max_stats, tiers=item.get("modTiers") or {}, texts=texts
     )
     return (group or None), [e.text for e in chosen]
+
+
+def defence_mod_texts(item: dict) -> list[str]:
+    """Item mods that feed an equipment filter rather than a stat filter.
+
+    They are not in the allowlist and score nothing, but they ARE part of the
+    search — through the item's displayed total — so the breakdown must not
+    show them as ignored.
+    """
+    out = []
+    for prop_name, (_id, pattern) in DEFENCE_PROPERTIES.items():
+        if _property(item, prop_name) is None:
+            continue
+        for text in (
+            list(item.get("explicitMods") or [])
+            + list(item.get("fracturedMods") or [])
+            + list(item.get("runeMods") or [])
+        ):
+            if pattern.search(text) and text not in out:
+                out.append(text)
+    return out
 
 
 def searched_item_texts(item: dict, index, notables, relax: int = 0) -> list[str]:

@@ -30,6 +30,7 @@ from sox.valuation.mods import build_index, explain_score
 from sox.valuation.rolls import roll_score, roll_score_from_item
 from sox.valuation.query import (
     category_for,
+    defence_mod_texts,
     explain_selection,
     searched_item_texts,
 )
@@ -270,6 +271,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                                              relax=result.relax_used)
             highlighted = searched_item_texts(item, mod_index, notables,
                                               relax=result.relax_used)
+            highlighted += defence_mod_texts(item)
             return report.PricedItem(
                 name=display_name(item), item_class=item_class,
                 price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",

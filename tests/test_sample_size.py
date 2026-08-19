@@ -196,39 +196,69 @@ def test_coherence_reports_but_does_not_gate_the_search():
     assert wants_search(verdict, None, item), "but it is priced anyway"
 
 
-def test_armour_uses_the_local_stat_id():
-    """"+145 to Evasion Rating" on a helmet is a different stat to the API.
+def test_local_defences_are_searched_as_equipment_filters():
+    """Flat and percent Armour/Evasion/ES are not stats here.
 
-    A helmet worth 20ex priced at 0.2ex because the global id was searched
-    and matched nothing, driving the ladder down to a single weak filter.
+    The displayed total already contains them, so the total is what gets
+    searched. Listing them as stats too would constrain the same thing twice,
+    and on the global stat id, which matches nothing on a helmet.
     """
     from sox.valuation.mods import normalize_mod
-    from sox.valuation.query import build_query, category_for, stat_ids_for
+    from sox.valuation.query import build_query, category_for
 
-    entry = MODS[normalize_mod("+120 to maximum Energy Shield")]
-    assert entry.local_ids, "flat ES must know its local twin"
-    assert stat_ids_for(entry, "armour.helmet") == entry.local_ids
-    assert stat_ids_for(entry, "accessory.amulet") == tuple(entry.ids)
+    for text in ("# to maximum Energy Shield", "#% increased Evasion Rating",
+                 "#% increased Armour"):
+        assert normalize_mod(text) not in MODS, f"{text} must not be a stat"
 
     helmet = itemtext.parse(
         "Item Class: Helmets\nRarity: Rare\nDragon Visor\nFreebooter Cap\n"
-        "--------\nEnergy Shield: 120\n--------\nItem Level: 81\n--------\n"
-        "{ Prefix Modifier }\n+120 to maximum Energy Shield\n"
+        "--------\nEvasion Rating: 485\n--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n+145(117-150) to Evasion Rating\n"
     )
     query = build_query(helmet, category_for(helmet), MODS, NOTABLES)
-    ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
-    assert entry.local_ids[0] in ids
-    assert entry.ids[0] not in ids
+    assert query["query"]["filters"]["equipment_filters"]["filters"]["ev"] == {"min": 457}
 
 
-def test_local_defences_do_not_leak_onto_jewellery():
-    from sox.valuation.mods import normalize_mod
-    from sox.valuation.query import stat_ids_for
+def test_equipment_minimum_normalises_to_the_worst_roll():
+    """485 Evasion with a +145 mod that could roll 117 is really a 457 item.
 
-    for text in ("#% increased Armour", "# to maximum Energy Shield",
-                 "#% increased Attack Speed"):
-        entry = MODS[normalize_mod(text)]
-        assert stat_ids_for(entry, "accessory.ring") == tuple(entry.ids)
+    Asking for 485 would exclude the identical item with a worse roll, which
+    is exactly a comparable.
+    """
+    from sox.valuation.query import DEFENCE_PROPERTIES, equipment_minimum
+
+    filter_id, pattern = DEFENCE_PROPERTIES["Evasion Rating"]
+    assert filter_id == "ev"
+    item = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nX\nFreebooter Cap\n"
+        "--------\nEvasion Rating: 485\n--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n+145(117-150) to Evasion Rating\n"
+    )
+    assert equipment_minimum(item, "Evasion Rating", pattern) == 485 - 145 + 117
+
+    # With no roll range reported, the total stands as-is.
+    plain = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nX\nFreebooter Cap\n"
+        "--------\nEvasion Rating: 485\n--------\nItem Level: 81\n"
+    )
+    assert equipment_minimum(plain, "Evasion Rating", pattern) == 485
+
+
+def test_weapon_damage_is_left_out_of_equipment_filters():
+    """Damage, attack speed and sockets are deliberately not constrained."""
+    from sox.valuation.query import DEFENCE_PROPERTIES, build_query, category_for
+
+    assert not {"damage", "aps", "crit", "rune_sockets"} & {
+        fid for fid, _ in DEFENCE_PROPERTIES.values()
+    }
+    staff = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
+        "--------\nPhysical Damage: 54-219\nAttacks per Second: 1.40\n"
+        "--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\nAdds 121 to 183 Cold Damage\n"
+    )
+    query = build_query(staff, category_for(staff), MODS, NOTABLES)
+    assert "equipment_filters" not in query["query"]["filters"]
 
 
 def test_added_damage_filters_on_the_average():

@@ -133,9 +133,10 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         width = max((len(str(t)) for t, _, _ in priced.breakdown), default=0)
         for text, weight, tag in priced.breakdown:
             if weight is None:
-                # +0 says it all: the mod is not in the allowlist, so it
-                # contributed nothing.
-                mark, note = "+0", ""
+                # +0 says it all when the mod is simply unknown — but a
+                # defence mod scores nothing while still driving the search
+                # through the item's total, and that must not read as ignored.
+                mark, note = "+0", f"({tag})" if tag else ""
             elif weight == 0:
                 mark, note = "·", "(minor-mod cap reached)"
             else:

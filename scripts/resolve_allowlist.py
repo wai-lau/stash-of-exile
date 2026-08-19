@@ -25,14 +25,12 @@ ALLOWLIST = OrderedDict(
             "defence_core",
             [
                 (3, "# to maximum Life", "universal after the 0.5 ES nerfs"),
-                (2, "# to maximum Energy Shield", "still core for ES builds"),
                 (2, "#% increased maximum Life", None),
-                (2, "#% increased Energy Shield", None),
-                (1, "#% increased Evasion Rating", None),
-                (1, "#% increased Armour", None),
-                (2, "#% increased Evasion and Energy Shield", "hybrid bases"),
-                (2, "#% increased Armour and Energy Shield", None),
-                (2, "#% increased Armour and Evasion", None),
+                # Local defences are NOT listed here. Flat and percent Armour,
+                # Evasion and Energy Shield are already folded into the item's
+                # displayed total, and that total is searched through
+                # equipment_filters instead. Listing them as stats too would
+                # constrain the same thing twice, and on the wrong stat id.
             ],
         ),
         (

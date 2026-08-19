@@ -169,12 +169,19 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
     entries = matched(mods, index)
     dominant, _ = dominant_archetype(entries)
 
+    from sox.valuation.query import defence_mod_texts
+
+    via_equipment = set(defence_mod_texts(item))
     rows: list[tuple[str, object, str]] = []
     for text, weight in explain_score(mods, index):
         entry = match_mod(text, index)
         tag = ""
         if entry is not None and dominant and dominant in coherence_keys(entry):
             tag = dominant
+        elif text in via_equipment:
+            # Scores nothing, but the search does use it — as the item's
+            # total, through equipment_filters.
+            tag = "equipment filter"
         rows.append((text, weight, tag))
 
     mod_score, _ = score_mods(mods, index)
