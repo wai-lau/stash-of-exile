@@ -73,6 +73,7 @@ FRAME_BY_RARITY = {
 # Header lines that are flags rather than key/value properties.
 FLAGS = {
     "corrupted": "corrupted",
+    "sanctified": "sanctified",
     "mirrored": "mirrored",
     "unidentified": "unidentified",
     "split": "split",
@@ -138,6 +139,7 @@ def parse(text: str) -> dict:
         "baseType": None,
         "identified": True,
         "corrupted": False,
+        "sanctified": False,
         "mirrored": False,
         "properties": [],
         "implicitMods": [],

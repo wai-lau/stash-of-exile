@@ -419,3 +419,100 @@ def test_minion_defences_do_not_carry_the_players_defence_tags():
         if entry.subject in ("minion", "companion", "totem"):
             assert not {"defence", "life", "es", "armour", "evasion",
                         "resistance"} & set(entry.tags), entry.text
+
+
+def _forgotten_warden(dex: int, life: int):
+    """A real index-priced unique: 9 ex across 15,162 listings."""
+    from sox.scout import IndexEntry
+
+    item = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Unique\nForgotten Warden\n"
+        "Primal Markings\n--------\nEvasion Rating: 965\nEnergy Shield: 295\n"
+        "--------\nItem Level: 84\n--------\n"
+        f"+85 to Deflection Rating per 50 missing Energy Shield\n"
+        f"250% increased Evasion and Energy Shield\n"
+        f"+{dex} to Dexterity\n"
+        f"Companions have {life}% increased maximum Life\n"
+        "12% of Damage from Deflected Hits is taken from Damageable "
+        "Companion's Life before you\n"
+    )
+    entry = IndexEntry(
+        name="Forgotten Warden", price_ex=9.0, quantity=15162,
+        metadata={"explicit_mods": [
+            "+(70-100) to Deflection Rating per 50 missing Energy Shield",
+            "(200-300)% increased Evasion and Energy Shield",
+            "+(20-30) to Dexterity",
+            "Companions have (30-50)% increased maximum Life",
+            "(10-15)% of Damage from Deflected Hits is taken from "
+            "Damageable Companion's Life before you",
+        ]},
+    )
+    return item, entry
+
+
+def test_one_strong_roll_escalates_a_unique_the_mean_would_bury():
+    """ANY roll in the top quarter is worth a search.
+
+    The market prices a unique on the roll people buy it for. Forgotten Warden
+    reported "47th percentile (average roll)" and took the index price while
+    carrying a near-perfect Dexterity roll.
+    """
+    from sox.valuation.candidates import item_mods, should_search_unique
+    from sox.valuation.rolls import roll_percentiles
+
+    item, entry = _forgotten_warden(dex=29, life=32)
+    percentiles = roll_percentiles(item_mods(item), entry.metadata)
+    assert max(percentiles) >= 0.75 and sum(percentiles) / len(percentiles) < 0.75, (
+        "the mean must hide the strong roll, or this proves nothing"
+    )
+    assert should_search_unique(item, entry, UNIQUES) == "good-roll"
+
+
+def test_a_uniformly_mediocre_unique_still_takes_the_index_price():
+    from sox.valuation.candidates import should_search_unique
+
+    item, entry = _forgotten_warden(dex=25, life=40)
+    assert should_search_unique(item, entry, UNIQUES) is None
+
+
+def test_a_granted_skill_escalates_a_unique():
+    """No unique in the scout index carries a granted skill, so the level ours
+    grants is invisible to the index price."""
+    from sox.valuation.candidates import should_search_unique
+    from sox.scout import IndexEntry
+
+    item = itemtext.parse(
+        "Item Class: Wands\nRarity: Unique\nSomeWand\nWithered Wand\n"
+        "--------\nItem Level: 82\n--------\n"
+        "Grants Skill: Level 20 Chaos Bolt\n--------\n"
+        "30% increased Chaos Damage\n"
+    )
+    entry = IndexEntry(name="SomeWand", price_ex=9.0, quantity=100,
+                       metadata={"explicit_mods": ["(25-35)% increased Chaos Damage"]})
+    assert should_search_unique(item, entry, UNIQUES) == "granted-skill"
+
+
+def test_a_clean_item_does_not_price_against_corrupted_listings():
+    """Corruption closes off every further craft, so a corrupted listing is not
+    'at least as good' and would drag the cheapest match below our floor."""
+    item = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nX\nWarded Helm\n"
+        "--------\nArmour: 91\n--------\nItem Level: 81\n--------\n"
+        "{ Suffix Modifier }\n+31(26-35)% to Lightning Resistance\n"
+    )
+    misc = build_query(item, category_for(item), MODS, NOTABLES)["query"]["filters"]
+    assert misc["misc_filters"]["filters"] == {
+        "corrupted": {"option": "false"}, "sanctified": {"option": "false"}
+    }
+
+    # Ours is corrupted: once the item has been touched at all the whole
+    # market is comparable again, so neither flag is pinned.
+    corrupted = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nX\nWarded Helm\n"
+        "--------\nArmour: 91\n--------\nItem Level: 81\n--------\n"
+        "{ Suffix Modifier }\n+31(26-35)% to Lightning Resistance\n"
+        "--------\nCorrupted\n"
+    )
+    assert corrupted["corrupted"] is True
+    filters = build_query(corrupted, category_for(corrupted), MODS, NOTABLES)
+    assert "misc_filters" not in filters["query"]["filters"]

@@ -65,8 +65,14 @@ def spread_of(metadata: dict) -> float:
     return max(ratios) if ratios else 1.0
 
 
-def roll_score(item_mods: list[str], metadata: dict) -> float | None:
-    """Mean percentile of our values within the ranges the item can roll."""
+def roll_percentiles(item_mods: list[str], metadata: dict) -> list[float]:
+    """Our percentile within each range the item can roll, one per mod.
+
+    The mean hides the copy that matters: a unique whose one build-defining
+    roll is near-perfect and whose filler rolls are poor averages out to
+    mediocre, while the market prices it on the roll people actually buy it
+    for.
+    """
     templates = []
     for key in MOD_KEYS:
         for mod in metadata.get(key) or []:
@@ -88,7 +94,12 @@ def roll_score(item_mods: list[str], metadata: dict) -> float | None:
         if hi <= lo:
             continue
         percentiles.append(min(max((value - lo) / (hi - lo), 0.0), 1.0))
+    return percentiles
 
+
+def roll_score(item_mods: list[str], metadata: dict) -> float | None:
+    """Mean percentile of our values within the ranges the item can roll."""
+    percentiles = roll_percentiles(item_mods, metadata)
     if not percentiles:
         return None
     return sum(percentiles) / len(percentiles)

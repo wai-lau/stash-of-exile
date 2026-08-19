@@ -84,15 +84,13 @@ NAMED_UNIQUES = [
 
 # Escalation thresholds, seeded from the live index distribution.
 #
-# min_escalation_price_ex is the floor that stops the swing rule wasting a
-# search slot. Thunderfist spreads x111 and indexes at 3 ex: a perfect copy of
-# a worthless item is still worthless, so a wide spread only earns a search
-# once the item is worth something to begin with.
+# roll_score_percentile is applied to the BEST single roll, not the mean. A
+# unique whose one build-defining roll is near-perfect and whose filler rolls
+# are poor averages out to mediocre, while the market prices it on the roll
+# people actually buy it for.
 THRESHOLDS = {
     "chase_price_ex": 5000,
-    "swing_ratio": 2.0,
     "roll_score_percentile": 0.75,
-    "min_escalation_price_ex": 50,
     "illiquid_quantity": 20,
 }
 
@@ -155,12 +153,13 @@ def main():
         "[thresholds]",
     ]
     out.append("# Escalate a unique to a live trade search when ANY holds:")
-    out.append("#   corrupted, OR index_price >= chase_price_ex,")
-    out.append("#   OR (spread >= swing_ratio AND our roll >= roll_score_percentile")
-    out.append("#       AND index_price >= min_escalation_price_ex)")
-    out.append("# Spread alone is deliberately NOT enough: Thunderfist spreads x111 at ~3ex,")
-    out.append("# so a perfect copy of it is still worth ~3ex. The price floor is what stops")
-    out.append("# the swing rule spending a search slot on a well-rolled worthless item.")
+    out.append("#   corrupted, not in the index, allocates a notable,")
+    out.append("#   grants a skill (the index never records one),")
+    out.append("#   index_price >= chase_price_ex,")
+    out.append("#   OR any single roll >= roll_score_percentile.")
+    out.append("# The last clause is the best roll, not the mean: a unique carrying one")
+    out.append("# near-perfect build-defining roll beside poor filler averages out to")
+    out.append("# mediocre, and the market does not price it that way.")
     for key, value in THRESHOLDS.items():
         out.append(f"{key} = {value}")
     out.append("")

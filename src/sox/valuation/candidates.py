@@ -16,7 +16,7 @@ from sox.valuation.mods import (
     matched,
     score_mods,
 )
-from sox.valuation.rolls import roll_score, spread_of
+from sox.valuation.rolls import roll_percentiles
 
 AVOID_PENALTY = 3
 
@@ -220,6 +220,8 @@ def has_notable(item: dict) -> bool:
 
 def should_search_unique(item: dict, entry: IndexEntry | None, rules: UniqueRules) -> str | None:
     """Return the escalation reason, or None to take the index price."""
+    from sox.valuation.query import granted_skill_filter
+
     if has_notable(item):
         # Megalomaniac-class: value is WHICH notables, which the index cannot
         # express. It reports 1ex across ~25,000 listings for all of them.
@@ -241,18 +243,20 @@ def should_search_unique(item: dict, entry: IndexEntry | None, rules: UniqueRule
     if entry.price_ex >= rules.thresholds.get("chase_price_ex", 5000):
         return "chase-price"
 
-    if spread_of(entry.metadata) < rules.thresholds.get("swing_ratio", 2.0):
-        return None
-    # A perfect copy of a worthless item is still worthless: Thunderfist
-    # spreads x111 at ~3ex and would otherwise satisfy every clause above.
-    if entry.price_ex < rules.thresholds.get("min_escalation_price_ex", 50):
-        return None
+    # The index reports nothing about a granted skill — no unique in the scout
+    # data carries one — so the level ours grants is invisible to its price.
+    if granted_skill_filter(item) is not None:
+        return "granted-skill"
 
-    score = roll_score(item_mods(item), entry.metadata)
-    if score is None:
-        return None
-    if score >= rules.thresholds.get("roll_score_percentile", 0.75):
-        return "swingy-good-roll"
+    threshold = rules.thresholds.get("roll_score_percentile", 0.75)
+    percentiles = roll_percentiles(item_mods(item), entry.metadata)
+    if percentiles and max(percentiles) >= threshold:
+        # ANY roll in the top quarter, not the mean of all of them. The market
+        # prices a unique on the roll people buy it for; a near-perfect
+        # build-defining roll next to poor filler averages out to mediocre and
+        # would otherwise be taken at the index price.
+        return "good-roll"
+
     return None
 
 

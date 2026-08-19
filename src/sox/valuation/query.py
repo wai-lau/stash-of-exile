@@ -517,6 +517,20 @@ def build_query(
     }
     if equipment:
         query["query"]["filters"]["equipment_filters"] = {"filters": equipment}
+
+    # A corrupted or sanctified listing is not "at least as good" as an
+    # untouched copy — corruption closes off every further craft, and a
+    # sanctified copy carries a bonus ours does not. Leaving them in the
+    # results lets one drag the cheapest match below our item's real floor.
+    #
+    # Pinned only when ours is neither. Once the item has been touched at all
+    # the whole market is comparable again, so both stay unconstrained rather
+    # than pinning the one flag we happen not to carry.
+    if not item.get("corrupted") and not item.get("sanctified"):
+        query["query"]["filters"]["misc_filters"] = {"filters": {
+            "corrupted": {"option": "false"},
+            "sanctified": {"option": "false"},
+        }}
     if item.get("name") and classify(item) is ItemClass.UNIQUE:
         query["query"]["name"] = item["name"]
     return query
