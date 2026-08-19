@@ -13,7 +13,9 @@ import hashlib
 import json
 import re
 
-from sox.valuation.allowlists import ModEntry
+from functools import lru_cache
+
+from sox.valuation.allowlists import ModEntry, load_skills
 from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
 from sox.valuation.mods import match_mod, select_synergistic
 from sox.valuation.rolls import parse_values
@@ -332,6 +334,54 @@ def _property(item: dict, name: str) -> int | None:
     return None
 
 
+# `Grants Skill: Level 20 Chaos Bolt`. The level is a rolled value and a real
+# search axis — a buyer filtering for the skill will not take a lower level of
+# it — so it is always searched at our level as the minimum.
+GRANTED_SKILL = re.compile(r"^Level (\d+) (.+)$")
+
+
+@lru_cache(maxsize=1)
+def _skill_ids() -> dict[str, str]:
+    return {_fold(name): stat_id for name, stat_id in load_skills().items()}
+
+
+def _fold(text: str) -> str:
+    return re.sub(r"\s+", " ", text.casefold()).strip()
+
+
+def granted_skill_filter(item: dict) -> dict | None:
+    """The item's granted skill, floored at the level it actually grants.
+
+    Returns None for an unlevelled grant like a shield's `Grants Skill: Raise
+    Shield`: that is intrinsic to every shield base, so it constrains nothing
+    and carries no level to floor.
+    """
+    for prop in item.get("properties") or []:
+        if prop.get("name") != "Grants Skill":
+            continue
+        values = prop.get("values") or []
+        if not values or not values[0]:
+            return None
+        match = GRANTED_SKILL.match(str(values[0][0]).strip())
+        if not match:
+            return None
+        stat_id = _skill_ids().get(_fold(match.group(2)))
+        if stat_id is None:
+            return None
+        return {"id": stat_id, "value": {"min": int(match.group(1))}}
+    return None
+
+
+def granted_skill_text(item: dict) -> list[str]:
+    """The granted-skill line as the item words it, when it is searched."""
+    if granted_skill_filter(item) is None:
+        return []
+    for prop in item.get("properties") or []:
+        if prop.get("name") == "Grants Skill":
+            return [f"Grants Skill: {str(prop['values'][0][0]).strip()}"]
+    return []
+
+
 def build_query(
     item: dict,
     category: str,
@@ -451,7 +501,11 @@ def build_query(
         else:
             mod_filters.append({"id": ids[0], "value": {"min": minimum}})
 
-    and_filters = (notable_filters + pseudo_filters + mod_filters)[:max_stats]
+    # The granted skill is exempt from the widening cap. Dropping it would not
+    # widen the search, it would change what is being searched for: a Level 20
+    # Chaos Bolt wand priced without the Chaos Bolt is priced as a bare wand.
+    skill_filters = [f for f in (granted_skill_filter(item),) if f]
+    and_filters = skill_filters + (notable_filters + pseudo_filters + mod_filters)[:max_stats]
 
     query: dict = {
         "query": {

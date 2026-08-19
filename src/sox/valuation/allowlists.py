@@ -93,3 +93,8 @@ def load_uniques() -> UniqueRules:
 def load_notables() -> dict[str, str]:
     """Notable name -> trade2 stat id. Prices Megalomaniac-class jewels."""
     return dict(_read("notables.toml").get("notable", {}))
+
+
+def load_skills() -> dict[str, str]:
+    """Granted skill name -> trade2 stat id, for `Grants Skill: Level N X`."""
+    return dict(_read("skills.toml").get("skill", {}))

@@ -172,10 +172,14 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
     entries = matched(mods, index)
     dominant, _ = dominant_archetype(entries)
 
-    from sox.valuation.query import defence_mod_texts
+    from sox.valuation.query import defence_mod_texts, granted_skill_text
 
     via_equipment = set(defence_mod_texts(item))
-    rows: list[tuple[str, object, str]] = []
+    # Scores nothing on its own, but it is always searched and at a minimum
+    # of the level actually granted, so it must not read as ignored.
+    rows: list[tuple[str, object, str]] = [
+        (text, None, "filter") for text in granted_skill_text(item)
+    ]
     for text, weight in explain_score(mods, index):
         entry = match_mod(text, index)
         tag = ""

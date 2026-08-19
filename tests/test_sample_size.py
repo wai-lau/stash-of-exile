@@ -595,3 +595,54 @@ def test_the_items_own_defence_type_counts_toward_coherence():
     assert defence_seed(ring) == {}
     _, ring_count, ring_bonus = coherence_of(ring, MODS)
     assert ring_bonus == 0
+
+
+def _wand():
+    return itemtext.parse(
+        Path("tests/fixtures/items/WandRareItem.txt").read_text()
+    )
+
+
+def test_a_granted_skill_is_always_searched_at_its_own_level():
+    """A Level 20 Chaos Bolt wand is not a bare wand.
+
+    The granted skill and its level are the whole identity of a wand or
+    sceptre, so the filter is exempt from the widening ladder: dropping it
+    would not widen the search, it would search for a different item.
+    """
+    from sox.valuation.query import RELAX_STEPS, build_query, granted_skill_filter
+
+    def all_stats(query):
+        return [f["id"] for g in query["query"]["stats"] for f in g["filters"]]
+
+    wand = _wand()
+    assert granted_skill_filter(wand) == {
+        "id": "skill.chaosbolt", "value": {"min": 20}
+    }
+    for rung in range(len(RELAX_STEPS)):
+        query = build_query(wand, category_for(wand), MODS, NOTABLES, relax=rung)
+        assert all_stats(query)[0] == "skill.chaosbolt", (
+            f"rung {rung} dropped the granted skill"
+        )
+
+
+def test_an_unlevelled_granted_skill_is_not_searched():
+    """Every shield grants Raise Shield. Filtering on it constrains nothing,
+    and there is no level to use as a minimum."""
+    from sox.valuation.query import granted_skill_filter, granted_skill_text
+
+    shield = itemtext.parse(
+        Path("tests/fixtures/items/NormalShield.txt").read_text()
+    )
+    assert granted_skill_filter(shield) is None
+    assert granted_skill_text(shield) == []
+
+
+def test_the_granted_skill_shows_as_searched_not_ignored():
+    from sox.valuation.candidates import score_rows
+    from sox.valuation.query import granted_skill_text
+
+    wand = _wand()
+    assert granted_skill_text(wand) == ["Grants Skill: Level 20 Chaos Bolt"]
+    rows = score_rows(wand, MODS, {})
+    assert rows[0] == ("Grants Skill: Level 20 Chaos Bolt", None, "filter")
