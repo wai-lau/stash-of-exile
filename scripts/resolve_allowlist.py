@@ -568,6 +568,24 @@ def local_variants(stats):
     return out
 
 
+def implicit_variants(stats):
+    """Numeric stat id -> implicit id, for stats an item can roll as implicit.
+
+    An implicit is a real mod on the item and belongs in the search, but the
+    trade API files it under its own group: `implicit.stat_3299347043` and
+    `explicit.stat_3299347043` are the same stat reached two ways, and asking
+    the explicit one about an implicit returns nothing. Only 178 of the 3031
+    explicit stats have an implicit twin, so the map has to be exact.
+    """
+    out = {}
+    for group in stats["result"]:
+        if group["id"] != "implicit":
+            continue
+        for entry in group["entries"]:
+            out[entry["id"].split(".", 1)[-1]] = entry["id"]
+    return out
+
+
 def build_index(stats):
     """normalized text -> [(group, id)] in table order."""
     idx = {}
@@ -629,6 +647,7 @@ def main():
     stats = json.load(open(sys.argv[1]))
     idx = build_index(stats)
     locals_by_text = local_variants(stats)
+    implicits_by_id = implicit_variants(stats)
     valid_ids = {e["id"] for g in stats["result"] for e in g["entries"]}
 
     lock_path = sys.argv[2] if len(sys.argv) > 2 else "src/sox/data/mod_allowlist.toml"
@@ -685,6 +704,12 @@ def main():
             local = locals_by_text.get(text)
             if local:
                 out.append(f'local_ids = ["{local}"]')
+            implicits = [implicits_by_id[n] for n in
+                         (i.split(".", 1)[-1] for i in ids)
+                         if n in implicits_by_id]
+            if implicits:
+                rendered_implicit = ", ".join(f'"{i}"' for i in implicits)
+                out.append(f"implicit_ids = [{rendered_implicit}]")
             tags = tags_for(text)
             if tags:
                 out.append("tags = [" + ", ".join(f'"{t}"' for t in tags) + "]")

@@ -172,7 +172,11 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
     entries = matched(mods, index)
     dominant, _ = dominant_archetype(entries)
 
-    from sox.valuation.query import defence_mod_texts, granted_skill_text
+    from sox.valuation.query import (
+        defence_mod_texts,
+        granted_skill_text,
+        searchable_implicits,
+    )
 
     via_equipment = set(defence_mod_texts(item))
     # Scores nothing on its own, but it is always searched and at a minimum
@@ -180,6 +184,9 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
     rows: list[tuple[str, object, str]] = [
         (text, None, "filter") for text in granted_skill_text(item)
     ]
+    # Searched but not scored: an implicit costs no affix slot, so it neither
+    # earns weight nor spends the room left to craft.
+    rows += [(text, None, "implicit") for text in searchable_implicits(item, index)]
     for text, weight in explain_score(mods, index):
         entry = match_mod(text, index)
         tag = ""

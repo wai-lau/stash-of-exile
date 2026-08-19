@@ -661,3 +661,102 @@ def test_a_corruption_enhancement_is_an_enchant_not_an_explicit():
     assert regroup(("explicit.stat_1315743832",), "enchant") == (
         "enchant.stat_1315743832",
     )
+
+
+def test_an_implicit_is_searched_under_the_implicit_group():
+    """An implicit is a real stat a buyer filters on, but the trade API files
+    it under its own group.
+
+    `implicit.stat_3299347043` and `explicit.stat_3299347043` are the same
+    stat reached two ways, and asking the explicit table about an implicit
+    returns nothing — so this used to be dropped from the search entirely.
+    """
+    # Rarity has no pseudo total, so it reaches the query as itself. A
+    # resistance implicit would be folded into the pseudo instead, which is
+    # group-independent and needs no twin.
+    item = itemtext.parse(
+        "Item Class: Amulets\nRarity: Rare\nX\nGold Amulet\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Implicit Modifier }\n18(15-20)% increased Rarity of Items found\n"
+        "--------\n"
+        "{ Prefix Modifier }\n+96(90-99) to maximum Life\n"
+    )
+    assert item["implicitMods"] == ["18% increased Rarity of Items found"]
+
+    ids = [f["id"] for g in build_query(item, category_for(item), MODS, NOTABLES)[
+        "query"]["stats"] for f in g["filters"]]
+    assert "implicit.stat_3917489142" in ids, "the implicit reached the query"
+    assert not any(i.startswith("explicit.stat_3917489142") for i in ids), \
+        "and not under the explicit group, which would match nothing"
+
+
+def test_forty_allowlisted_mods_can_be_rolled_as_an_implicit():
+    """The map has to be exact: only 178 of the 3031 explicit stats have an
+    implicit twin, so an unchecked prefix swap would send filters that match
+    no listing."""
+    from sox.valuation.allowlists import load_mods
+
+    with_twin = [m for m in load_mods() if m.implicit_ids]
+    assert len(with_twin) == 40
+    for entry in with_twin:
+        assert all(i.startswith("implicit.") for i in entry.implicit_ids)
+        # Same numeric stat, different table.
+        assert {i.split(".", 1)[-1] for i in entry.implicit_ids} <= {
+            i.split(".", 1)[-1] for i in entry.ids}
+
+
+def test_an_implicit_scores_nothing_and_costs_no_affix_slot():
+    """It is searched, not scored: an implicit does not occupy a prefix or
+    suffix, so it must not eat into the room left to craft either."""
+    from sox.valuation.candidates import score_rows, used_affixes
+
+    item = itemtext.parse(
+        "Item Class: Amulets\nRarity: Rare\nX\nGold Amulet\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Implicit Modifier }\n18(15-20)% increased Rarity of Items found\n"
+        "--------\n"
+        "{ Prefix Modifier }\n+96(90-99) to maximum Life\n"
+    )
+    assert used_affixes(item) == 1, "the implicit is not an affix"
+    rows = score_rows(item, MODS, load_bases())
+    implicit_rows = [r for r in rows if r[2] == "implicit"]
+    assert implicit_rows == [("18% increased Rarity of Items found", None, "implicit")]
+
+
+def test_an_implicit_is_filtered_at_the_floor_of_its_range():
+    """An implicit comes with the base rather than being rolled onto it.
+
+    The buyer is shopping for the base and will take any roll of it, so
+    filtering at ours would drop the same base over a difference nobody is
+    paying for.
+    """
+    item = itemtext.parse(
+        "Item Class: Amulets\nRarity: Rare\nX\nGold Amulet\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Implicit Modifier }\n18(15-20)% increased Rarity of Items found\n"
+        "--------\n"
+        "{ Prefix Modifier }\n+96(90-99) to maximum Life\n"
+    )
+    filters = {f["id"]: f["value"]["min"] for g in
+               build_query(item, category_for(item), MODS, NOTABLES)["query"]["stats"]
+               for f in g["filters"]}
+    assert filters["implicit.stat_3917489142"] == 15.0, "the floor, not our 18"
+    # An explicit is still filtered at what we actually rolled.
+    assert filters["pseudo.pseudo_total_life"] == 90
+
+
+def test_an_implicit_folded_into_a_pseudo_is_not_searched_twice():
+    """Resistances go to the pseudo total, which is group-independent and
+    needs no implicit twin — so the implicit must not also appear alone."""
+    item = itemtext.parse(
+        "Item Class: Amulets\nRarity: Rare\nX\nGold Amulet\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Implicit Modifier }\n+18(15-20)% to Fire Resistance\n"
+        "--------\n"
+        "{ Suffix Modifier }\n+31(26-35)% to Lightning Resistance\n"
+    )
+    ids = [f["id"] for g in build_query(item, category_for(item), MODS, NOTABLES)[
+        "query"]["stats"] for f in g["filters"]]
+    assert "pseudo.pseudo_total_elemental_resistance" in ids
+    assert not any(i.startswith("implicit.") for i in ids), \
+        "the pseudo already carries it"

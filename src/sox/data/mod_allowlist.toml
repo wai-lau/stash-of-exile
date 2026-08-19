@@ -23,6 +23,7 @@ ids = ["explicit.stat_3299347043"]
 slug = "to_maximum_life"
 text = "# to maximum Life"
 weight = 3
+implicit_ids = ["implicit.stat_3299347043"]
 tags = ["defence", "life"]
 note = "universal after the 0.5 ES nerfs"
 
@@ -31,6 +32,7 @@ ids = ["explicit.stat_983749596"]
 slug = "increased_maximum_life"
 text = "#% increased maximum Life"
 weight = 2
+implicit_ids = ["implicit.stat_983749596"]
 tags = ["defence", "life"]
 
 [[category]]
@@ -66,6 +68,7 @@ ids = ["explicit.stat_3362812763"]
 slug = "of_armour_also_applies_to_elemental_damage"
 text = "#% of Armour also applies to Elemental Damage"
 weight = 3
+implicit_ids = ["implicit.stat_3362812763"]
 tags = ["armour", "defence", "elemental"]
 note = "armour-stacker enabler"
 
@@ -84,6 +87,7 @@ ids = ["explicit.stat_3981240776", "explicit.stat_2704225257"]
 slug = "to_spirit"
 text = "# to Spirit"
 weight = 3
+implicit_ids = ["implicit.stat_3981240776"]
 tags = ["spirit"]
 ambiguous = true  # matched by OR across these ids
 note = "gates every buff/minion build"
@@ -125,6 +129,7 @@ ids = ["explicit.stat_3372524247"]
 slug = "to_fire_resistance"
 text = "#% to Fire Resistance"
 weight = 1
+implicit_ids = ["implicit.stat_3372524247"]
 tags = ["defence", "elemental", "resistance"]
 
 [[category.mod]]
@@ -132,6 +137,7 @@ ids = ["explicit.stat_4220027924"]
 slug = "to_cold_resistance"
 text = "#% to Cold Resistance"
 weight = 1
+implicit_ids = ["implicit.stat_4220027924"]
 tags = ["defence", "elemental", "resistance"]
 
 [[category.mod]]
@@ -139,6 +145,7 @@ ids = ["explicit.stat_1671376347"]
 slug = "to_lightning_resistance"
 text = "#% to Lightning Resistance"
 weight = 1
+implicit_ids = ["implicit.stat_1671376347"]
 tags = ["defence", "elemental", "resistance"]
 
 [[category.mod]]
@@ -146,6 +153,7 @@ ids = ["explicit.stat_2901986750"]
 slug = "to_all_elemental_resistances"
 text = "#% to all Elemental Resistances"
 weight = 1
+implicit_ids = ["implicit.stat_2901986750"]
 tags = ["defence", "elemental", "resistance"]
 
 [[category.mod]]
@@ -153,6 +161,7 @@ ids = ["explicit.stat_2923486259"]
 slug = "to_chaos_resistance"
 text = "#% to Chaos Resistance"
 weight = 2
+implicit_ids = ["implicit.stat_2923486259"]
 tags = ["chaos", "defence", "resistance"]
 
 [[category.mod]]
@@ -168,6 +177,7 @@ ids = ["explicit.stat_3676141501"]
 slug = "to_maximum_cold_resistance"
 text = "#% to Maximum Cold Resistance"
 weight = 3
+implicit_ids = ["implicit.stat_3676141501"]
 tags = ["defence", "elemental", "resistance"]
 
 [[category.mod]]
@@ -192,6 +202,7 @@ ids = ["explicit.stat_1782086450"]
 slug = "faster_start_of_energy_shield_recharge"
 text = "#% faster start of Energy Shield Recharge"
 weight = 2
+implicit_ids = ["implicit.stat_1782086450"]
 tags = ["defence", "es"]
 
 [[category.mod]]
@@ -199,6 +210,7 @@ ids = ["explicit.stat_2339757871"]
 slug = "increased_energy_shield_recharge_rate"
 text = "#% increased Energy Shield Recharge Rate"
 weight = 2
+implicit_ids = ["implicit.stat_2339757871"]
 tags = ["defence", "es"]
 
 [[category.mod]]
@@ -221,6 +233,7 @@ ids = ["explicit.stat_669069897"]
 slug = "leeches_of_physical_damage_as_mana"
 text = "Leeches #% of Physical Damage as Mana"
 weight = 2
+implicit_ids = ["implicit.stat_669069897"]
 tags = ["mana", "physical"]
 
 [[category.mod]]
@@ -235,6 +248,7 @@ ids = ["explicit.stat_789117908"]
 slug = "increased_mana_regeneration_rate"
 text = "#% increased Mana Regeneration Rate"
 weight = 1
+implicit_ids = ["implicit.stat_789117908"]
 tags = ["mana"]
 
 [[category]]
@@ -288,6 +302,7 @@ ids = ["explicit.stat_1078455967"]
 slug = "to_level_of_all_cold_skills"
 text = "# to Level of all Cold Skills"
 weight = 3
+implicit_ids = ["implicit.stat_1078455967"]
 tags = ["elemental"]
 
 [[category.mod]]
@@ -365,6 +380,7 @@ ids = ["explicit.stat_3032590688"]
 slug = "adds_to_physical_damage_to_attacks"
 text = "Adds # to # Physical Damage to Attacks"
 weight = 2
+implicit_ids = ["implicit.stat_3032590688"]
 tags = ["attack", "physical"]
 
 [[category.mod]]
@@ -372,6 +388,7 @@ ids = ["explicit.stat_1573130764"]
 slug = "adds_to_fire_damage_to_attacks"
 text = "Adds # to # Fire damage to Attacks"
 weight = 2
+implicit_ids = ["implicit.stat_1573130764"]
 tags = ["attack", "elemental"]
 
 [[category.mod]]
@@ -386,6 +403,7 @@ ids = ["explicit.stat_1754445556"]
 slug = "adds_to_lightning_damage_to_attacks"
 text = "Adds # to # Lightning damage to Attacks"
 weight = 2
+implicit_ids = ["implicit.stat_1754445556"]
 tags = ["attack", "elemental"]
 
 [[category]]
@@ -417,6 +435,7 @@ ids = ["explicit.stat_2231156303"]
 slug = "increased_lightning_damage"
 text = "#% increased Lightning Damage"
 weight = 3
+implicit_ids = ["implicit.stat_2231156303"]
 tags = ["elemental"]
 
 [[category.mod]]
@@ -511,6 +530,7 @@ slug = "increased_attack_speed"
 text = "#% increased Attack Speed"
 weight = 2
 local_ids = ["explicit.stat_210067635"]
+implicit_ids = ["implicit.stat_681332047"]
 tags = ["attack"]
 
 [[category.mod]]
@@ -518,6 +538,7 @@ ids = ["explicit.stat_2891184298"]
 slug = "increased_cast_speed"
 text = "#% increased Cast Speed"
 weight = 2
+implicit_ids = ["implicit.stat_2891184298"]
 tags = ["spell"]
 
 [[category.mod]]
@@ -525,6 +546,7 @@ ids = ["explicit.stat_2194114101"]
 slug = "increased_critical_hit_chance_for_attacks"
 text = "#% increased Critical Hit Chance for Attacks"
 weight = 2
+implicit_ids = ["implicit.stat_2194114101"]
 tags = ["attack", "crit"]
 
 [[category.mod]]
@@ -540,6 +562,7 @@ slug = "to_accuracy_rating"
 text = "# to Accuracy Rating"
 weight = 1
 local_ids = ["explicit.stat_691932474"]
+implicit_ids = ["implicit.stat_803737631"]
 tags = ["attack"]
 
 [[category.mod]]
@@ -565,6 +588,7 @@ ids = ["explicit.stat_1589917703"]
 slug = "minions_deal_increased_damage"
 text = "Minions deal #% increased Damage"
 weight = 2
+implicit_ids = ["implicit.stat_1589917703"]
 tags = ["minion"]
 subject = "minion"
 
@@ -819,6 +843,7 @@ ids = ["explicit.stat_3917489142"]
 slug = "increased_rarity_of_items_found"
 text = "#% increased Rarity of Items found"
 weight = 2
+implicit_ids = ["implicit.stat_3917489142"]
 tags = ["rarity"]
 note = "150%+ IIR target"
 
@@ -834,6 +859,7 @@ ids = ["explicit.stat_1050105434"]
 slug = "to_maximum_mana"
 text = "# to maximum Mana"
 weight = 2
+implicit_ids = ["implicit.stat_1050105434"]
 tags = ["mana"]
 
 [[category.mod]]
@@ -848,6 +874,7 @@ ids = ["explicit.stat_4080418644"]
 slug = "to_strength"
 text = "# to Strength"
 weight = 1
+implicit_ids = ["implicit.stat_4080418644"]
 tags = ["attribute"]
 
 [[category.mod]]
@@ -855,6 +882,7 @@ ids = ["explicit.stat_3261801346"]
 slug = "to_dexterity"
 text = "# to Dexterity"
 weight = 1
+implicit_ids = ["implicit.stat_3261801346"]
 tags = ["attribute"]
 
 [[category.mod]]
@@ -862,6 +890,7 @@ ids = ["explicit.stat_328541901"]
 slug = "to_intelligence"
 text = "# to Intelligence"
 weight = 1
+implicit_ids = ["implicit.stat_328541901"]
 tags = ["attribute"]
 
 [[category]]
@@ -892,6 +921,7 @@ ids = ["explicit.stat_736967255"]
 slug = "increased_chaos_damage"
 text = "#% increased Chaos Damage"
 weight = 2
+implicit_ids = ["implicit.stat_736967255"]
 tags = ["chaos"]
 
 [[category.mod]]
@@ -994,6 +1024,7 @@ ids = ["explicit.stat_3166958180"]
 slug = "increased_magnitude_of_bleeding_you_inflict"
 text = "#% increased Magnitude of Bleeding you inflict"
 weight = 2
+implicit_ids = ["implicit.stat_3166958180"]
 tags = ["ailment"]
 
 [[category.mod]]
@@ -1008,6 +1039,7 @@ ids = ["explicit.stat_473429811"]
 slug = "increased_freeze_buildup"
 text = "#% increased Freeze Buildup"
 weight = 1
+implicit_ids = ["implicit.stat_473429811"]
 tags = ["ailment"]
 
 [[category.mod]]
@@ -1025,6 +1057,7 @@ ids = ["explicit.stat_3325883026"]
 slug = "life_regeneration_per_second"
 text = "# Life Regeneration per second"
 weight = 1
+implicit_ids = ["implicit.stat_3325883026"]
 
 [[category.mod]]
 ids = ["explicit.stat_915769802"]
@@ -1037,6 +1070,7 @@ ids = ["explicit.stat_1379411836", "explicit.stat_2897413282"]
 slug = "to_all_attributes"
 text = "# to all Attributes"
 weight = 2
+implicit_ids = ["implicit.stat_1379411836"]
 ambiguous = true  # matched by OR across these ids
 
 [[category.mod]]
@@ -1058,6 +1092,7 @@ ids = ["explicit.stat_1836676211"]
 slug = "increased_flask_charges_gained"
 text = "#% increased Flask Charges gained"
 weight = 1
+implicit_ids = ["implicit.stat_1836676211"]
 
 [[category.mod]]
 ids = ["explicit.stat_3417711605"]
@@ -1071,6 +1106,7 @@ ids = ["explicit.stat_239367161"]
 slug = "increased_stun_buildup"
 text = "#% increased Stun Buildup"
 weight = 1
+implicit_ids = ["implicit.stat_239367161"]
 
 [[category.mod]]
 ids = ["explicit.stat_101878827"]
@@ -1092,6 +1128,7 @@ ids = ["explicit.stat_3585532255"]
 slug = "increased_charm_charges_gained"
 text = "#% increased Charm Charges gained"
 weight = 1
+implicit_ids = ["implicit.stat_3585532255"]
 
 [[category.mod]]
 ids = ["explicit.stat_818778753"]
@@ -1113,6 +1150,7 @@ ids = ["explicit.stat_2321178454"]
 slug = "chance_to_pierce_an_enemy"
 text = "#% chance to Pierce an Enemy"
 weight = 2
+implicit_ids = ["implicit.stat_2321178454"]
 
 [[category.mod]]
 ids = ["explicit.stat_2653955271"]
@@ -1173,6 +1211,7 @@ ids = ["explicit.stat_3885405204"]
 slug = "bow_attacks_fire_additional_arrows"
 text = "Bow Attacks fire # additional Arrows"
 weight = 3
+implicit_ids = ["implicit.stat_3885405204"]
 tags = ["elemental"]
 
 [[category.mod]]
@@ -1221,6 +1260,7 @@ ids = ["explicit.stat_1028592286"]
 slug = "chance_to_chain_an_additional_time"
 text = "#% chance to Chain an additional time"
 weight = 2
+implicit_ids = ["implicit.stat_1028592286"]
 
 [[category.mod]]
 ids = ["explicit.stat_805298720"]

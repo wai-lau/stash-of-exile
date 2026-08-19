@@ -332,8 +332,9 @@ def pseudo_totals(item: dict, index=None) -> list[tuple[str, int, list[str]]]:
     ranges = item.get("modRanges") or {}
     # Every source the ITEM owns counts toward a total — explicit, desecrated,
     # fractured, the base's implicit. Runes do not: their bonus leaves with the
-    # rune.
-    mods = searchable_mods(item) + list(item.get("implicitMods") or [])
+    # rune. searchable_mods carries the implicits now; adding them again here
+    # counted the base's implicit twice.
+    mods = searchable_mods(item)
 
     out = []
     for pseudo_id, patterns in PSEUDO_TOTALS:
@@ -397,12 +398,18 @@ def searchable_mods(item: dict) -> list[str]:
     Rune mods are excluded: a socketed rune belongs to the socket, not the
     item. The buyer sockets their own, and the rune has its own price — so
     searching on its bonus prices an item the seller is not selling.
+
+    Implicits ARE included. They occupy no affix slot, so they do not count
+    against the room left to craft, but they are real stats on the item and a
+    buyer filters on them like any other — 40 of the allowlisted mods can be
+    rolled as an implicit.
     """
     return (
         list(item.get("explicitMods") or [])
         + list(item.get("fracturedMods") or [])
         + list(item.get("desecratedMods") or [])
         + list(item.get("enchantMods") or [])
+        + list(item.get("implicitMods") or [])
     )
 
 
@@ -483,6 +490,23 @@ def granted_skill_filter(item: dict) -> dict | None:
             return None
         return {"id": stat_id, "value": {"min": int(match.group(1))}}
     return None
+
+
+def searchable_implicits(item: dict, index) -> list[str]:
+    """Implicits the search can actually use.
+
+    An implicit occupies no affix slot, so it does not score and does not eat
+    into the room left to craft — but it is a real stat a buyer filters on,
+    and 40 of the allowlisted mods can be rolled as one.
+    """
+    from sox.valuation.mods import match_mod
+
+    out = []
+    for text in item.get("implicitMods") or []:
+        entry = match_mod(text, index)
+        if entry is not None and entry.implicit_ids:
+            out.append(text)
+    return out
 
 
 def granted_skill_text(item: dict) -> list[str]:
@@ -610,6 +634,7 @@ def build_query(
     # the enchant group; searching it as explicit returned 0 listings where
     # enchant returned thousands.
     enchant_texts = set(item.get("enchantMods") or [])
+    implicit_texts = set(item.get("implicitMods") or [])
 
     mod_filters = []
     for entry in chosen_entries:
@@ -618,6 +643,23 @@ def build_query(
         ids = stat_ids_for(entry, category)
         if text in enchant_texts:
             ids = regroup(ids, "enchant")
+        elif text in implicit_texts:
+            # The implicit twin is a different stat id, not a prefix swap on
+            # the same one, so it comes from the allowlist rather than
+            # regroup(). Without a twin the mod cannot be searched at all —
+            # asking the explicit table about an implicit returns nothing, so
+            # omitting it beats sending a filter that matches no listing.
+            if not entry.implicit_ids:
+                continue
+            ids = entry.implicit_ids
+            # An implicit comes with the base rather than being rolled onto
+            # it, so the buyer is shopping for the base and will take any roll
+            # of it. Filtering at ours would drop the same base over a
+            # difference nobody is paying for, so the floor of the range is
+            # the honest minimum.
+            span = (item.get("modRanges") or {}).get(text)
+            if span:
+                minimum = round(span[1] * scale, 2)
         if len(ids) > 1:
             or_groups.append({
                 "type": "count",
