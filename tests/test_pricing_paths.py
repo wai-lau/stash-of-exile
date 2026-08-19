@@ -760,3 +760,27 @@ def test_an_implicit_folded_into_a_pseudo_is_not_searched_twice():
     assert "pseudo.pseudo_total_elemental_resistance" in ids
     assert not any(i.startswith("implicit.") for i in ids), \
         "the pseudo already carries it"
+
+
+def test_the_search_asks_for_the_rarity_the_item_actually_is():
+    """A rare and a normal of the same base are different goods.
+
+    The normal is bought as a craft base and priced on its ilvl, the rare on
+    its mods, so "nonunique" priced each against the other's market. Magic
+    stays nonunique: a rare with the same two mods is a strictly better copy
+    and belongs among its comparables.
+    """
+    base = ("Item Class: Body Armours\nRarity: {rarity}\n{name}\nShrouded Mail\n"
+            "--------\nArmour: 178\n--------\nItem Level: 81\n{mods}")
+    cases = {
+        "Rare": ("Behemoth Cloak",
+                 "--------\n{ Suffix Modifier }\n+32(25-35) to Strength\n", "rare"),
+        "Normal": ("Shrouded Mail", "", "normal"),
+        "Magic": ("Sturdy Shrouded Mail",
+                  "--------\n+32(25-35) to Strength\n", "nonunique"),
+    }
+    for rarity, (name, mods, expected) in cases.items():
+        item = itemtext.parse(base.format(rarity=rarity, name=name, mods=mods))
+        types = build_query(item, category_for(item), MODS, NOTABLES)[
+            "query"]["filters"]["type_filters"]["filters"]
+        assert types["rarity"] == {"option": expected}, rarity
