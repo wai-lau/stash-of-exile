@@ -121,21 +121,6 @@ tags = ["spirit"]
 name = "resistances"
 
 [[category.mod]]
-ids = ["pseudo.pseudo_total_elemental_resistance"]
-slug = "total_elemental_resistance"
-text = "+#% total Elemental Resistance"
-weight = 2
-tags = ["defence", "elemental", "resistance"]
-note = "pseudo; triple-res suffixes"
-
-[[category.mod]]
-ids = ["pseudo.pseudo_total_chaos_resistance"]
-slug = "total_to_chaos_resistance"
-text = "+#% total to Chaos Resistance"
-weight = 2
-tags = ["chaos", "defence", "resistance"]
-
-[[category.mod]]
 ids = ["explicit.stat_3372524247"]
 slug = "to_fire_resistance"
 text = "#% to Fire Resistance"

@@ -63,8 +63,10 @@ ALLOWLIST = OrderedDict(
         (
             "resistances",
             [
-                (2, "+#% total Elemental Resistance", "pseudo; triple-res suffixes"),
-                (2, "+#% total to Chaos Resistance", None),
+                # No item ever prints "total Elemental Resistance" — that is a
+                # search-only aggregate. The totals are computed from the
+                # item's own resistance mods and searched as pseudo stats;
+                # listing them here could never match anything.
                 (1, "#% to Fire Resistance", None),
                 (1, "#% to Cold Resistance", None),
                 (1, "#% to Lightning Resistance", None),

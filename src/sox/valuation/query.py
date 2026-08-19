@@ -159,26 +159,33 @@ def filter_value(entry_text: str, values: list[float]) -> float:
 # Each entry lists the mod patterns that feed the total. Values are taken at
 # each mod's MINIMUM roll, for the same reason the equipment filters are —
 # the identical item with worse rolls is still a comparable.
+# (pseudo id, [(mod pattern, how many times it counts toward the total)])
+#
+# The ELEMENTAL total, not per-element totals. Demanding a distribution is far
+# stricter than demanding the same sum: fire>=70 AND cold>=40 AND light>=40
+# returns 0 listings while total elemental >= 150 returns 26. Buyers want
+# total resistance, not particular elements. Chaos stays separate because it
+# is a distinct need, not interchangeable with the elements.
+#
+# "+18% to all Elemental Resistances" adds 18 to each of the three, so it
+# counts three times toward the elemental total.
 PSEUDO_TOTALS = [
-    ("pseudo.pseudo_total_life", [re.compile(r"to maximum Life$", re.I)]),
-    ("pseudo.pseudo_total_mana", [re.compile(r"to maximum Mana$", re.I)]),
-    ("pseudo.pseudo_total_fire_resistance",
-     [re.compile(r"to Fire Resistance$", re.I),
-      re.compile(r"to all Elemental Resistances$", re.I)]),
-    ("pseudo.pseudo_total_cold_resistance",
-     [re.compile(r"to Cold Resistance$", re.I),
-      re.compile(r"to all Elemental Resistances$", re.I)]),
-    ("pseudo.pseudo_total_lightning_resistance",
-     [re.compile(r"to Lightning Resistance$", re.I),
-      re.compile(r"to all Elemental Resistances$", re.I)]),
+    ("pseudo.pseudo_total_life", [(re.compile(r"to maximum Life$", re.I), 1)]),
+    ("pseudo.pseudo_total_mana", [(re.compile(r"to maximum Mana$", re.I), 1)]),
+    ("pseudo.pseudo_total_elemental_resistance",
+     [(re.compile(r"to (Fire|Cold|Lightning) Resistance$", re.I), 1),
+      (re.compile(r"to all Elemental Resistances$", re.I), 3)]),
     ("pseudo.pseudo_total_chaos_resistance",
-     [re.compile(r"to Chaos Resistance$", re.I)]),
+     [(re.compile(r"to Chaos Resistance$", re.I), 1)]),
     ("pseudo.pseudo_total_strength",
-     [re.compile(r"to Strength$", re.I), re.compile(r"to all Attributes$", re.I)]),
+     [(re.compile(r"to Strength$", re.I), 1),
+      (re.compile(r"to all Attributes$", re.I), 1)]),
     ("pseudo.pseudo_total_dexterity",
-     [re.compile(r"to Dexterity$", re.I), re.compile(r"to all Attributes$", re.I)]),
+     [(re.compile(r"to Dexterity$", re.I), 1),
+      (re.compile(r"to all Attributes$", re.I), 1)]),
     ("pseudo.pseudo_total_intelligence",
-     [re.compile(r"to Intelligence$", re.I), re.compile(r"to all Attributes$", re.I)]),
+     [(re.compile(r"to Intelligence$", re.I), 1),
+      (re.compile(r"to all Attributes$", re.I), 1)]),
 ]
 
 
@@ -202,14 +209,15 @@ def pseudo_totals(item: dict, index=None) -> list[tuple[str, int, list[str]]]:
         total = 0.0
         used: list[str] = []
         for text in mods:
-            if not any(p.search(text) for p in patterns):
+            multiplier = next((m for p, m in patterns if p.search(text)), 0)
+            if not multiplier:
                 continue
             values = parse_values(text)
             if not values:
                 continue
             # Floor roll where the item reports one, else the value shown.
             floor = ranges.get(text, (values[0], values[0], values[0]))[1]
-            total += floor
+            total += floor * multiplier
             used.append(text)
         if total > 0:
             out.append((pseudo_id, int(round(total)), used))

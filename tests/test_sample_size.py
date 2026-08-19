@@ -389,9 +389,8 @@ def test_pseudo_totals_replace_the_mods_that_feed_them():
         "{ Suffix Modifier }\n+18(15-20)% to all Elemental Resistances\n"
     )
     totals = dict((pid, value) for pid, value, _ in pseudo_totals(item, MODS))
-    # Floor rolls: 26 from the fire mod, 15 from the all-elemental mod.
-    assert totals["pseudo.pseudo_total_fire_resistance"] == 41
-    assert totals["pseudo.pseudo_total_cold_resistance"] == 15
+    # Floor rolls: 26 fire, plus 15 all-elemental counting three times.
+    assert totals["pseudo.pseudo_total_elemental_resistance"] == 26 + 15 * 3
 
     query = build_query(item, category_for(item), MODS, NOTABLES)
     ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
