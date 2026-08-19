@@ -74,6 +74,21 @@ def colour_for(price_ex: float | None, divine_ex: float) -> str:
     return RESET
 
 
+def detected(name: str, note: str) -> str:
+    """Printed the instant an item lands on the clipboard.
+
+    A trade search can take seconds once the rate governor starts pacing, and
+    a feed that shows nothing until the answer arrives looks broken. The name
+    appears immediately; the priced detail follows under it.
+    """
+    return f"{timestamp()} {BOLD}{name}{RESET}  {DIM}· {note}{RESET}"
+
+
+def body_lines(body: str) -> str:
+    """The priced detail, indented under an already-printed header."""
+    return "\n".join(f"          {line}" for line in body.splitlines()[1:])
+
+
 def entry(body: str, price_ex: float | None, divine_ex: float) -> str:
     """One priced item, tinted so a valuable one is visible from across a desk."""
     colour = colour_for(price_ex, divine_ex)

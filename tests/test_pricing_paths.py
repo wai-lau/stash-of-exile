@@ -144,3 +144,58 @@ def test_watch_session_tracks_totals_and_best():
     assert s.searches == 6
     assert s.best_name == "Mageblood"
     assert round(s.total_ex) == 135426
+
+
+def test_unrevealed_desecrated_mods_are_useless_but_occupy_slots():
+    """Unrevealed mods have no known stat, so they are worth nothing.
+
+    They are not free either: they hold an affix slot a buyer would otherwise
+    craft into, so they must reduce the open-affix bonus like a junk mod.
+    """
+    from sox.valuation.candidates import item_mods, used_affixes
+
+    text = (
+        "Item Class: Body Armours\nRarity: Rare\nDoom Guardian\nVaal Cuirass\n"
+        "--------\nItem Level: 82\n--------\n"
+        '{ Prefix Modifier "Athlete\'s" (Tier: 1) }\n+96(90-99) to maximum Life\n'
+        "{ Desecrated Prefix Modifier }\nUnrevealed Prefix Modifier\n"
+        "{ Desecrated Suffix Modifier }\nUnrevealed Suffix Modifier\n"
+    )
+    item = itemtext.parse(text)
+
+    assert len(item["unrevealedMods"]) == 2
+    # Never scored, never searched.
+    assert not any("Unrevealed" in m for m in item_mods(item))
+    assert not any("Unrevealed" in m for m in item["explicitMods"])
+    # But they still consume slots: 1 real mod + 2 unrevealed.
+    assert used_affixes(item) == 3
+
+
+def test_unrevealed_mods_reduce_the_open_affix_bonus():
+    from sox.valuation.candidates import open_affix_bonus
+
+    base = ("Item Class: Body Armours\nRarity: Rare\nDoom Guardian\nVaal Cuirass\n"
+            "--------\nItem Level: 82\n--------\n"
+            "{ Prefix Modifier }\n+96 to maximum Life\n")
+    clean = itemtext.parse(base)
+    veiled = itemtext.parse(
+        base + "{ Desecrated Prefix Modifier }\nUnrevealed Prefix Modifier\n"
+    )
+    clean_bonus, _ = open_affix_bonus(clean, mod_score=3, has_premium=True)
+    veiled_bonus, veiled_reason = open_affix_bonus(veiled, mod_score=3, has_premium=True)
+    assert veiled_bonus <= clean_bonus
+    assert "open4" in veiled_reason, "6 capacity - 1 real - 1 unrevealed = 4 open"
+
+
+def test_never_searched_on_an_unrevealed_mod():
+    from sox.valuation.query import build_query, category_for
+
+    item = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Rare\nDoom Guardian\nVaal Cuirass\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Prefix Modifier }\n+96 to maximum Life\n"
+        "{ Desecrated Prefix Modifier }\nUnrevealed Prefix Modifier\n"
+    )
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    dumped = str(query)
+    assert "Unrevealed" not in dumped

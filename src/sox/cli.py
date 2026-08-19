@@ -125,32 +125,39 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         for text in clipboard.watch(args.poll):
             if not clipboard.looks_like_item(text):
                 continue
+
+            # Acknowledge the item before doing any network work. Deciding
+            # whether a search is needed costs nothing, so the header can say
+            # which is coming.
             try:
-                body, price_ex, searches = price_and_measure(
-                    text, index, rates, mod_index, base_rules, unique_rules,
-                    notables, trade, cache, cfg, league.divine_price_ex,
-                )
+                item = itemtext.parse(text)
+            except ValueError:
+                continue
+            name = display_name(item)
+            if item.get("name"):
+                name = f"{name}  [{item.get('baseType')}]"
+            entry_ = index_price_for(item, index)
+            verdict = candidates.assess(item, entry_, mod_index, base_rules, unique_rules)
+            searching = verdict.should_search and trade is not None
+            print(watch_ui.detected(name, "searching…" if searching else "index"),
+                  flush=True)
+
+            try:
+                priced = _price_item(item, index, rates, mod_index, base_rules,
+                                     unique_rules, notables, trade, cache, cfg)
             except (GGGError, httpx.HTTPError) as exc:
                 # One bad lookup must not end the session; the next copy retries.
                 print(watch_ui.error(str(exc)), flush=True)
                 continue
-            stats.record(body.splitlines()[0], price_ex, searches)
-            print(watch_ui.entry(body, price_ex, league.divine_price_ex), flush=True)
+
+            body = report.render(item, priced, league.divine_price_ex)
+            stats.record(name, priced.price_ex, priced.searches_used)
+            print(watch_ui.body_lines(body), flush=True)
             print(watch_ui.status(stats, league.divine_price_ex), flush=True)
     except KeyboardInterrupt:
         print()
         print(watch_ui.status(stats, league.divine_price_ex))
     return 0
-
-
-def price_and_measure(block, index, rates, mod_index, base_rules, unique_rules,
-                      notables, trade, cache, cfg, divine_ratio):
-    """Price one item and report its value and search cost for the tally."""
-    item = itemtext.parse(block)
-    priced = _price_item(item, index, rates, mod_index, base_rules,
-                         unique_rules, notables, trade, cache, cfg)
-    return (report.render(item, priced, divine_ratio),
-            priced.price_ex, priced.searches_used)
 
 
 def price_one(block, index, rates, mod_index, base_rules, unique_rules,

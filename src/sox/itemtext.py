@@ -36,8 +36,10 @@ SEPARATOR = re.compile(r"^-{3,}$")
 
 # "{ Prefix Modifier "Shocking" (Tier: 4) - Damage, Elemental, Attack }"
 # "{ Unique Modifier - Defences }"
+# "{ Desecrated Suffix Modifier "of Amanamu" (Tier: 1) - ... }"  <- TWO words
+# before "Modifier", so the kind must not be a single \w+.
 MOD_HEADER = re.compile(
-    r"^\{\s*(?P<kind>\w+)\s+Modifier"
+    r"^\{\s*(?P<kind>\w+)(?:\s+\w+)*?\s+Modifier"
     r'(?:\s+"(?P<name>[^"]*)")?'
     r"(?:\s*\(Tier:\s*(?P<tier>\d+)\))?"
     r".*\}$"
@@ -50,6 +52,14 @@ ROLL = re.compile(r"(-?\d+(?:\.\d+)?)\((-?\d+(?:\.\d+)?)-(-?\d+(?:\.\d+)?)\)")
 #   "36% increased Physical Damage (rune)"
 #   "Adds 32 to 59 Physical Damage (fractured)"  <- inside a Prefix Modifier block
 MOD_MARKER = re.compile(r"\s*\((implicit|fractured|rune|desecrated|enchant|crafted|scourge)\)\s*$", re.I)
+
+# An unrevealed desecrated modifier occupies an affix slot but its stat is
+# not yet known, so it is worth nothing until revealed. The whole line IS the
+# marker. The exact literal could not be confirmed from GGG data, so a pattern
+# family is matched rather than one guessed string: PoE2 wording is
+# "Unrevealed Prefix/Suffix Modifier" (cf. the pseudo stats "# Unrevealed
+# Prefix Modifiers"), and PoE1 used "Veiled".
+UNREVEALED = re.compile(r"^(?:unrevealed|veiled)\b.*modifier\b", re.I)
 
 # Uncut gems put the level in the name: "Uncut Skill Gem (Level 19)".
 GEM_LEVEL = re.compile(r"\(Level\s+(\d+)\)")
@@ -136,6 +146,7 @@ def parse(text: str) -> dict:
         "runeMods": [],
         "desecratedMods": [],
         "enchantMods": [],
+        "unrevealedMods": [],
         "modTiers": {},
         "modRanges": {},
     }
@@ -223,6 +234,9 @@ def _parse_section(section: list[str], item: dict) -> None:
             if not _looks_like_mod(line):
                 continue
             stripped, marker = split_marker(line)
+            if UNREVEALED.match(stripped):
+                item["unrevealedMods"].append(stripped)
+                continue
             field = _KIND_TO_FIELD.get(marker or "", "explicitMods")
             item[field].append(strip_rolls(stripped))
 
@@ -262,6 +276,10 @@ def _parse_mod_section(section: list[str], item: dict) -> None:
             continue
 
         stripped, marker = split_marker(line)
+        if UNREVEALED.match(stripped):
+            # Occupies an affix slot, contributes nothing knowable.
+            item["unrevealedMods"].append(stripped)
+            continue
         plain = strip_rolls(stripped)
         if not plain:
             continue

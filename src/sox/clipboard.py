@@ -12,27 +12,34 @@ in milliseconds.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import shutil
 import subprocess
 import time
 from collections.abc import Iterator
 
-# Marks the start of a clipboard payload on the PowerShell stream. Chosen to
-# be something no item text could contain.
-DELIMITER = "<<<SOX-CLIP>>>"
+# Each clipboard payload is sent as ONE base64 line. A start-delimiter with a
+# multi-line payload cannot work here: the payload is only known to be
+# complete when the NEXT delimiter arrives, so every item would lag one copy
+# behind. One self-contained line per change has no such lag, and base64 also
+# removes any chance of item text colliding with a delimiter.
 
-_PS_WATCHER = f"""
+# Write-Output block-buffers when stdout is a pipe, so writing goes through
+# [Console]::Out with an explicit Flush to make every change arrive at once.
+_PS_WATCHER = """
 $ErrorActionPreference = 'SilentlyContinue'
 $last = ''
-while ($true) {{
+while ($true) {
     $current = Get-Clipboard -Raw
-    if ($current -ne $null -and $current -ne $last) {{
+    if ($current -ne $null -and $current -ne $last) {
         $last = $current
-        Write-Output '{DELIMITER}'
-        Write-Output $current
-    }}
-    Start-Sleep -Milliseconds {{poll_ms}}
-}}
+        $bytes = [Text.Encoding]::UTF8.GetBytes($current)
+        [Console]::Out.WriteLine([Convert]::ToBase64String($bytes))
+        [Console]::Out.Flush()
+    }
+    Start-Sleep -Milliseconds {poll_ms}
+}
 """
 
 
@@ -71,15 +78,19 @@ def _watch_windows(poll_ms: int) -> Iterator[str]:
         text=True,
         bufsize=1,
     )
-    buffer: list[str] = []
     try:
-        for line in process.stdout:  # type: ignore[union-attr]
-            if line.rstrip("\r\n") == DELIMITER:
-                if buffer:
-                    yield "\n".join(buffer).strip()
-                buffer = []
+        # NOT `for line in process.stdout`: iterating a file object uses an
+        # 8KB read-ahead buffer, so nothing is yielded until that fills. For a
+        # live feed each line must be delivered as it arrives.
+        for line in iter(process.stdout.readline, ""):  # type: ignore[union-attr]
+            payload = line.strip()
+            if not payload:
                 continue
-            buffer.append(line.rstrip("\r\n"))
+            try:
+                text = base64.b64decode(payload).decode("utf-8", "replace")
+            except (ValueError, binascii.Error):
+                continue
+            yield text.replace("\r\n", "\n").strip()
     finally:
         process.terminate()
 

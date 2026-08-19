@@ -26,7 +26,11 @@ class Verdict:
 
 
 def item_mods(item: dict) -> list[str]:
-    """Every mod that occupies an affix and can be searched on."""
+    """Every mod that can be scored and searched on.
+
+    Excludes unrevealed desecrated modifiers: their stat is unknown until
+    revealed, so they are worth nothing and cannot be searched.
+    """
     return (
         list(item.get("explicitMods") or [])
         + list(item.get("fracturedMods") or [])
@@ -36,7 +40,13 @@ def item_mods(item: dict) -> list[str]:
 
 
 def used_affixes(item: dict) -> int:
-    return len(set(item_mods(item)))
+    """Affix slots consumed, INCLUDING unrevealed ones.
+
+    An unrevealed modifier is useless but not free: it holds a slot a buyer
+    would otherwise craft into, so it must reduce the open-affix bonus exactly
+    as a junk mod does.
+    """
+    return len(set(item_mods(item))) + len(item.get("unrevealedMods") or [])
 
 
 def open_affix_bonus(item: dict, mod_score: int, has_premium: bool) -> tuple[int, str]:
