@@ -15,6 +15,10 @@ from sox.valuation.classify import ItemClass, display_name
 SEARCHED = "\033[36m"
 # The market row is the answer; everything else on screen explains it.
 MARKET = "\033[1;33m"
+# Priced in divine, the same colour is worn inside out. A divine price is the
+# one worth spotting while a watch session scrolls past, and inverting the row
+# reads from across the room where a second hue would just be another colour.
+MARKET_DIV = "\033[1;33;7m"
 RESET = "\033[0m"
 
 
@@ -145,7 +149,10 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
             market += f"  ·  25th {p25}"
         if priced.median_ex is not None:
             market += f"  ·  median {median}"
-        out.append(f"  market     {MARKET}{market}{RESET}")
+        # fmt_row quotes the whole row in one unit, chosen from the low, so
+        # the low is what says which unit this price is in.
+        colour = MARKET_DIV if low.endswith(" div") else MARKET
+        out.append(f"  market     {colour}{market}{RESET}")
         # `listings` is only ever the cheapest handful — one fetch call is
         # enough to find the low end, so it reads 10 for anything with a real
         # market. The match count is the number that says whether the price is

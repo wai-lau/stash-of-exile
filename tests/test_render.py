@@ -101,3 +101,23 @@ def test_a_market_row_is_quoted_in_one_unit():
     # turn the low into "0.03 div".
     assert fmt_row([9.0, 32.23, 4480.0], RATES)[0] == "9 ex"
     assert fmt_row([None, None, None], RATES) == ["—", "—", "—"]
+
+
+def test_a_divine_market_row_wears_the_colour_inside_out():
+    """The unit a price is quoted in is information; so is spotting it.
+
+    A watch session scrolls, and the divine prices are the ones worth
+    catching. Inverting the row it already uses beats introducing a second
+    colour that then has to be learned.
+    """
+    from sox import report
+
+    rates = {"exalted": 1.0, "divine": 358.0}
+    div = report.render({"typeLine": "Mace"}, PricedItem(
+        name="Mace", item_class=ItemClass.GEAR, price_ex=716.0, source="trade",
+        tag="exact", listings=10, median_ex=1074.0), rates)
+    ex = report.render({"typeLine": "Mace"}, PricedItem(
+        name="Mace", item_class=ItemClass.GEAR, price_ex=12.0, source="trade",
+        tag="exact", listings=10, median_ex=20.0), rates)
+    assert report.MARKET_DIV in div and "2 div" in div
+    assert report.MARKET_DIV not in ex and report.MARKET in ex
