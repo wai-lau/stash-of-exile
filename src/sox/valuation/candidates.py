@@ -16,7 +16,7 @@ from sox.valuation.mods import (
     matched,
     score_mods,
 )
-from sox.valuation.rolls import roll_percentiles
+from sox.valuation.rolls import roll_percentiles, roll_percentiles_from_item
 
 AVOID_PENALTY = 3
 
@@ -249,7 +249,10 @@ def should_search_unique(item: dict, entry: IndexEntry | None, rules: UniqueRule
         return "granted-skill"
 
     threshold = rules.thresholds.get("roll_score_percentile", 0.75)
-    percentiles = roll_percentiles(item_mods(item), entry.metadata)
+    # The item's own advanced descriptions carry the range on the same line as
+    # the roll, so prefer them; the index template has to be matched by text.
+    percentiles = roll_percentiles_from_item(item) or \
+        roll_percentiles(item_mods(item), entry.metadata)
     if percentiles and max(percentiles) >= threshold:
         # ANY roll in the top quarter, not the mean of all of them. The market
         # prices a unique on the roll people buy it for; a near-perfect

@@ -516,3 +516,86 @@ def test_a_clean_item_does_not_price_against_corrupted_listings():
     assert corrupted["corrupted"] is True
     filters = build_query(corrupted, category_for(corrupted), MODS, NOTABLES)
     assert "misc_filters" not in filters["query"]["filters"]
+
+
+def _warden_text():
+    return Path("tests/fixtures/items/ForgottenWardenTwiceCorrupted.txt").read_text()
+
+
+def test_twice_corrupted_reads_as_corrupted():
+    """A twice-corrupted item prints only "Twice Corrupted", never "Corrupted"
+    as well, so the plain flag has to be implied.
+
+    Without it the item read as untouched: it escaped the corrupted escalation
+    and the search pinned corrupted=No, asking the market for clean copies of
+    an item that can never be one.
+    """
+    item = itemtext.parse(_warden_text())
+    assert item["corrupted"] is True and item["twiceCorrupted"] is True
+
+    filters = build_query(item, category_for(item), MODS, NOTABLES)
+    assert "misc_filters" not in filters["query"]["filters"]
+    assert should_search_unique_of(item) == "corrupted"
+
+
+def should_search_unique_of(item):
+    from sox.valuation.candidates import should_search_unique
+    from sox.scout import IndexEntry
+
+    return should_search_unique(item, IndexEntry(
+        name="Forgotten Warden", price_ex=9.0, quantity=15162,
+        metadata={"explicit_mods": [
+            "+(70-100) to Deflection Rating per 50 missing Energy Shield",
+            "(200-300)% increased Evasion and Energy Shield",
+            "+(20-30) to Dexterity",
+            "Companions have (30-50)% increased maximum Life",
+            "(10-15)% of Damage from Deflected Hits is taken from "
+            "Damageable Companion's Life before you",
+        ]}), UNIQUES)
+
+
+def test_rolls_match_their_template_by_text_not_position():
+    """One extra mod used to shift every roll onto the wrong range.
+
+    This copy carries a corruption enhancement the index template has no entry
+    for, so zipping the two lists in order scored Dexterity 24 against the
+    Evasion range (200-300) and reported 0th, then Evasion 280 against
+    Dexterity's (20-30) and reported 100th.
+    """
+    from sox.valuation.candidates import item_mods
+    from sox.valuation.rolls import roll_percentiles
+
+    item = itemtext.parse(_warden_text())
+    entry_mods = [
+        "+(70-100) to Deflection Rating per 50 missing Energy Shield",
+        "(200-300)% increased Evasion and Energy Shield",
+        "+(20-30) to Dexterity",
+        "Companions have (30-50)% increased maximum Life",
+        "(10-15)% of Damage from Deflected Hits is taken from "
+        "Damageable Companion's Life before you",
+    ]
+    got = roll_percentiles(item_mods(item), {"explicit_mods": entry_mods})
+    assert [round(p, 2) for p in got] == [0.2, 0.8, 0.4, 0.6, 0.8]
+    # The corruption enhancement has no template and is skipped, not misaligned.
+    assert len(got) == len(entry_mods)
+
+
+def test_the_granted_skill_survives_a_leading_property_line():
+    """`Grants Skill:` sits in its own section here, but when it heads a mod
+    block the colon used to make the parser read the whole block as properties
+    and drop every mod under it."""
+    from sox.valuation.query import granted_skill_filter
+
+    item = itemtext.parse(_warden_text())
+    assert granted_skill_filter(item) == {
+        "id": "skill.spirit_vessel_companion", "value": {"min": 20}
+    }
+
+    inline = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Unique\nX\nPrimal Markings\n"
+        "--------\nEnergy Shield: 414\n--------\nItem Level: 84\n--------\n"
+        "Grants Skill: Level 20 Spirit Vessel\n"
+        "+24(20-30) to Dexterity\n"
+    )
+    assert granted_skill_filter(inline) is not None
+    assert inline["explicitMods"] == ["+24 to Dexterity"], "the mod survived"

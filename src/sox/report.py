@@ -47,6 +47,7 @@ class PricedItem:
     item_class_name: str = ""              # the game's own label, e.g. "Quarterstaves"
     category: str | None = None            # the trade category searched
     roll_pct: float | None = None
+    best_roll_pct: float | None = None
 
 
 def fmt_price(ex: float | None, divine_ratio: float) -> str:
@@ -107,8 +108,15 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         if priced.quantity and priced.quantity < 20:
             lines.append("             thin market — index price is weak evidence")
         if priced.roll_pct is not None:
+            # The mean alone reads as a verdict on the item, but escalation
+            # turns on the BEST roll — a copy with one near-perfect
+            # build-defining roll beside poor filler is what the market pays
+            # for, and an average of 47% hides it completely.
+            best = priced.best_roll_pct
             band = ("well rolled" if priced.roll_pct >= 0.75
                     else "poorly rolled" if priced.roll_pct <= 0.25 else "average roll")
+            if best is not None and best >= 0.75 and priced.roll_pct < 0.75:
+                band = f"average overall, best {best * 100:.0f}th"
             lines.append(f"  rolls      {priced.roll_pct * 100:.0f}th percentile "
                          f"({band})")
             if priced.roll_pct >= 0.75:

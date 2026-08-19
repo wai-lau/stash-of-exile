@@ -1,0 +1,39 @@
+Item Class: Body Armours
+Rarity: Unique
+Forgotten Warden
+Primal Markings
+--------
+Quality: +27% (augmented)
+Evasion Rating: 1355 (augmented)
+Energy Shield: 414 (augmented)
+--------
+Requires: Level 70, 67 Dex, 67 Int
+--------
+Sockets: S S 
+--------
+Item Level: 84
+--------
+{ Corruption Enhancement — Damage }
+40(40-50)% increased Thorns damage
+--------
+18% increased Armour, Evasion and Energy Shield (rune)
+10% increased Deflection Rating (rune)
+--------
+Grants Skill: Level 20 Spirit Vessel
+--------
+{ Unique Modifier — Evasion }
++76(70-100) to Deflection Rating per 50 missing Energy Shield
+{ Unique Modifier — Evasion, Energy Shield }
+280(200-300)% increased Evasion and Energy Shield
+{ Unique Modifier — Attribute }
++24(20-30) to Dexterity
+{ Unique Modifier — Life, Minion }
+Companions have 42(30-50)% increased maximum Life
+{ Unique Modifier }
+14(10-15)% of Damage from Deflected Hits is taken from Damageable Companion's Life before you
+--------
+A gift from the Draíocht, lost in Darkness.
+The bronze hums. The cloth sighs.
+Living pieces of her, yearning to exist.
+--------
+Twice Corrupted

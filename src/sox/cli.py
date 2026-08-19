@@ -28,7 +28,12 @@ from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_
 from sox.valuation.classify import ItemClass, classify, display_name
 from sox.valuation.index_pricer import index_price_for
 from sox.valuation.mods import build_index, explain_score
-from sox.valuation.rolls import roll_score, roll_score_from_item
+from sox.valuation.rolls import (
+    roll_percentiles,
+    roll_percentiles_from_item,
+    roll_score,
+    roll_score_from_item,
+)
 from sox.valuation.query import (
     category_for,
     defence_mod_texts,
@@ -141,6 +146,18 @@ def _coherence_fields(item, mod_index) -> dict:
     group, count, bonus = candidates.coherence_of(item, mod_index)
     return {"coherence_group": group, "coherence_count": count,
             "coherence_bonus": bonus}
+
+
+def _best_roll(item, entry) -> float | None:
+    """The item's strongest roll, preferring its own advanced descriptions.
+
+    Those carry the range on the same line as the value, so nothing can
+    misalign; the index template has to be matched by text.
+    """
+    percentiles = roll_percentiles_from_item(item)
+    if not percentiles and entry is not None:
+        percentiles = roll_percentiles(candidates.item_mods(item), entry.metadata)
+    return max(percentiles) if percentiles else None
 
 
 def wants_search(verdict, entry, item, force: bool = False) -> bool:
@@ -336,6 +353,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             name=display_name(item), item_class=item_class, price_ex=entry.price_ex,
             source="index", tag=None, reason=verdict.reason, quantity=entry.quantity,
             roll_pct=roll_pct,
+            best_roll_pct=_best_roll(item, entry),
         )
 
     if item_class is ItemClass.UNKNOWN:

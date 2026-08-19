@@ -65,35 +65,54 @@ def spread_of(metadata: dict) -> float:
     return max(ratios) if ratios else 1.0
 
 
+# A range like "(70-100)" and a rolled "76" must reduce to the same shape so
+# a mod can be matched to its template by text.
+_RANGE_TOKEN = re.compile(r"\(\s*-?\d+(?:\.\d+)?\s*-\s*-?\d+(?:\.\d+)?\s*\)")
+_NUMBER_TOKEN = re.compile(r"-?\d+(?:\.\d+)?")
+
+
+def _shape(text: str) -> str:
+    """Mod text with every number and range collapsed, for template matching."""
+    text = _RANGE_TOKEN.sub("#", text)
+    text = _NUMBER_TOKEN.sub("#", text)
+    return re.sub(r"\s+", " ", text.casefold()).strip()
+
+
 def roll_percentiles(item_mods: list[str], metadata: dict) -> list[float]:
     """Our percentile within each range the item can roll, one per mod.
 
-    The mean hides the copy that matters: a unique whose one build-defining
-    roll is near-perfect and whose filler rolls are poor averages out to
-    mediocre, while the market prices it on the roll people actually buy it
-    for.
+    Matched by mod TEXT, not by position. Zipping the two lists in order
+    silently misaligns whenever our copy carries a mod the index template does
+    not — a corruption enhancement, an enchant — and then compares every roll
+    against the wrong range. A twice-corrupted Forgotten Warden scored its
+    Dexterity against the Evasion range that way.
+
+    The mean also hides the copy that matters: a unique whose one
+    build-defining roll is near-perfect and whose filler rolls are poor
+    averages out to mediocre, while the market prices it on the roll people
+    actually buy it for.
     """
-    templates = []
+    templates: dict[str, list[tuple[float, float]]] = {}
     for key in MOD_KEYS:
         for mod in metadata.get(key) or []:
             if isinstance(mod, dict):
-                templates.extend(_ranges_from_structured(mod))
+                for span in _ranges_from_structured(mod):
+                    templates.setdefault(_shape(str(mod)), []).append(span)
             else:
                 ranges = parse_ranges(mod)
                 if ranges:
-                    templates.append(ranges[0])
-
-    values = []
-    for text in item_mods:
-        found = parse_values(text)
-        if found:
-            values.append(found[0])
+                    templates.setdefault(_shape(mod), []).append(ranges[0])
 
     percentiles = []
-    for (lo, hi), value in zip(templates, values):
+    for text in item_mods:
+        spans = templates.get(_shape(text))
+        values = parse_values(text)
+        if not spans or not values:
+            continue
+        lo, hi = spans.pop(0)
         if hi <= lo:
             continue
-        percentiles.append(min(max((value - lo) / (hi - lo), 0.0), 1.0))
+        percentiles.append(min(max((values[0] - lo) / (hi - lo), 0.0), 1.0))
     return percentiles
 
 
@@ -103,6 +122,19 @@ def roll_score(item_mods: list[str], metadata: dict) -> float | None:
     if not percentiles:
         return None
     return sum(percentiles) / len(percentiles)
+
+
+def roll_percentiles_from_item(item: dict) -> list[float]:
+    """Percentiles from the item's OWN advanced descriptions.
+
+    Exact where the index template is approximate: the ranges come from the
+    same line as the roll, so nothing can misalign.
+    """
+    out = []
+    for actual, lo, hi in (item.get("modRanges") or {}).values():
+        if hi > lo:
+            out.append(min(max((actual - lo) / (hi - lo), 0.0), 1.0))
+    return out
 
 
 def roll_score_from_item(item: dict) -> float | None:

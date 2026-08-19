@@ -73,11 +73,16 @@ FRAME_BY_RARITY = {
 # Header lines that are flags rather than key/value properties.
 FLAGS = {
     "corrupted": "corrupted",
+    "twice corrupted": "twiceCorrupted",
     "sanctified": "sanctified",
     "mirrored": "mirrored",
     "unidentified": "unidentified",
     "split": "split",
 }
+
+# A twice-corrupted item prints only "Twice Corrupted" — never "Corrupted" as
+# well — so the plain flag has to be implied or the item reads as untouched.
+IMPLIES = {"twiceCorrupted": "corrupted"}
 
 # Section keys that are not item properties.
 _SKIP_PROPERTY_KEYS = {"requires", "item level", "stack size", "note"}
@@ -139,6 +144,7 @@ def parse(text: str) -> dict:
         "baseType": None,
         "identified": True,
         "corrupted": False,
+        "twiceCorrupted": False,
         "sanctified": False,
         "mirrored": False,
         "properties": [],
@@ -200,6 +206,9 @@ def _parse_section(section: list[str], item: dict) -> None:
                 item["identified"] = False
             else:
                 item[FLAGS[key]] = True
+                implied = IMPLIES.get(FLAGS[key])
+                if implied:
+                    item[implied] = True
 
     if section[0].startswith("Item Level:"):
         item["ilvl"] = int(re.sub(r"\D", "", section[0]) or 0)
@@ -222,9 +231,17 @@ def _parse_section(section: list[str], item: dict) -> None:
         return
 
     # Property section, e.g. "Energy Shield: 44 (augmented)".
+    #
+    # A property can share a section with real mods: a unique that grants a
+    # skill prints "Grants Skill: Level 20 Spirit Vessel" at the head of its
+    # explicit block. Lines that are not properties fall through to the mod
+    # pass below, because treating the whole section as properties on the
+    # strength of one colon dropped every mod under it.
     matched_property = False
+    leftover = []
     for line in section:
         if ":" not in line:
+            leftover.append(line)
             continue
         key, value = line.split(":", 1)
         key, value = key.strip(), _strip_augmented(value)
@@ -236,8 +253,7 @@ def _parse_section(section: list[str], item: dict) -> None:
     # A section with no colons and no modifier header is either an implicit
     # (when advanced descriptions are off) or unique flavour text. Only lines
     # that look like a stat are kept.
-    if not matched_property:
-        for line in section:
+    for line in (leftover if matched_property else section):
             stripped, marker = split_marker(line)
             # Checked BEFORE _looks_like_mod: "Unrevealed Suffix Modifier"
             # carries no number, so the mod-shape filter would drop it and the
