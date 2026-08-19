@@ -116,6 +116,58 @@ def test_explanation_matches_the_rung_used():
     """Rung 2 keeps 2 stats, so the display must not show 3."""
     from sox.valuation.query import RELAX_STEPS, explain_selection
 
-    _, at_rung_2 = RELAX_STEPS[2]
+    at_rung_2 = RELAX_STEPS[2]
     _, stats = explain_selection(ITEM, MODS, NOTABLES, relax=2)
     assert len(stats) <= at_rung_2
+
+
+def test_minimums_are_never_lowered():
+    """Searching below your own values prices a WORSE item, not yours."""
+    from sox.valuation.query import build_query, category_for
+
+    def minimums(relax):
+        q = build_query(ITEM, category_for(ITEM), MODS, NOTABLES, relax=relax)
+        return {f["id"]: f["value"].get("min") for f in q["query"]["stats"][0]["filters"]}
+
+    strict = minimums(0)
+    for rung in range(1, 4):
+        widened = minimums(rung)
+        # Fewer stats each rung, but every surviving minimum is unchanged.
+        assert len(widened) <= len(strict)
+        for stat_id, value in widened.items():
+            assert value == strict[stat_id], f"rung {rung} lowered {stat_id}"
+
+
+def test_widening_drops_the_worst_tier_mod_first():
+    """Tier 1 is the best roll, so the highest tier number goes first."""
+    from sox.valuation.query import build_query, category_for
+
+    item = itemtext.parse(
+        "Item Class: Bows\nRarity: Rare\nTest Bow\nRider Bow\n"
+        "--------\nItem Level: 80\n--------\n"
+        '{ Prefix Modifier "Best" (Tier: 1) }\nAdds 5(1-5) to 82(62-89) Lightning Damage\n'
+        '{ Prefix Modifier "Worst" (Tier: 9) }\nAdds 9(6-9) to 13(10-15) Cold Damage\n'
+    )
+    narrow = build_query(item, category_for(item), MODS, NOTABLES, relax=3)
+    kept = [f["id"] for f in narrow["query"]["stats"][0]["filters"]]
+    assert len(kept) == 1
+    lightning = MODS[__import__("sox.valuation.mods", fromlist=["x"]).normalize_mod(
+        "Adds 5 to 82 Lightning Damage")]
+    assert kept[0] == lightning.ids[0], "the tier 1 mod must survive"
+
+
+def test_only_cohering_mods_are_searched():
+    """Non-cohering mods are dropped, not used to pad the query."""
+    from sox.valuation.query import explain_selection
+
+    item = itemtext.parse(
+        "Item Class: Amulets\nRarity: Rare\nMixed\nLapis Amulet\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Prefix Modifier }\n+3 to Level of all Spell Skills\n"
+        "{ Prefix Modifier }\n25% increased Cast Speed\n"
+        "{ Suffix Modifier }\n40% increased Spell Damage\n"
+        "{ Suffix Modifier }\n18% increased Attack Speed\n"
+    )
+    group, stats = explain_selection(item, MODS, NOTABLES, relax=0)
+    assert group == "spell"
+    assert "#% increased Attack Speed" not in stats

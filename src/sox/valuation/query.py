@@ -17,14 +17,14 @@ from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
 from sox.valuation.mods import match_mod, select_synergistic
 from sox.valuation.rolls import parse_values
 
-# Relaxation ladder: (scale applied to every minimum, how many stats to keep).
-# Constraining on EVERY matched mod is what a naive implementation does and it
-# returns nothing: demanding fire AND cold AND lightning AND accuracy at once
-# describes one item in the world. Buyers search on the few mods that define
-# the item, so we keep the highest-weight ones and loosen from there.
-RELAX_STEPS = ((1.0, 3), (0.9, 3), (0.75, 2), (0.75, 1))
-
-MAX_STATS_DEFAULT = 3
+# Widening ladder: how many cohering stats to keep at each rung.
+#
+# Minimums are NEVER lowered. Searching below your own values asks "what are
+# worse items worth", which answers a different question and drags the price
+# down. Widening instead drops the weakest mod — by the game's own tier where
+# the item reports one — so every rung still describes an item at least as
+# good as yours on the stats that remain.
+RELAX_STEPS = (4, 3, 2, 1)
 
 # Clipboard property name -> equipment_filters id, verified against
 # /api/trade2/data/filters.
@@ -91,7 +91,8 @@ def build_query(
     status: str = "online",
     relax: int = 0,
 ) -> dict:
-    scale, max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
+    max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
+    scale = 1.0  # minimums are never lowered; see RELAX_STEPS
 
     type_filters: dict = {"category": {"option": category}}
     rarity = rarity_of(item)
@@ -144,8 +145,13 @@ def build_query(
     notable_items = [(w, t, e) for w, t, e in scored if isinstance(e, _Notable)]
     mod_items = [(w, t, e) for w, t, e in scored if not isinstance(e, _Notable)]
 
+    tiers = item.get("modTiers") or {}
+    texts = {id(e): t for _, t, e in mod_items}
     chosen_entries, _group = select_synergistic(
-        [e for _, _, e in mod_items], max(max_stats - len(notable_items), 0)
+        [e for _, _, e in mod_items],
+        max(max_stats - len(notable_items), 0),
+        tiers=tiers,
+        texts=texts,
     )
     by_entry = {id(e): t for _, t, e in mod_items}
     selected = notable_items[:max_stats] + [
@@ -201,7 +207,7 @@ def explain_selection(
     """
     from sox.valuation.mods import matched, select_synergistic
 
-    _, max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
+    max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
 
     all_mods = (
         list(item.get("explicitMods") or [])
@@ -215,6 +221,14 @@ def explain_selection(
     if notable_texts:
         return "notable", notable_texts[:max_stats]
 
-    entries = matched([t for t in all_mods if not t.startswith("Allocates ")], index)
-    chosen, group = select_synergistic(entries, max_stats)
+    plain = [t for t in all_mods if not t.startswith("Allocates ")]
+    entries = matched(plain, index)
+    texts = {}
+    for text in plain:
+        entry = match_mod(text, index)
+        if entry is not None:
+            texts.setdefault(id(entry), text)
+    chosen, group = select_synergistic(
+        entries, max_stats, tiers=item.get("modTiers") or {}, texts=texts
+    )
     return (group or None), [e.text for e in chosen]

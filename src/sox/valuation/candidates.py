@@ -90,7 +90,7 @@ def score_gear(item: dict, index: dict[str, ModEntry], base_rules: BaseRules) ->
 
     mod_score, _ = score_mods(mods, index)
     if mod_score:
-        reasons.append(f"mods={mod_score}")
+        reasons.append(f"coherence={mod_score}")
 
     bonus, why = coherence_bonus(mods, index)
     if bonus:

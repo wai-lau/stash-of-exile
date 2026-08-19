@@ -98,31 +98,40 @@ def dominant_archetype(entries: list[ModEntry]) -> tuple[str | None, int]:
 
 
 def select_synergistic(
-    entries: list[ModEntry], limit: int
+    entries: list[ModEntry],
+    limit: int,
+    tiers: dict[str, int] | None = None,
+    texts: dict[int, str] | None = None,
 ) -> tuple[list[ModEntry], str]:
-    """Pick the mods a real buyer would search on, together.
+    """Pick only the mods that cohere, best tier first.
 
     This is the judgement a price-check overlay leaves to the player: which
-    stats belong to one build. Picking the heaviest mods regardless of
-    archetype produces a query no single buyer wants — +Melee Skills AND
-    +Spell Skills describes nobody. So mods serving the item's dominant
-    archetype come first, and only then the heaviest leftovers.
+    stats belong to one build. Mods outside the item's dominant archetype are
+    NOT used to pad the query — a query mixing +Melee Skills with +Spell
+    Skills describes a buyer who does not exist, and padding it with unrelated
+    stats only narrows the result set for no gain.
+
+    Ordering is by the game's own mod tier where the item reports one (tier 1
+    is best), so that widening the search drops the weakest mod first.
     """
     if not entries:
         return [], ""
 
-    key, top = dominant_archetype(entries)
-    if key is None or top < 2:
-        chosen = sorted(entries, key=lambda e: -e.weight)[:limit]
-        return chosen, "top-weight"
+    key, _ = dominant_archetype(entries)
+    if key is None:
+        cohering = sorted(entries, key=lambda e: -e.weight)[:limit]
+        return cohering, "top-weight"
 
-    in_group = [e for e in entries if key in coherence_keys(e)]
-    outside = [e for e in entries if key not in coherence_keys(e)]
-    in_group.sort(key=lambda e: -e.weight)
-    outside.sort(key=lambda e: -e.weight)
+    cohering = [e for e in entries if key in coherence_keys(e)]
 
-    chosen = (in_group + outside)[:limit]
-    return chosen, key
+    def rank(entry: ModEntry) -> tuple[int, int]:
+        text = (texts or {}).get(id(entry))
+        tier = (tiers or {}).get(text or "", 99)
+        # Best tier first; weight breaks ties when no tier is reported.
+        return (tier, -entry.weight)
+
+    cohering.sort(key=rank)
+    return cohering[:limit], key
 
 
 def coherence_bonus(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[int, str]:

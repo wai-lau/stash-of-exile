@@ -55,6 +55,15 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
             lines.append("             nothing at least as good is listed — "
                          "price this one by hand, it may be the good one")
     elif priced.source == "trade":
+        # Put a weak sample FIRST and in capitals. Buried under the numbers it
+        # reads as a footnote, and the number gets believed anyway.
+        if priced.confidence == "very-thin":
+            lines.append(f"  !! GUESS   only {priced.listings} comparable listing"
+                         f"{'s' if priced.listings != 1 else ''} exist — "
+                         "this is NOT a price")
+        elif priced.confidence == "thin":
+            lines.append(f"  !! THIN    only {priced.listings} comparable listings — "
+                         "treat the number as a rough bound")
         market = f"low {fmt_price(priced.price_ex, divine_ratio)}"
         if priced.p25_ex is not None:
             market += f"  ·  25th {fmt_price(priced.p25_ex, divine_ratio)}"
@@ -69,12 +78,7 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         if priced.relax_used:
             lines.append("             found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")
-        if priced.confidence == "very-thin":
-            lines.append("             VERY THIN — almost nothing comparable is "
-                         "listed, so this number is a guess, not a price")
-        elif priced.confidence == "thin":
-            lines.append("             thin sample — few comparable listings, so "
-                         "the low end may be an outlier")
+
     else:
         lines.append(f"  index      {fmt_price(priced.price_ex, divine_ratio)}"
                      + (f"   ({priced.quantity:,} listed)" if priced.quantity else ""))
