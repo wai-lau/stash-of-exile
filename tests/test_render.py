@@ -9,6 +9,9 @@ import pytest
 from sox.report import PricedItem, render
 from sox.valuation.classify import ItemClass
 
+# Live rates: chaos sits between exalted and divine in PoE2.
+RATES = {"exalted": 1.0, "chaos": 33.4, "divine": 340.6}
+
 ITEM = {"name": "Doom Shield", "baseType": "Tower Shield", "ilvl": 70}
 ROWS = (
     ("+96 to maximum Life", 3, "defence"),
@@ -33,7 +36,7 @@ def test_render_handles_every_outcome(tag, price):
         median_ex=price, p25_ex=price, item_class_name="Shields",
         category="armour.shield",
     )
-    text = render(ITEM, priced, divine_ratio=320.0)
+    text = render(ITEM, priced, RATES)
     assert "Doom Shield" in text
     assert "armour.shield" in text
 
@@ -44,6 +47,40 @@ def test_equipment_filter_mods_are_marked_not_dismissed():
         source="trade", tag="exact", reason="score 4", score=4,
         breakdown=ROWS, listings=9, median_ex=12.5, p25_ex=12.5,
     )
-    text = render(ITEM, priced, divine_ratio=320.0)
+    text = render(ITEM, priced, RATES)
     assert "(filter)" in text, "a mod driving the search must not read as ignored"
     assert "+0  +145 to Evasion Rating" in text
+
+
+def test_the_market_block_is_the_last_thing_rendered():
+    """The score and coherence explain how the number was arrived at; the
+    number is what you read off the end."""
+    priced = PricedItem(
+        name="Doom Shield", item_class=ItemClass.GEAR, price_ex=1600.0,
+        source="trade", tag="exact", listings=10, matches=196,
+        median_ex=4480.0, p25_ex=2240.0, score=4, breakdown=ROWS,
+        searched_group="defence", searched_stats=("# to maximum Life",),
+    )
+    import re
+
+    body = render(ITEM, priced, RATES).split("\n")
+    # Labelled rows open a section; everything else is that section's detail.
+    labels = [re.match(r"  (\w+)", l).group(1) for l in body if re.match(r"  \w", l)]
+    assert labels[-1] == "market", labels
+    assert {"score", "coherence", "searched"} <= set(labels[:-1])
+
+
+def test_a_price_is_quoted_in_one_currency():
+    """"1,600 ex (5.0 div)" made you convert in your head to compare against a
+    market that quotes divine. In PoE2 chaos sits BETWEEN exalted and divine,
+    so it is a real middle rung rather than a fraction."""
+    from sox.report import fmt_price
+
+    assert fmt_price(0.5, RATES) == "0.5 ex"
+    assert fmt_price(26.5, RATES) == "26.5 ex"
+    assert fmt_price(120.0, RATES) == "3.59 chaos"
+    assert fmt_price(1600.0, RATES) == "4.7 div"
+    assert fmt_price(150000.0, RATES) == "440 div"
+    assert fmt_price(None, RATES) == "—"
+    # No chaos rate yet: fall through rather than crash.
+    assert fmt_price(120.0, {"divine": 340.6}) == "120 ex"

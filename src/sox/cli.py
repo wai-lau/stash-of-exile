@@ -123,8 +123,7 @@ def main(argv: list[str] | None = None) -> int:
             if n:
                 print()
             print(price_one(block, index, rates, mod_index, base_rules,
-                            unique_rules, notables, trade, cache, cfg,
-                            league.divine_price_ex))
+                            unique_rules, notables, trade, cache, cfg))
         return 0
     except (GGGError, httpx.HTTPError) as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -273,7 +272,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                     continue
                 timer.cancel()
 
-                body = report.render(item, priced, league.divine_price_ex)
+                body = report.render(item, priced, rates)
                 stats.record(name, priced.price_ex, priced.searches_used,
                              junk=priced.tag == "junk")
                 if announced.is_set():
@@ -300,11 +299,11 @@ def run_watch(args, cfg, cache, scout, league) -> int:
 
 
 def price_one(block, index, rates, mod_index, base_rules, unique_rules,
-              notables, trade, cache, cfg, divine_ratio) -> str:
+              notables, trade, cache, cfg) -> str:
     item = itemtext.parse(block)
     priced = _price_item(item, index, rates, mod_index, base_rules,
                          unique_rules, notables, trade, cache, cfg)
-    return report.render(item, priced, divine_ratio)
+    return report.render(item, priced, rates)
 
 
 def _price_item(item, index, rates, mod_index, base_rules, unique_rules,

@@ -680,7 +680,7 @@ def test_the_reported_count_is_what_matched_not_what_we_fetched(tmp_path):
     text = render(ITEM, PricedItem(
         name="X", item_class="Helmets", price_ex=1.0, source="trade",
         tag="exact", listings=result.listings, matches=result.matches,
-    ), 320.0)
+    ), RATES)
     assert "cheapest 10 of 842 listings" in text
 
 

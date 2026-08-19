@@ -52,23 +52,40 @@ class PricedItem:
     best_roll_pct: float | None = None
 
 
-def fmt_price(ex: float | None, divine_ratio: float) -> str:
+# Largest unit first. In PoE2 chaos sits BETWEEN exalted and divine — about
+# 33 ex against divine's 340 — so it is a real middle rung, not a fraction.
+PRICE_UNITS = (("divine", "div"), ("chaos", "chaos"))
+
+
+def fmt_price(ex: float | None, rates: dict[str, float]) -> str:
+    """One currency, the largest that still reads as at least one of them.
+
+    "1,600 ex (5.0 div)" made you convert in your head to compare against a
+    market that quotes divine. The unit a price is quoted in IS information.
+    """
     if ex is None:
         return "—"
-    if divine_ratio > 0 and ex >= divine_ratio:
-        return f"{ex:,.0f} ex ({ex / divine_ratio:,.1f} div)"
-    return f"{ex:,.1f} ex"
+    for code, label in PRICE_UNITS:
+        rate = rates.get(code) or 0.0
+        if rate > 0 and ex >= rate:
+            return f"{_round(ex / rate)} {label}"
+    return f"{_round(ex)} ex"
 
 
-def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
-    lines = [
-        f"{display_name(item)}"
-        + (f"  [{item.get('baseType')}]" if item.get("name") else ""),
-        f"  type       {priced.item_class_name or priced.item_class}"
-        + (f" → {priced.category}" if priced.category else "")
-        + (f"   ilvl {item['ilvl']}" if item.get("ilvl") else ""),
-    ]
+def _round(value: float) -> str:
+    if value >= 100:
+        return f"{value:,.0f}"
+    return f"{value:,.2f}".rstrip("0").rstrip(".")
 
+
+
+def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
+    """The market or index block.
+
+    Rendered last: the score and coherence explain how the number was
+    arrived at, and the number is what you read off the end.
+    """
+    out: list[str] = []
     if priced.price_ex is None:
         if priced.tag == "junk":
             # The generic advice about --force lives in the watch banner; on
@@ -76,29 +93,29 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
             # particular item scored, and why.
             # The score block below prints the same rows, so the verdict
             # only needs the number it failed against.
-            lines.append(f"  verdict    JUNK  (score {priced.score}, needs 6)")
+            out.append(f"  verdict    JUNK  (score {priced.score}, needs 6)")
         elif priced.tag == "unpriced:above-market":
-            lines.append("  price      no comparable listing")
-            lines.append("             nothing at least as good is listed — "
+            out.append("  price      no comparable listing")
+            out.append("             nothing at least as good is listed — "
                          "price this one by hand, it may be the good one")
         else:
-            lines.append(f"  price      not priced ({priced.tag or 'unknown'})")
+            out.append(f"  price      not priced ({priced.tag or 'unknown'})")
     elif priced.source == "trade":
         # Put a weak sample FIRST and in capitals. Buried under the numbers it
         # reads as a footnote, and the number gets believed anyway.
         if priced.confidence == "very-thin":
-            lines.append(f"  !! GUESS   only {priced.listings} comparable listing"
+            out.append(f"  !! GUESS   only {priced.listings} comparable listing"
                          f"{'s' if priced.listings != 1 else ''} exist — "
                          "this is NOT a price")
         elif priced.confidence == "thin":
-            lines.append(f"  !! THIN    only {priced.listings} comparable listings — "
+            out.append(f"  !! THIN    only {priced.listings} comparable listings — "
                          "treat the number as a rough bound")
-        market = f"low {fmt_price(priced.price_ex, divine_ratio)}"
+        market = f"low {fmt_price(priced.price_ex, rates)}"
         if priced.p25_ex is not None:
-            market += f"  ·  25th {fmt_price(priced.p25_ex, divine_ratio)}"
+            market += f"  ·  25th {fmt_price(priced.p25_ex, rates)}"
         if priced.median_ex is not None:
-            market += f"  ·  median {fmt_price(priced.median_ex, divine_ratio)}"
-        lines.append(f"  market     {MARKET}{market}{RESET}")
+            market += f"  ·  median {fmt_price(priced.median_ex, rates)}"
+        out.append(f"  market     {MARKET}{market}{RESET}")
         # `listings` is only ever the cheapest handful — one fetch call is
         # enough to find the low end, so it reads 10 for anything with a real
         # market. The match count is the number that says whether the price is
@@ -112,19 +129,19 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         # a word — but not a row of its own.
         if priced.from_cache:
             found += ", cached"
-        lines.append(f"             {found}")
+        out.append(f"             {found}")
         if priced.rune_inflated:
-            lines.append(f"             {priced.rune_inflated} skipped — met your "
+            out.append(f"             {priced.rune_inflated} skipped — met your "
                          "defences only with their runes")
         if priced.relax_used:
-            lines.append("             found only after widening, so these comparables "
+            out.append("             found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")
 
     else:
-        lines.append(f"  index      {fmt_price(priced.price_ex, divine_ratio)}"
+        out.append(f"  index      {fmt_price(priced.price_ex, rates)}"
                      + (f"   ({priced.quantity:,} listed)" if priced.quantity else ""))
         if priced.quantity and priced.quantity < 20:
-            lines.append("             thin market — index price is weak evidence")
+            out.append("             thin market — index price is weak evidence")
         if priced.roll_pct is not None:
             # The mean alone reads as a verdict on the item, but escalation
             # turns on the BEST roll — a copy with one near-perfect
@@ -135,11 +152,23 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                     else "poorly rolled" if priced.roll_pct <= 0.25 else "average roll")
             if best is not None and best >= 0.75 and priced.roll_pct < 0.75:
                 band = f"average overall, best {best * 100:.0f}th"
-            lines.append(f"  rolls      {priced.roll_pct * 100:.0f}th percentile "
+            out.append(f"  rolls      {priced.roll_pct * 100:.0f}th percentile "
                          f"({band})")
             if priced.roll_pct >= 0.75:
-                lines.append("             the index price is a floor across all "
+                out.append("             the index price is a floor across all "
                              "copies; yours is better than most")
+
+    return out
+
+
+def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
+    lines = [
+        f"{display_name(item)}"
+        + (f"  [{item.get('baseType')}]" if item.get("name") else ""),
+        f"  type       {priced.item_class_name or priced.item_class}"
+        + (f" → {priced.category}" if priced.category else "")
+        + (f"   ilvl {item['ilvl']}" if item.get("ilvl") else ""),
+    ]
 
     if priced.searched_stats and priced.searched_group:
         # The mods themselves are highlighted in the score breakdown, so
@@ -168,4 +197,8 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                          f"{priced.coherence_group}{gain}")
         elif priced.breakdown:
             lines.append("  coherence  none — the mods serve different builds")
+
+    # Last: the score and coherence explain how the number was arrived at, and
+    # the number is what you read off the end.
+    lines += _price_lines(priced, rates)
     return "\n".join(lines)
