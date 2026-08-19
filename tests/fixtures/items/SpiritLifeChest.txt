@@ -1,0 +1,26 @@
+Item Class: Body Armours
+Rarity: Rare
+Blight Mantle
+Wolfskin Mantle
+--------
+Armour: 526 (augmented)
+Energy Shield: 146 (augmented)
+--------
+Requires: Level 65, 67 Str, 67 Int
+--------
+Item Level: 82
+--------
+{ Prefix Modifier "Fecund" (Tier: 2) }
++61(55-64) to Spirit
+{ Prefix Modifier "Athlete's" (Tier: 1) }
++121(115-129) to maximum Life
+{ Prefix Modifier "Studded" (Tier: 3) }
++40(35-44) to Armour
+{ Suffix Modifier "of the Lynx" (Tier: 4) }
++11(10-14) to maximum Energy Shield
+{ Prefix Modifier "Reinforced" (Tier: 5) }
+36(33-38)% increased Armour and Energy Shield
+{ Suffix Modifier "of Regrowth" (Tier: 2) }
+34.5(30-40) Life Regeneration per second
+{ Suffix Modifier "of the Tundra" (Tier: 3) }
++24(20-25)% to Cold Resistance

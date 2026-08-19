@@ -41,15 +41,25 @@ def test_our_dps_floor_leaves_the_rune_out():
     """414-1043 at 2.07aps is 1508 dps showing; the 36% rune is 141 of it.
 
     Own physical mods total 251%, the rune adds 36 on top, so the base is
-    recovered against 287% and rebuilt against 251%.
+    recovered against 287% and rebuilt against 251% — 1367.7 rune-free.
+
+    That is then filed at 20% quality, the unit the dps filter compares in.
+    This crossbow is +29%, so the filter de-rates it rather than inflating
+    it: the market is asked for 1272, not the 1368 the weapon carries.
     """
-    assert damage_filters(CROSSBOW)["dps"]["min"] == pytest.approx(1367.7, abs=0.2)
+    filed = 1367.7 * 1.2 / 1.29
+    assert damage_filters(CROSSBOW)["dps"]["min"] == pytest.approx(filed, abs=0.2)
 
 
 def test_a_listing_propped_up_by_its_rune_is_not_a_comparable():
-    """Shows 1000 dps, is 800 once the buyer's own rune comes off."""
+    """Shows 1000 dps, is 800 once the buyer's own rune comes off.
+
+    Both sides filed at 20% quality — the floor the query sent, and the
+    listing recomputed here — because that is the unit the filter compares
+    in. These carry no quality, so both are simply a fifth larger.
+    """
     propped = listing(500, 2.0, rune_mods=["Adds 100 to 100 Physical Damage"])
-    assert not meets_without_runes(propped, {"dps": {"min": 900}})
+    assert not meets_without_runes(propped, {"dps": {"min": 900 * 1.2}})
 
 
 def test_a_listing_that_clears_the_floor_on_its_own_survives():
@@ -73,5 +83,6 @@ def test_percent_runes_are_removed_multiplicatively_not_by_subtraction():
     """
     propped = listing(750, 1.0, rune_mods=["50% increased Physical Damage"],
                       own_pct=100)
-    assert not meets_without_runes(propped, {"dps": {"min": 700}})
-    assert meets_without_runes(propped, {"dps": {"min": 600}})
+    # Filed at 20% quality on both sides, as the dps filter compares.
+    assert not meets_without_runes(propped, {"dps": {"min": 700 * 1.2}})
+    assert meets_without_runes(propped, {"dps": {"min": 600 * 1.2}})

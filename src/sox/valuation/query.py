@@ -15,7 +15,7 @@ import re
 
 from functools import lru_cache
 
-from sox.valuation.allowlists import ModEntry, load_skills
+from sox.valuation.allowlists import ModEntry, load_flags, load_skills
 from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
 from sox.valuation.mods import match_mod, select_synergistic
 from sox.valuation.rolls import parse_values
@@ -70,6 +70,54 @@ DEFENCE_PROPERTIES = {
     "Block chance": ("block", re.compile(r"(?!)", re.I),
                      re.compile(r"increased Block chance$", re.I)),
 }
+
+
+# The trade filters do not compare the number an item shows. Every defence in
+# a listing's `extended` block — the field ar/es/ev actually read — is
+# normalised to 20% quality: a 0-quality boot showing 78 Armour is filed at
+# 94, and one at 15% quality showing 95 is filed at 99.
+#
+#     filed = shown * 1.2 / (1 + quality/100)
+#
+# Our floor came off the clipboard un-normalised. A search for "at least my 94
+# Armour" therefore asked for items FILED at 94 — a fifth weaker than ours —
+# and the rune check then threw every one of them out for a reason that had
+# nothing to do with runes: of 30 listings dropped as rune-inflated on one
+# pair of boots, 29 carried no rune at all.
+QUALITY_BASELINE = 20
+
+# Only the three the `extended` block reports and that quality scales on an
+# armour base. Spirit, Runic Ward and Block chance were never measured against
+# a quality item, and normalising them on the strength of an analogy would be
+# guessing at the filter's arithmetic.
+QUALITY_SCALED = ("ar", "es", "ev")
+
+
+def quality_percent(item: dict) -> int:
+    """The item's quality, from the clipboard or from a listing payload."""
+    for prop in item.get("properties") or []:
+        if clean_markup(prop.get("name", "")) != "Quality":
+            continue
+        values = prop.get("values") or []
+        if values and values[0]:
+            try:
+                return int(str(values[0][0]).split()[0].strip("+").rstrip("%"))
+            except (ValueError, IndexError):
+                return 0
+    return 0
+
+
+def filed_at_baseline_quality(value: float, item: dict) -> float:
+    """A total as the trade filters file it: normalised to 20% quality."""
+    return value * (1 + QUALITY_BASELINE / 100) / (1 + quality_percent(item) / 100)
+
+
+def at_baseline_quality(value: float, item: dict, property_name: str) -> float:
+    """The same, for the defences the filters are known to normalise."""
+    filter_id = (DEFENCE_PROPERTIES.get(property_name) or (None,))[0]
+    if filter_id not in QUALITY_SCALED:
+        return value
+    return filed_at_baseline_quality(value, item)
 
 
 def equipment_minimum(item: dict, property_name: str, flat, percent) -> int | None:
@@ -129,7 +177,7 @@ def equipment_minimum(item: dict, property_name: str, flat, percent) -> int | No
 
     base = total / (1 + pct_actual / 100) - flat_actual
     minimum = (base + flat_min) * (1 + pct_min / 100)
-    return max(int(round(minimum)), 1)
+    return max(int(round(at_baseline_quality(minimum, item, property_name))), 1)
 
 # Item Class -> trade category. Item Class comes straight from the clipboard.
 ITEM_CLASS_CATEGORIES = {
@@ -154,6 +202,15 @@ ITEM_CLASS_CATEGORIES = {
 
 class _Notable:
     """A notable allocation, which has an exact id and no numeric minimum."""
+
+    __slots__ = ("stat_id",)
+
+    def __init__(self, stat_id: str) -> None:
+        self.stat_id = stat_id
+
+
+class _Flag:
+    """A unique's value-less mod: an exact id, and no minimum to ask for."""
 
     __slots__ = ("stat_id",)
 
@@ -234,7 +291,10 @@ def rune_free_defence(item: dict, property_name: str, flat, percent) -> float | 
     _flat_own, pct_own = totals(own_texts)
 
     base = total / (1 + (pct_own + pct_rune) / 100) - flat_rune
-    return max(base * (1 + pct_own / 100), 0.0)
+    # Filed as the filter files it, so the two numbers being compared are the
+    # same measurement of the same thing.
+    return at_baseline_quality(max(base * (1 + pct_own / 100), 0.0), item,
+                               property_name)
 
 
 def meets_without_runes(item: dict, required: dict) -> bool:
@@ -243,6 +303,12 @@ def meets_without_runes(item: dict, required: dict) -> bool:
     Covers DPS as well as the defences: a weapon reaching our damage only
     because of a socketed rune is a worse weapon wearing our numbers.
     """
+    # Nothing to take off, and the search already applied every floor: an
+    # item with no runes cannot be rune-inflated. Recomputing it here only
+    # created a second chance to disagree with the API, and it took it.
+    if not item.get("runeMods"):
+        return True
+
     by_id = {fid: (name, flat, pct)
              for name, (fid, flat, pct) in DEFENCE_PROPERTIES.items()}
     for filter_id, bound in (required or {}).items():
@@ -504,8 +570,9 @@ def _average_range(text: str | None) -> float:
 # add flat damage and no weapon-local percent exists for them.
 NEVER = re.compile(r"(?!)")
 _FLAT = r"^adds \d[\d.,]* to \d[\d.,]* {} damage$"
+PHYSICAL_DAMAGE = ("Physical Damage",)
 RUNE_DAMAGE_TYPES = (
-    (("Physical Damage",), re.compile(_FLAT.format("physical"), re.I),
+    (PHYSICAL_DAMAGE, re.compile(_FLAT.format("physical"), re.I),
      re.compile(r"^\d[\d.]*% increased physical damage$", re.I)),
     (("Fire Damage",), re.compile(_FLAT.format("fire"), re.I), NEVER),
     (("Cold Damage",), re.compile(_FLAT.format("cold"), re.I), NEVER),
@@ -579,7 +646,15 @@ def rune_free_dps(item: dict) -> float | None:
         shown = sum(_average_range(_property_text(item, n)) for n in names)
         if shown <= 0:
             continue
-        combined += _strip_runes(shown, *_own_and_rune_totals(item, flat, percent))
+        free = _strip_runes(shown, *_own_and_rune_totals(item, flat, percent))
+        # Quality raises physical damage and nothing else, and the dps the
+        # filter compares against is filed at 20% of it. Measured on four
+        # listed maces: a +17% mace showing 112-160 at 1.10 aps is filed at
+        # 153.45 pdps, which is the average rebuilt at 20% quality — while
+        # its 1-7 lightning is filed at 4.4, exactly as shown.
+        if names == PHYSICAL_DAMAGE:
+            free = filed_at_baseline_quality(free, item)
+        combined += free
     if combined <= 0:
         return None
     return combined * aps
@@ -635,8 +710,34 @@ GRANTED_SKILL = re.compile(r"^Level (\d+) (.+)$")
 
 
 @lru_cache(maxsize=1)
-def _skill_ids() -> dict[str, str]:
-    return {_fold(name): stat_id for name, stat_id in load_skills().items()}
+def _skill_ids() -> dict[str, tuple[str, ...]]:
+    return {_fold(name): tuple(ids) for name, ids in load_skills().items()}
+
+
+@lru_cache(maxsize=1)
+def _flag_ids() -> dict[str, dict[str, str]]:
+    from sox.valuation.mods import normalize_mod
+
+    return {group: {normalize_mod(text): stat_id for text, stat_id in entries.items()}
+            for group, entries in load_flags().items()}
+
+
+def flag_stat_id(item: dict, text: str) -> str | None:
+    """The stat id for a mod that carries no number, or None.
+
+    A flag has no roll to compare, so the ordinary path — match the
+    allowlist, read the minimum off the item — has nothing to work with and
+    drops it. That is right for gear, where a mod is worth something or it is
+    not; it is wrong for a unique, where the flag is not a value on the item
+    but the identity of it. Six Mastered Domain tablets share a name, a base
+    and an index price of 1 exalted, and the Forest one sells for 55.
+    """
+    from sox.valuation.mods import normalize_mod
+
+    if rarity_of(item) is not Rarity.UNIQUE or parse_values(text):
+        return None
+    group = "implicit" if text in (item.get("implicitMods") or []) else "explicit"
+    return _flag_ids()[group].get(normalize_mod(text))
 
 
 def _fold(text: str) -> str:
@@ -659,11 +760,57 @@ def granted_skill_filter(item: dict) -> dict | None:
         match = GRANTED_SKILL.match(str(values[0][0]).strip())
         if not match:
             return None
-        stat_id = _skill_ids().get(_fold(match.group(2)))
-        if stat_id is None:
+        ids = _skill_ids().get(_fold(match.group(2)))
+        if not ids:
             return None
-        return {"id": stat_id, "value": {"min": int(match.group(1))}}
+        level = int(match.group(1))
+        if len(ids) == 1:
+            return {"id": ids[0], "value": {"min": level}}
+        # Two ids for one name, and the item text cannot say which. Corpsewade
+        # Iron Greaves grants the TRIGGERED Decompose, so asking for
+        # skill.corpse_cloud alone matched 0 of the 1,806 listings that exist
+        # and the boots were reported as having no comparable listing at all.
+        return {
+            "type": "count",
+            "value": {"min": 1},
+            "filters": [{"id": stat_id, "value": {"min": level}} for stat_id in ids],
+        }
     return None
+
+
+def cohering_pseudo_totals(
+    item: dict, index: dict[str, ModEntry]
+) -> list[tuple[str, int, list[str]]]:
+    """The pseudo totals the query will actually send.
+
+    Pseudo totals obey the same rule as mods: only what coheres. An
+    Intelligence total on an elemental weapon constrains the search to items
+    carrying Intelligence, which most comparables do not — that alone moved a
+    3ex quarterstaff to a 50ex median.
+    """
+    from sox.valuation.mods import coherence_keys, dominant_archetype, matched
+
+    dominant, _count = dominant_archetype(matched(searchable_mods(item), index),
+                                          seed=defence_seed(item))
+    out = []
+    for pseudo_id, value, used in pseudo_totals(item, index):
+        if dominant is not None:
+            entries = [e for t in used if (e := match_mod(t, index)) is not None]
+            if not any(dominant in coherence_keys(e) for e in entries):
+                continue
+        out.append((pseudo_id, value, used))
+    return out
+
+
+def pseudo_mod_texts(item: dict, index: dict[str, ModEntry]) -> list[str]:
+    """Item mods the query adds up into a pseudo total instead of searching.
+
+    They ARE searched — through the total — but not under their own stat id,
+    and the breakdown has to say so or the row reads as a stat filter that is
+    not in the query.
+    """
+    return [text for _id, _value, used in cohering_pseudo_totals(item, index)
+            for text in used]
 
 
 def searchable_implicits(item: dict, index) -> list[str]:
@@ -693,14 +840,19 @@ def granted_skill_text(item: dict) -> list[str]:
     return []
 
 
-def build_query(
+def _build(
     item: dict,
     category: str,
     index: dict[str, ModEntry],
     notables: dict[str, str],
     status: str = "any",
     relax: int = 0,
-) -> dict:
+) -> tuple[dict, str, list[str]]:
+    """The query, the buyer group behind it, and the stats it asks for.
+
+    One function, because the report is evidence about the price and the two
+    used to be derived separately from the same item.
+    """
     max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
     scale = 1.0  # minimums are never lowered; see RELAX_STEPS
 
@@ -751,9 +903,6 @@ def build_query(
         if value:
             equipment[filter_id] = {"min": value}
 
-    and_filters: list[dict] = []
-    or_groups: list[dict] = []
-
     all_mods = searchable_mods(item)
 
     # Notables ARE the value of a Megalomaniac, so they outrank every mod and
@@ -761,6 +910,10 @@ def build_query(
     # often unlisted, while "a Megalomaniac with this one notable" usually is,
     # and that single notable is what the item is really worth.
     NOTABLE_WEIGHT = 99
+    # Ranked with the notables and for the same reason: a flag is what the
+    # item IS, not what it is worth, so widening must drop mods around it
+    # rather than dropping it.
+    FLAG_WEIGHT = 99
     # A mod already covered by an equipment filter must not also be a stat
     # filter: the item's total includes it, so constraining both asks for it
     # twice. Spirit is the case that matters — local on a sceptre, where the
@@ -773,17 +926,7 @@ def build_query(
     # Intelligence total on an elemental weapon constrains the search to items
     # carrying Intelligence, which most comparables do not — that alone moved
     # a 3ex quarterstaff to a 50ex median.
-    from sox.valuation.mods import coherence_keys, dominant_archetype, matched
-
-    dominant, _count = dominant_archetype(matched(all_mods, index),
-                                          seed=defence_seed(item))
-    totals = []
-    for pseudo_id, value, used in pseudo_totals(item, index):
-        if dominant is not None:
-            entries = [e for t in used if (e := match_mod(t, index)) is not None]
-            if not any(dominant in coherence_keys(e) for e in entries):
-                continue
-        totals.append((pseudo_id, value, used))
+    totals = cohering_pseudo_totals(item, index)
     for _pseudo_id, _value, used in totals:
         covered.update(used)
 
@@ -796,6 +939,13 @@ def build_query(
             if stat_id:
                 scored.append((NOTABLE_WEIGHT, text, _Notable(stat_id)))
             continue
+        # A flag is checked before the allowlist because the allowlist has
+        # nothing to say about it: there is no roll to weigh, so it never
+        # earned an entry, and the value-less test below would drop it anyway.
+        stat_id = flag_stat_id(item, text)
+        if stat_id is not None:
+            scored.append((FLAG_WEIGHT, text, _Flag(stat_id)))
+            continue
         entry = match_mod(text, index)
         if entry is None:
             continue  # never guess a stat id
@@ -806,9 +956,11 @@ def build_query(
     # Choose stats that SYNERGIZE, not merely the heaviest ones. Selecting by
     # weight alone can mix archetypes and describe a buyer who does not exist.
     notable_items = [(w, t, e) for w, t, e in scored if isinstance(e, _Notable)]
-    mod_items = [(w, t, e) for w, t, e in scored if not isinstance(e, _Notable)]
+    flag_items = [(w, t, e) for w, t, e in scored if isinstance(e, _Flag)]
+    mod_items = [(w, t, e) for w, t, e in scored
+                 if not isinstance(e, (_Notable, _Flag))]
 
-    chosen_entries, _group = select_synergistic(
+    chosen_entries, _order_key = select_synergistic(
         [e for _, _, e in mod_items], max_stats,
         tiers=item.get("modTiers") or {},
         texts={id(e): t for _, t, e in mod_items},
@@ -817,13 +969,29 @@ def build_query(
     )
     by_entry = {id(e): t for _, t, e in mod_items}
 
-    # Three sources of stat filters, in the order they survive widening:
-    # notables identify the item outright, pseudo totals describe it more
-    # faithfully than any single mod, and individual mods come last.
-    notable_filters = [{"id": e.stat_id, "value": {}} for _, _, e in notable_items]
+    # Every stat filter travels with the wording the report will show it as.
+    # The two were derived twice from the same item and drifted: the report
+    # named Spirit as searched at one rung and dropped it at the next while
+    # the query carried it at every rung, so the breakdown said a mod had been
+    # ignored that the price in fact rested on.
+    #
+    # Three sources, in the order they survive widening: notables identify the
+    # item outright, pseudo totals describe it more faithfully than any single
+    # mod, and individual mods come last.
+    ranked: list[tuple[dict, list[str]]] = []
 
-    pseudo_filters = [{"id": pid, "value": {"min": value}}
-                      for pid, value, _ in totals]
+    ranked += [({"id": e.stat_id, "value": {}}, [text])
+               for _, text, e in notable_items]
+
+    # No minimum, because there is no number to put one on. The id alone is
+    # the whole filter: the listing either counts as a Forest Map or it does
+    # not.
+    ranked += [({"id": e.stat_id, "value": {}}, [text])
+               for _, text, e in flag_items]
+
+    for pseudo_id, value, used in totals:
+        labels = [e.text if (e := match_mod(t, index)) else t for t in used]
+        ranked.append(({"id": pseudo_id, "value": {"min": value}}, labels))
 
     # A Corruption Enhancement reads like an explicit mod but is filed under
     # the enchant group; searching it as explicit returned 0 listings where
@@ -831,7 +999,6 @@ def build_query(
     enchant_texts = set(item.get("enchantMods") or [])
     implicit_texts = set(item.get("implicitMods") or [])
 
-    mod_filters = []
     for entry in chosen_entries:
         text = by_entry[id(entry)]
         minimum = round(filter_value(entry.text, parse_values(text)) * scale, 2)
@@ -855,27 +1022,52 @@ def build_query(
             span = (item.get("modRanges") or {}).get(text)
             if span:
                 minimum = round(span[1] * scale, 2)
+        # One mod, several ids the listing might carry it under — Spirit is
+        # local on a sceptre and global on an amulet — so it is asked for as
+        # "at least one of these". It is still ONE mod and takes one place in
+        # the ladder: kept outside it, an or-group could not be widened away
+        # and rungs 0 and 1 built the identical query.
         if len(ids) > 1:
-            or_groups.append({
+            ranked.append(({
                 "type": "count",
                 "value": {"min": 1},
                 "filters": [
                     {"id": stat_id, "value": {"min": minimum}} for stat_id in ids
                 ],
-            })
+            }, [entry.text]))
         else:
-            mod_filters.append({"id": ids[0], "value": {"min": minimum}})
+            ranked.append(({"id": ids[0], "value": {"min": minimum}}, [entry.text]))
 
     # The granted skill is exempt from the widening cap. Dropping it would not
     # widen the search, it would change what is being searched for: a Level 20
     # Chaos Bolt wand priced without the Chaos Bolt is priced as a bare wand.
-    skill_filters = [f for f in (granted_skill_filter(item),) if f]
-    ranked = notable_filters + pseudo_filters + mod_filters
+    skill = granted_skill_filter(item)
+    # A count group is a stat group of its own, never a member of the `and`.
+    skill_filters = [skill] if skill and "type" not in skill else []
+    skill_groups = [skill] if skill and "type" in skill else []
     # The no-mods rung still keeps one notable. A notable-granting jewel IS
     # its notables — priced without them it is one of ~25,000 Megalomaniacs
-    # the index already reports as worth 1 exalted.
-    keep = max(max_stats, 1) if notable_filters else max_stats
-    and_filters = skill_filters + ranked[:keep]
+    # the index already reports as worth 1 exalted. A unique's flag is the
+    # same kind of thing: drop the biome and a Mastered Domain tablet is one
+    # of 26,357 the index also reports as worth 1 exalted.
+    keep = max(max_stats, 1) if notable_items or flag_items else max_stats
+    kept = ranked[:keep]
+    and_filters = skill_filters + [f for f, _ in kept if "type" not in f]
+    or_groups = skill_groups + [f for f, _ in kept if "type" in f]
+    searched = [text for _, labels in kept for text in labels]
+
+    # Named from what the query ENDED UP asking for, not from the item. A
+    # pseudo total is still a mod a buyer shops for — life and resistances
+    # are the whole of "defence" — and reading the group off the surviving
+    # filters keeps the name true at every rung of the ladder.
+    from sox.valuation.mods import dominant_archetype, matched
+
+    group = dominant_archetype(matched(searched, index),
+                               seed=defence_seed(item))[0] or ""
+    if notable_items:
+        group = "notable"
+    elif flag_items:
+        group = "variant"
 
     query: dict = {
         "query": {
@@ -907,9 +1099,25 @@ def build_query(
             "corrupted": {"option": "false"},
             "sanctified": {"option": "false"},
         }}
-    if item.get("name") and classify(item) is ItemClass.UNIQUE:
+    # Keyed on the item's RARITY, not on its pricing class. A unique Tablet,
+    # Waystone or Relic classifies as ENDGAME — the class decides which
+    # market prices it, and those have no index — so gating the name on
+    # ItemClass.UNIQUE left it off and searched the whole category: every
+    # unique tablet in the game, priced at whichever was cheapest.
+    if item.get("name") and rarity is Rarity.UNIQUE:
         query["query"]["name"] = item["name"]
-    return query
+    return query, group, searched
+
+
+def build_query(
+    item: dict,
+    category: str,
+    index: dict[str, ModEntry],
+    notables: dict[str, str],
+    status: str = "any",
+    relax: int = 0,
+) -> dict:
+    return _build(item, category, index, notables, status, relax)[0]
 
 
 def query_hash(query: dict) -> str:
@@ -927,37 +1135,16 @@ def explain_selection(
     Surfaced in the output because this is the judgement the tool exists to
     make. A price-check overlay leaves it to the player, whose knowledge of
     which stats synergize comes from having played the archetype.
+
+    Read off the query itself rather than worked out again. Derived twice it
+    drifted: a +61 Spirit roll went into every rung of a chest's search as an
+    or-group over its two stat ids, while this reported it at rung 0 and
+    dropped it at rung 2 — so the breakdown showed the item's best mod as one
+    the price did not rest on.
     """
-    from sox.valuation.mods import matched, select_synergistic
-
-    max_stats = RELAX_STEPS[min(relax, len(RELAX_STEPS) - 1)]
-
-    all_mods = searchable_mods(item)
-    notable_texts = [
-        t for t in all_mods
-        if t.startswith("Allocates ") and notables.get(t[len("Allocates "):].strip())
-    ]
-    if notable_texts:
-        return "notable", notable_texts[:max_stats]
-
-    # Mods an equipment filter already covers are not searched as stats, so
-    # reporting them here named a buyer group the query never asked for: a
-    # mace whose damage mods had all become one DPS filter still read
-    # "searched as elemental".
-    covered = set(defence_mod_texts(item))
-    plain = [t for t in all_mods
-             if not t.startswith("Allocates ") and t not in covered]
-    entries = matched(plain, index)
-    texts = {}
-    for text in plain:
-        entry = match_mod(text, index)
-        if entry is not None:
-            texts.setdefault(id(entry), text)
-    chosen, group = select_synergistic(
-        entries, max_stats, tiers=item.get("modTiers") or {}, texts=texts,
-        rolls=item.get("modRanges") or {}, seed=defence_seed(item),
-    )
-    return (group or None), [e.text for e in chosen]
+    _, group, searched = _build(
+        item, category_for(item) or "", index, notables, relax=relax)
+    return (group or None), searched
 
 
 def defence_mod_texts(item: dict) -> list[str]:

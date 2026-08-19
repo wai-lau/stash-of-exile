@@ -14,6 +14,12 @@ from sox.valuation.allowlists import ModEntry
 
 _NUMBER = re.compile(r"[+-]?\d+(?:\.\d+)?")
 
+# "Area has patches of Shocked Ground — Unscalable Value". The game tags the
+# map mods that nothing a player owns can scale. It is an annotation on the
+# line, not part of the mod: the trade stats table carries the text without
+# it, so a mod wearing one matched nothing at all.
+_ANNOTATION = re.compile(r"\s*[—–-]\s*unscalable value\s*$")
+
 # Most a pile of weight-1 mods may contribute in total. Community pricing
 # guidance is explicit that 4+ low-tier mods make an item worth LESS: they
 # occupy affix slots a buyer would otherwise craft into.
@@ -32,7 +38,7 @@ def normalize_mod(text: str) -> str:
     text = text.casefold()
     text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"(?<![a-z0-9])\+(?=#)", "", text)
-    return text
+    return _ANNOTATION.sub("", text)
 
 
 def build_index(entries: list[ModEntry]) -> dict[str, ModEntry]:
@@ -135,12 +141,25 @@ def dominant_archetype(
             weights[key] = weights.get(key, 0) + entry.weight
     if not counts:
         return None, 0
-    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], -weights.get(kv[0], 0)))
+    # Shortest key first among equals, so a tie inside one family is reported
+    # as the family — "minion", not "minion:attack".
+    ranked = sorted(counts.items(),
+                    key=lambda kv: (-kv[1], -weights.get(kv[0], 0), len(kv[0])))
     key, top = ranked[0]
     if top < 2:
         return None, top
-    if len(ranked) > 1:
-        runner, second = ranked[1]
+    # Only a DIFFERENT family can make an item ambiguous. A universal minion
+    # mod votes for "minion" and for every subtype of it at once, so the
+    # runner-up is routinely the same mods under another name — and the tie
+    # rule read that as two buyers and gave up. A ring carrying minion damage,
+    # minion crit and minion attack speed reported "none — the mods serve
+    # different builds", scored no coherence at all, and then had its query
+    # ranked by weight alone, which is how a search describes a buyer who does
+    # not exist.
+    rival = next(((k, c) for k, c in ranked[1:]
+                  if k.split(":", 1)[0] != key.split(":", 1)[0]), None)
+    if rival is not None:
+        runner, second = rival
         if second == top and weights.get(runner, 0) == weights.get(key, 0):
             return None, top
     return key, top

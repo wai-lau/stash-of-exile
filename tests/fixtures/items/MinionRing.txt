@@ -1,0 +1,24 @@
+Item Class: Rings
+Rarity: Rare
+Corruption Hold
+Amethyst Ring
+--------
+Requires: Level 68
+--------
+Item Level: 80
+--------
+{ Implicit Modifier }
++13(10-15)% to Chaos Resistance (implicit)
+--------
+{ Prefix Modifier "Warlord's" (Tier: 3) }
+Minions deal 22(20-25)% increased Damage
+{ Prefix Modifier "Flaring" (Tier: 4) }
+Adds 9(8-12) to 18(15-22) Physical Damage to Attacks
+{ Prefix Modifier "Deadly" (Tier: 2) }
+Minions have 37(30-40)% increased Critical Hit Chance
+{ Suffix Modifier "of Celerity" (Tier: 3) }
+Minions have 10(8-12)% increased Attack and Cast Speed
+{ Suffix Modifier "of the Order" (Tier: 2) }
++23(20-25)% to Chaos Resistance
+{ Suffix Modifier "of Fury" (Tier: 1) }
+Minions deal 25(20-30)% increased Damage if you've Hit Recently

@@ -10,13 +10,15 @@ from pathlib import Path
 from sox import itemtext
 from sox.cache import Cache
 from sox.ggg.trade import Listing
-from sox.valuation.allowlists import load_mods, load_notables
+from sox.valuation.allowlists import load_bases, load_mods, load_notables
 from sox.valuation.mods import build_index
 from sox.valuation.query import category_for
 from sox.valuation.trade_pricer import MIN_SAMPLE, price_by_search
 
 MODS = build_index(load_mods())
 NOTABLES = load_notables()
+BASES = load_bases()
+FIXTURES = Path(__file__).parent / "fixtures" / "items"
 RATES = {"exalted": 1.0, "divine": 320.0}
 ITEM = itemtext.parse(
     (Path(__file__).parent / "fixtures" / "items" / "RareItem.txt").read_text()
@@ -225,7 +227,10 @@ def test_local_defences_are_searched_as_equipment_filters():
         "{ Prefix Modifier }\n+145(117-150) to Evasion Rating\n"
     )
     query = build_query(helmet, category_for(helmet), MODS, NOTABLES)
-    assert query["query"]["filters"]["equipment_filters"]["filters"]["ev"] == {"min": 457}
+    # 457 at the worst roll, filed at 20% quality like every value the ev
+    # filter compares against.
+    assert query["query"]["filters"]["equipment_filters"]["filters"]["ev"] == {
+        "min": round(457 * 1.2)}
 
 
 def test_equipment_minimum_normalises_to_the_worst_roll():
@@ -243,14 +248,15 @@ def test_equipment_minimum_normalises_to_the_worst_roll():
         "--------\nEvasion Rating: 485\n--------\nItem Level: 81\n--------\n"
         "{ Prefix Modifier }\n+145(117-150) to Evasion Rating\n"
     )
-    assert equipment_minimum(item, "Evasion Rating", flat, percent) == 485 - 145 + 117
+    worst = 485 - 145 + 117
+    assert equipment_minimum(item, "Evasion Rating", flat, percent) == round(worst * 1.2)
 
     # With no roll range reported, the total stands as-is.
     plain = itemtext.parse(
         "Item Class: Helmets\nRarity: Rare\nX\nFreebooter Cap\n"
         "--------\nEvasion Rating: 485\n--------\nItem Level: 81\n"
     )
-    assert equipment_minimum(plain, "Evasion Rating", flat, percent) == 485
+    assert equipment_minimum(plain, "Evasion Rating", flat, percent) == round(485 * 1.2)
 
 
 def test_a_weapon_is_searched_on_its_dps():
@@ -272,11 +278,15 @@ def test_a_weapon_is_searched_on_its_dps():
     )
     equipment = build_query(staff, category_for(staff), MODS, NOTABLES)[
         "query"]["filters"]["equipment_filters"]["filters"]
-    # (136.5 physical + 152 cold) * 1.40. Total only: splitting it into pdps
-    # and edps pins the SOURCE, and a weapon reaching the same DPS through
-    # fire instead of cold is a comparable. Live, all three filters left 65
-    # matches where DPS alone left 995.
-    assert equipment == {"dps": {"min": 403.9}}
+    # (136.5 physical filed at 20% quality + 152 cold) * 1.40. Quality raises
+    # physical damage and nothing else, and the dps the filter compares
+    # against is filed at 20% of it — measured on four listed maces.
+    #
+    # Total only: splitting it into pdps and edps pins the SOURCE, and a
+    # weapon reaching the same DPS through fire instead of cold is a
+    # comparable. Live, all three filters left 65 matches where DPS alone
+    # left 995.
+    assert equipment == {"dps": {"min": round((136.5 * 1.2 + 152) * 1.40, 1)}}
 
 
 def test_a_damage_mod_covered_by_dps_is_not_also_a_stat_filter():
@@ -312,7 +322,8 @@ def test_a_weapon_dps_drops_its_runes():
 
     The two items below differ by one 36% rune. 728.5 average damage against
     100% of our own is a 364.25 base; the runed copy divides by 2.36 instead
-    of 2 and rebuilds at 2, so 617.4 average and 1278 dps.
+    of 2 and rebuilds at 2, so 617.4 average and 1278 dps. Both are then
+    filed at 20% quality, which these carry none of.
     """
     from sox.valuation.query import damage_filters
 
@@ -322,8 +333,8 @@ def test_a_weapon_dps_drops_its_runes():
             "{ Prefix Modifier }\n100(80-120)% increased Physical Damage\n")
     bare = itemtext.parse(text)
     runed = itemtext.parse(text + "--------\n36% increased Physical Damage (rune)\n")
-    assert damage_filters(bare)["dps"] == {"min": 1508.0}, "no rune, nothing to strip"
-    assert damage_filters(runed)["dps"] == {"min": 1278.0}
+    assert damage_filters(bare)["dps"] == {"min": 1508.0 * 1.2}, "nothing to strip"
+    assert damage_filters(runed)["dps"] == {"min": 1278.0 * 1.2}
 
 
 def test_requirements_are_capped_not_floored():
@@ -622,8 +633,9 @@ def test_a_socketed_rune_does_not_inflate_the_equipment_filter():
         "--------\n+100 to maximum Energy Shield (rune)\n"
     )
     assert with_rune["runeMods"] == ["+100 to maximum Energy Shield"]
-    # 500 shown - 400 own - 100 rune = 0 base, rebuilt at the mod's floor roll.
-    assert equipment_minimum(with_rune, "Energy Shield", flat, percent) == 380
+    # 500 shown - 400 own - 100 rune = 0 base, rebuilt at the mod's floor roll,
+    # then filed at 20% quality like every value the es filter compares against.
+    assert equipment_minimum(with_rune, "Energy Shield", flat, percent) == round(380 * 1.2)
 
     # Without the rune the same item shows 400 and asks for the same floor,
     # which is the point: the rune changes the display, not the item.
@@ -632,7 +644,7 @@ def test_a_socketed_rune_does_not_inflate_the_equipment_filter():
         "--------\nEnergy Shield: 400\n--------\nItem Level: 82\n--------\n"
         "{ Prefix Modifier }\n+400(380-420) to maximum Energy Shield\n"
     )
-    assert equipment_minimum(without, "Energy Shield", flat, percent) == 380
+    assert equipment_minimum(without, "Energy Shield", flat, percent) == round(380 * 1.2)
 
 
 def test_rune_mods_are_neither_scored_nor_searched():
@@ -793,16 +805,25 @@ def test_a_listing_that_only_meets_our_defences_with_runes_is_not_a_comparable()
     from sox.valuation.query import meets_without_runes, rune_free_defence
     from sox.valuation.query import DEFENCE_PROPERTIES
 
-    required = {"ev": {"min": 1294}, "es": {"min": 395}}
+    # Both sides filed at 20% quality, which is the unit the filters compare
+    # in: the floor the query sent, and the listing recomputed here.
+    required = {"ev": {"min": round(1294 * 1.2)}, "es": {"min": round(395 * 1.2)}}
 
     inflated = _listed(evasion=1376, energy_shield=421, own_pct=292, rune_pct=36)
     _, flat, pct = DEFENCE_PROPERTIES["Evasion Rating"]
-    assert round(rune_free_defence(inflated, "Evasion Rating", flat, pct)) == 1260
+    assert round(rune_free_defence(inflated, "Evasion Rating", flat, pct)) == round(1260 * 1.2)
     assert not meets_without_runes(inflated, required)
 
-    # The same defences with no rune behind them clear the floor honestly.
+    # The same defences with no rune behind them clear the floor honestly —
+    # and never reach the arithmetic at all, because an item with no rune
+    # cannot be rune-inflated and the search already applied every floor.
     genuine = _listed(evasion=1376, energy_shield=421, own_pct=292, rune_pct=0)
     assert meets_without_runes(genuine, required)
+
+    # A rune that is not load-bearing keeps its listing: 1376 shown, and still
+    # over the floor once the rune's 6% comes off.
+    carried = _listed(evasion=1376, energy_shield=421, own_pct=292, rune_pct=6)
+    assert meets_without_runes(carried, {"ev": {"min": round(1000 * 1.2)}})
 
 
 def test_rune_inflated_listings_are_replaced_not_just_dropped(tmp_path):
@@ -906,3 +927,130 @@ def test_the_explanation_only_names_stats_the_query_actually_asks_for():
     ids = [f["id"] for g in build_query(mace, category_for(mace), MODS, NOTABLES)[
         "query"]["stats"] for f in g["filters"]]
     assert len(ids) == len(stats)
+
+
+def test_a_defence_floor_is_filed_at_twenty_percent_quality():
+    """The filters do not compare the number the item shows.
+
+    Measured live on a Corpsewade Iron Greaves listing: the item's Armour
+    property reads 78 and its `extended` block — the field the `ar` filter
+    reads — says 94, which is 78 x 1.2 at 0% quality. A search for "at least
+    my 94 Armour" was therefore asking for items a fifth weaker than ours.
+
+    It cuts both ways. Above 20% the filter DE-rates: a +27% Forgotten Warden
+    showing 1,294 rune-free Evasion is filed at 1,222.
+    """
+    from sox.valuation.query import DEFENCE_PROPERTIES, equipment_minimum
+
+    _, flat, percent = DEFENCE_PROPERTIES["Armour"]
+    head = ("Item Class: Boots\nRarity: Rare\nX\nIron Greaves\n"
+            "--------\n{quality}Armour: 94\n--------\nItem Level: 81\n")
+
+    plain = itemtext.parse(head.format(quality=""))
+    assert equipment_minimum(plain, "Armour", flat, percent) == round(94 * 1.2)
+
+    keen = itemtext.parse(head.format(quality="Quality: +20% (augmented)\n"))
+    assert equipment_minimum(keen, "Armour", flat, percent) == 94, "already filed"
+
+    rich = itemtext.parse(head.format(quality="Quality: +30% (augmented)\n"))
+    assert equipment_minimum(rich, "Armour", flat, percent) == round(94 * 1.2 / 1.3)
+
+
+def test_spirit_and_block_are_left_at_face_value():
+    """Only ar, es and ev were measured against a quality item. Normalising
+    the rest on the strength of an analogy would be guessing at the filter."""
+    from sox.valuation.query import DEFENCE_PROPERTIES, equipment_minimum
+
+    _, flat, percent = DEFENCE_PROPERTIES["Spirit"]
+    item = itemtext.parse(
+        "Item Class: Sceptres\nRarity: Rare\nX\nRattling Sceptre\n"
+        "--------\nQuality: +20% (augmented)\nSpirit: 100\n"
+        "--------\nItem Level: 81\n"
+    )
+    assert equipment_minimum(item, "Spirit", flat, percent) == 100
+
+
+def test_an_item_with_no_runes_is_never_rune_inflated():
+    """29 of the 30 listings dropped as rune-inflated on one pair of boots
+    carried no rune at all — they were being recomputed from the shown value
+    and compared against a floor filed at 20% quality.
+
+    The search already applied every floor. With no rune there is nothing to
+    take off, so there is nothing left to check.
+    """
+    from sox.valuation.query import meets_without_runes
+
+    bare = _listed(evasion=1, energy_shield=1, own_pct=0, rune_pct=0)
+    assert meets_without_runes(bare, {"ev": {"min": 99999}})
+
+
+def test_physical_dps_is_filed_at_twenty_percent_quality_and_elemental_is_not():
+    """Measured on four listed two-hand maces, against their own `extended`
+    block — the field the dps filter reads.
+
+    A +17% mace showing 112-160 physical at 1.10 aps is filed at 153.45 pdps,
+    which is the average rebuilt at 20% quality. A +16% mace showing 1-7
+    lightning is filed at 4.4 edps, exactly as shown: quality raises physical
+    damage and nothing else.
+    """
+    import pytest
+
+    from sox.valuation.query import rune_free_dps
+
+    head = ("Item Class: Two Hand Maces\nRarity: Rare\nX\nY\n--------\n"
+            "Quality: +{q}% (augmented)\n{damage}Attacks per Second: 1.10\n"
+            "--------\nItem Level: 81\n")
+
+    physical = itemtext.parse(head.format(q=17, damage="Physical Damage: 112-160\n"))
+    assert rune_free_dps(physical) == pytest.approx(153.45, abs=0.05)
+
+    mixed = itemtext.parse(head.format(
+        q=16, damage="Physical Damage: 128-174\nLightning Damage: 1-7\n"))
+    assert rune_free_dps(mixed) == pytest.approx(176.0, abs=0.3)
+
+
+def test_a_minion_mod_does_not_tie_with_its_own_subtypes():
+    """A universal minion mod votes for "minion" AND every subtype at once.
+
+    Three of them therefore counted minion 3, minion:attack 3, minion:caster
+    3 and minion:companion 3 — four names for the same three mods, all tied on
+    count and weight. The tie rule read that as two buyers and reported "none
+    — the mods serve different builds" about a ring carrying minion damage,
+    minion crit and minion attack speed. Only a DIFFERENT family can make an
+    item ambiguous.
+    """
+    from sox.valuation.candidates import coherence_of, item_mods, score_gear
+    from sox.valuation.mods import dominant_archetype, matched
+
+    ring = itemtext.parse((FIXTURES / "MinionRing.txt").read_text())
+    assert dominant_archetype(matched(item_mods(ring), MODS)) == ("minion", 3)
+    # Reported as the family, not as one of its subtypes.
+    assert coherence_of(ring, MODS) == ("minion", 3, 2)
+    assert score_gear(ring, MODS, BASES)[0] == 12, "10 on mods, +2 for the cluster"
+
+
+def test_the_cluster_decides_which_mods_survive_widening():
+    """With no cluster the query is ranked by weight alone, which is how a
+    search comes to describe a buyer who does not exist: this ring's chaos
+    resistance outranked its minion crit and its minion attack speed."""
+    from sox.valuation.query import explain_selection
+
+    ring = itemtext.parse((FIXTURES / "MinionRing.txt").read_text())
+    group, stats = explain_selection(ring, MODS, NOTABLES, relax=2)
+    assert group == "minion"
+    assert all("Minion" in text for text in stats), stats
+
+
+def test_a_genuine_hybrid_is_still_no_cluster():
+    """Narrowing the tie rule to one family must not disarm it: two
+    elementals against two physicals is still an item serving both."""
+    from sox.valuation.allowlists import ModEntry
+    from sox.valuation.mods import dominant_archetype
+
+    def entry(tag, weight):
+        return ModEntry(ids=[], slug="x", text="x", weight=weight,
+                        category="c", tags=(tag,))
+
+    tied = [entry("elemental", 3), entry("elemental", 2),
+            entry("physical", 3), entry("physical", 2)]
+    assert dominant_archetype(tied) == (None, 2)

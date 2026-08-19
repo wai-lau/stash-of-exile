@@ -97,6 +97,22 @@ def load_notables() -> dict[str, str]:
     return dict(_read("notables.toml").get("notable", {}))
 
 
-def load_skills() -> dict[str, str]:
-    """Granted skill name -> trade2 stat id, for `Grants Skill: Level N X`."""
-    return dict(_read("skills.toml").get("skill", {}))
+def load_flags() -> dict[str, dict[str, str]]:
+    """Group -> {value-less mod text: trade2 stat id}.
+
+    A mod carrying no number has no minimum to search at, so the query
+    builder dropped it and the item went to market described only by its
+    category. On a Mastered Domain tablet the biome IS the item — Forest 55
+    ex against Desert 1 ex — and this is what lets it be searched.
+    """
+    return {group: dict(entries)
+            for group, entries in _read("flag_mods.toml").items()}
+
+
+def load_skills() -> dict[str, list[str]]:
+    """Granted skill name -> trade2 stat ids, for `Grants Skill: Level N X`.
+
+    A list: three skill names carry two ids apiece — the plain skill and a
+    triggered or reserved copy — and the item text names only the skill.
+    """
+    return {name: list(ids) for name, ids in _read("skills.toml").get("skill", {}).items()}

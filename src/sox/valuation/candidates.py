@@ -175,10 +175,12 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
     from sox.valuation.query import (
         defence_mod_texts,
         granted_skill_text,
+        pseudo_mod_texts,
         searchable_implicits,
     )
 
     via_equipment = set(defence_mod_texts(item))
+    via_pseudo = set(pseudo_mod_texts(item, index))
     # Scores nothing on its own, but it is always searched and at a minimum
     # of the level actually granted, so it must not read as ignored.
     rows: list[tuple[str, object, str]] = [
@@ -199,6 +201,14 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
             tag = "filter"
         elif entry is not None and dominant and dominant in coherence_keys(entry):
             tag = dominant
+        if text in via_pseudo:
+            # Added rather than substituted, unlike the equipment filter
+            # above. A life roll folded into pseudo_total_life is searched as
+            # that sum and not under its own stat id, which the row has to
+            # say — but the sum serves the same buyer the mod does, so the
+            # archetype stays true and the coherence line below still has its
+            # two defence rows to point at.
+            tag = f"{tag}, pseudo" if tag else "pseudo"
         rows.append((text, weight, tag))
 
     mod_score, _ = score_mods(mods, index)

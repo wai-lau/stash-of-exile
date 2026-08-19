@@ -1,0 +1,21 @@
+Item Class: Boots
+Rarity: Unique
+Corpsewade
+Iron Greaves
+--------
+Armour: 78 (augmented)
+--------
+Requires: Level 11, 17 Str
+--------
+Item Level: 81
+--------
+Grants Skill: Level 18 Decompose
+--------
+{ Unique Modifier }
+10% increased Movement Speed
+{ Unique Modifier }
+38(35-50)% increased Armour
+{ Unique Modifier }
++7(5-10) to Strength
+{ Unique Modifier }
+Trigger Decompose every 1.2 metres travelled

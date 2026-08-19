@@ -8,7 +8,12 @@ from sox.valuation import candidates
 from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_uniques
 from sox.valuation.classify import ItemClass, classify
 from sox.valuation.mods import build_index
-from sox.valuation.query import RELAX_STEPS, build_query, category_for
+from sox.valuation.query import (
+    RELAX_STEPS,
+    build_query,
+    category_for,
+    query_hash,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures" / "items"
 MODS = build_index(load_mods())
@@ -615,8 +620,11 @@ def test_a_uniques_defences_are_not_rebuilt_at_its_worst_roll():
     item = itemtext.parse(_warden_text())
     equipment = build_query(item, category_for(item), MODS, NOTABLES)[
         "query"]["filters"]["equipment_filters"]["filters"]
-    # The rune's 18% is still removed — its bonus is not the item's.
-    assert equipment == {"es": {"min": 395}, "ev": {"min": 1294}}
+    # The rune's 18% is still removed — its bonus is not the item's — and what
+    # is left is filed at 20% quality, which is the unit the ev/es filters
+    # compare in. This copy is +27%, so the filter de-rates it rather than
+    # inflating it: 1,294 rune-free Evasion is asked for as 1,222.
+    assert equipment == {"es": {"min": 373}, "ev": {"min": 1222}}
 
 
 def test_a_hybrid_defence_mod_counts_for_every_defence_it_names():
@@ -834,3 +842,183 @@ def test_the_ladder_can_widen_all_the_way_to_no_mods():
     assert filters["equipment_filters"]["filters"]["dps"]["min"] > 0
     assert filters["req_filters"]["filters"] == {"lvl": {"max": 60},
                                                  "str": {"max": 104}}
+
+
+# A unique tablet's biome. Measured live 2026-08-19 against Runes of Aldur:
+# the Forest variant asked 55 ex over 8,620 listings while Desert, Grass,
+# Swamp and Water sat at 1-3 ex, and both the index and the exchange report
+# one price — 1 exalted — for all 26,357 Mastered Domains regardless of biome.
+FOREST = "explicit.stat_864099561"
+
+
+def test_a_unique_tablet_is_searched_by_its_name():
+    """The name is gated on rarity, not on the pricing class.
+
+    A unique Tablet classifies as ENDGAME — the class picks the market, and
+    endgame items have no index — so gating on ItemClass.UNIQUE left the name
+    off entirely and the search asked for every unique tablet in the game.
+    """
+    item = load("UniqueTabletForest")
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    assert classify(item) is ItemClass.ENDGAME, "the class is not what decides"
+    assert query["query"]["name"] == "Mastered Domain"
+
+
+def test_a_flag_mod_is_searched_with_no_minimum():
+    """The biome IS the item, and it carries no number to search at.
+
+    Priced without it the query returned every biome sorted by price, so a
+    Desert tablet at 1 exalted set the price of a Forest one worth 55.
+    """
+    item = load("UniqueTabletForest")
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    assert query["query"]["stats"][0]["filters"] == [{"id": FOREST, "value": {}}]
+
+
+def test_the_unscalable_annotation_is_not_part_of_the_mod():
+    """The game tags map mods nothing can scale; the stats table does not.
+
+    "Map also counts as a Forest Map — Unscalable Value" against a table that
+    says "Map also counts as a Forest Map" matched nothing at all.
+    """
+    from sox.valuation.mods import normalize_mod
+
+    assert (normalize_mod("Map also counts as a Forest Map — Unscalable Value")
+            == normalize_mod("Map also counts as a Forest Map"))
+
+
+def test_widening_drops_mods_around_a_flag_and_never_the_flag():
+    """Same rule as a notable: widening must not change what is being
+    searched for. A Mastered Domain without its biome is one of 26,357."""
+    from sox.valuation.query import RELAX_STEPS
+
+    item = load("UniqueTabletForest")
+    for step in range(len(RELAX_STEPS)):
+        query = build_query(item, category_for(item), MODS, NOTABLES, relax=step)
+        assert query["query"]["stats"][0]["filters"] == [{"id": FOREST, "value": {}}]
+
+
+def test_a_rare_map_flag_is_left_alone():
+    """Only a unique's flags are identity. On a rare the mods are value, and
+    the allowlist is what says which of them a buyer pays for."""
+    item = load("RareMap")
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
+    assert "explicit.stat_3477720557" not in ids, "Shocked Ground is not identity"
+    assert all(f.get("value") != {} for f in query["query"]["stats"][0]["filters"])
+
+
+def _stat_ids(query):
+    """Every stat id the query asks for, and-filters and or-groups alike."""
+    out = []
+    for group in query["query"]["stats"]:
+        out += [f["id"] for f in group["filters"]]
+    return out
+
+
+def test_the_report_names_the_stats_the_query_asked_for():
+    """Spirit read as ignored on a chest whose price rested on it.
+
+    +61 to Spirit went into every rung of the search — as an or-group over
+    the two ids a listing can carry it under — while the breakdown reported
+    it at rung 0 and dropped it at rung 2. The two were derived separately
+    from the same item; now the report reads off the query.
+    """
+    from sox.valuation.query import explain_selection
+
+    item = load("SpiritLifeChest")
+    for step in range(len(RELAX_STEPS)):
+        query = build_query(item, category_for(item), MODS, NOTABLES, relax=step)
+        _, reported = explain_selection(item, MODS, NOTABLES, relax=step)
+        spirit = any(i == "explicit.stat_3981240776" for i in _stat_ids(query))
+        assert spirit == ("# to Spirit" in reported), f"rung {step}"
+
+
+def test_every_rung_of_the_ladder_widens_the_query():
+    """An or-group kept outside the cap could not be widened away.
+
+    Rungs 0 and 1 built the identical query, so a search was spent replaying
+    the previous one and the ladder arrived a rung late.
+    """
+    item = load("SpiritLifeChest")
+    seen = [query_hash(build_query(item, category_for(item), MODS, NOTABLES,
+                                   relax=step))
+            for step in range(len(RELAX_STEPS))]
+    assert len(set(seen)) == len(seen), "each rung must be a different search"
+
+
+def test_a_multi_id_mod_takes_one_place_in_the_ladder():
+    """Spirit is local on a sceptre and global on an amulet, so it is asked
+    for as "at least one of these two ids" — but it is still one mod."""
+    item = load("SpiritLifeChest")
+    for step, cap in enumerate(RELAX_STEPS):
+        query = build_query(item, category_for(item), MODS, NOTABLES, relax=step)
+        groups = query["query"]["stats"]
+        constraints = len(groups[0]["filters"]) + len(groups) - 1
+        assert constraints <= cap, f"rung {step} asked for {constraints} of {cap}"
+
+
+def test_a_mod_folded_into_a_pseudo_total_says_so():
+    """The row has to name the filter the query actually sent.
+
+    +121 to maximum Life is searched as pseudo_total_life, not under its own
+    stat id, and a row reading only "(defence)" described a stat filter that
+    is not in the query.
+    """
+    item = load("SpiritLifeChest")
+    tags = {text: tag for text, _weight, tag in candidates.score_rows(item, MODS, BASES)}
+    assert tags["+121 to maximum Life"] == "defence, pseudo"
+    assert tags["+24% to Cold Resistance"] == "defence, pseudo"
+    # The archetype stays: the total serves the same buyer the mod does, and
+    # the coherence line needs its two defence rows to point at.
+    assert tags["+61 to Spirit"] == ""
+    # An equipment filter still substitutes rather than adds — the mod's own
+    # identity is dissolved into the item's displayed total.
+    assert tags["+40 to Armour"] == "filter"
+
+
+def test_a_skill_name_with_two_ids_searches_both():
+    """Corpsewade Iron Greaves came back with no comparable listing at all.
+
+    "Grants Skill: Level 18 Decompose" resolves to TWO stat ids — the plain
+    skill and the triggered copy — and the item text says only the name. The
+    resolver picked the shorter, skill.corpse_cloud, and these boots grant the
+    triggered one: measured live, that id matched 0 listings where
+    skill.corpse_cloud_triggered matched 1,806.
+    """
+    from sox.valuation.allowlists import load_skills
+    from sox.valuation.query import granted_skill_filter
+
+    assert load_skills()["Decompose"] == [
+        "skill.corpse_cloud", "skill.corpse_cloud_triggered"]
+
+    item = load("CorpsewadeBoots")
+    skill = granted_skill_filter(item)
+    assert skill["type"] == "count" and skill["value"] == {"min": 1}
+    assert skill["filters"] == [
+        {"id": "skill.corpse_cloud", "value": {"min": 18}},
+        {"id": "skill.corpse_cloud_triggered", "value": {"min": 18}},
+    ]
+
+
+def test_an_unambiguous_skill_stays_one_filter():
+    """Most skills carry exactly one id, and a count group would say nothing."""
+    from sox.valuation.query import granted_skill_filter
+
+    wand = load("WandRareItem")
+    skill = granted_skill_filter(wand)
+    assert skill is not None and "type" not in skill
+
+
+def test_a_skill_count_group_is_a_stat_group_of_its_own():
+    """A count group is never a member of the `and` list, and it stays exempt
+    from the widening ladder: dropping the skill would not widen the search,
+    it would change what is being searched for."""
+    item = load("CorpsewadeBoots")
+    for step in range(len(RELAX_STEPS)):
+        stats = build_query(item, category_for(item), MODS, NOTABLES,
+                            relax=step)["query"]["stats"]
+        assert all("type" not in f for f in stats[0]["filters"])
+        groups = [g for g in stats[1:]
+                  if any(f["id"].startswith("skill.") for f in g["filters"])]
+        assert len(groups) == 1, f"rung {step}"

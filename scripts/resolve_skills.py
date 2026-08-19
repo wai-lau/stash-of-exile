@@ -28,10 +28,18 @@ def normalize_name(text):
 def main():
     stats = json.load(open(sys.argv[1]))
 
-    # A few skill names carry two ids — one for the ordinary skill, one for a
-    # unique's or a support's own copy (Lightning Bolt vs the Breach version).
-    # The clipboard prints only the name, so prefer the id whose slug IS the
-    # name; failing that, the shorter id, which is consistently the plain one.
+    # Three skill names carry two ids — one for the ordinary skill, one for a
+    # triggered or reserved copy: Decompose is skill.corpse_cloud and
+    # skill.corpse_cloud_triggered, and Lightning Bolt and Blink are the same
+    # shape. The clipboard prints only "Grants Skill: Level 18 Decompose", so
+    # nothing in the item says which, and picking the shorter id picked wrong:
+    # Corpsewade Iron Greaves grants the TRIGGERED one, so a search for
+    # skill.corpse_cloud returned 0 listings of the 1,806 that exist and the
+    # boots came back as having no comparable listing at all.
+    #
+    # Every id is kept and the query asks for at least one of them. A skill
+    # name matching two ids is a fact about GGG's table, not a decision this
+    # script gets to make.
     by_name = {}
     for group in stats["result"]:
         if group["id"] != SKILL_GROUP:
@@ -45,15 +53,12 @@ def main():
             )
 
     resolved, ambiguous = {}, []
-    for key, options in by_name.items():
-        if len(options) > 1:
-            slug = key.replace(" ", "_").replace("'", "")
-            exact = [o for o in options if o[1] == f"{SKILL_GROUP}.{slug}"]
-            chosen = exact[0] if exact else min(options, key=lambda o: len(o[1]))
-            ambiguous.append((chosen, options))
-        else:
-            chosen = options[0]
-        resolved[chosen[0]] = chosen[1]
+    for _key, options in by_name.items():
+        name = options[0][0]
+        ids = sorted({stat_id for _name, stat_id in options})
+        resolved[name] = ids
+        if len(ids) > 1:
+            ambiguous.append((name, ids))
 
     out = [
         "# Granted skill -> trade2 stat id.",
@@ -62,18 +67,22 @@ def main():
         "# A rolled `Grants Skill: Level N` is always searched, with N as the",
         "# minimum — it is the whole identity of a wand or sceptre, and a buyer",
         "# filtering for the skill will not accept a lower level of it.",
+        "#",
+        "# A list, because a skill name can carry two ids — the plain skill and",
+        "# a triggered or reserved copy of it — and the item text says only the",
+        "# name. Both are searched as \"at least one of these\".",
         "",
         "[skill]",
     ]
     for name in sorted(resolved):
         escaped = name.replace('"', '\\"')
-        out.append(f'"{escaped}" = "{resolved[name]}"')
+        ids = ", ".join(f'"{stat_id}"' for stat_id in resolved[name])
+        out.append(f'"{escaped}" = [{ids}]')
 
     print("\n".join(out))
     print(f"# {len(resolved)} skills resolved", file=sys.stderr)
-    for chosen, options in ambiguous:
-        others = ", ".join(i for _, i in options if i != chosen[1])
-        print(f"#   ambiguous: {chosen[0]} -> {chosen[1]} (also {others})", file=sys.stderr)
+    for name, ids in ambiguous:
+        print(f"#   two ids, both searched: {name} -> {', '.join(ids)}", file=sys.stderr)
     if not resolved:
         print("# ERROR: no granted skills found — has the group changed?", file=sys.stderr)
         sys.exit(1)

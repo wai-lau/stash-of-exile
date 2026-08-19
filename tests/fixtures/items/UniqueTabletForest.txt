@@ -1,0 +1,15 @@
+Item Class: Tablet
+Rarity: Unique
+Mastered Domain
+Irradiated Tablet
+--------
+Item Level: 82
+--------
+{ Implicit Modifier }
+Adds Irradiated to a Map
+1 use remaining
+--------
+{ Unique Modifier — Map }
+Map also counts as a Forest Map — Unscalable Value
+--------
+Can be used in a Map Device, causing the Map to be Irradiated.
