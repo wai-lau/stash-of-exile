@@ -492,20 +492,21 @@ def test_a_group_of_one_is_not_a_cluster():
     from sox.valuation.mods import dominant_archetype, matched
     from sox.valuation.query import explain_selection, searchable_mods
 
+    # An amulet: no defence property, so nothing seeds the count and every
+    # archetype is a group of one.
     item = itemtext.parse(
-        "Item Class: Helmets\nRarity: Rare\nViper Visor\nWarded Helm\n"
-        "--------\nArmour: 91\n--------\nItem Level: 81\n--------\n"
+        "Item Class: Amulets\nRarity: Rare\nX\nLapis Amulet\n"
+        "--------\nItem Level: 81\n--------\n"
         "{ Suffix Modifier }\n+23(20-28) to maximum Mana\n"
         "{ Suffix Modifier }\n+24(20-26) to Intelligence\n"
-        "--------\n+28(20-30)% of Armour also applies to Elemental Damage (desecrated)\n"
+        "{ Suffix Modifier }\n+29(25-32) to Accuracy Rating\n"
     )
     group, _ = dominant_archetype(matched(searchable_mods(item), MODS))
     assert group is None, "one mod per archetype is not a cluster"
 
     named, stats = explain_selection(item, MODS, NOTABLES)
     assert named is None or named == ""
-    assert stats[0] == "#% of Armour also applies to Elemental Damage", \
-        "the build-defining mod leads"
+    assert stats[0] == "# to maximum Mana", "highest weight leads"
 
 
 def test_weight_leads_the_ranking():
@@ -564,3 +565,33 @@ def test_rune_mods_are_neither_scored_nor_searched():
     )
     assert "36% increased Physical Damage" not in item_mods(item)
     assert "36% increased Physical Damage" not in searchable_mods(item)
+
+
+def test_the_items_own_defence_type_counts_toward_coherence():
+    """An ES chest is an ES item before any mod is read.
+
+    A recharge-rate mod on an Energy Shield base serves the same buyer the
+    base does; the same mod on a ring serves nobody in particular.
+    """
+    from sox.valuation.candidates import coherence_of
+    from sox.valuation.query import defence_seed
+
+    chest = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Rare\nX\nVaal Regalia\n"
+        "--------\nEnergy Shield: 500\n--------\nItem Level: 82\n--------\n"
+        "{ Suffix Modifier }\n25(20-30)% increased Energy Shield Recharge Rate\n"
+    )
+    assert defence_seed(chest) == {"es": 1}
+    group, count, bonus = coherence_of(chest, MODS)
+    assert group == "es", "the base names the archetype, not the umbrella tag"
+    assert count >= 2 and bonus >= 1, "the base and the mod cluster together"
+
+    # The same mod on a ring has nothing to cluster with.
+    ring = itemtext.parse(
+        "Item Class: Rings\nRarity: Rare\nX\nGold Ring\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Suffix Modifier }\n25(20-30)% increased Energy Shield Recharge Rate\n"
+    )
+    assert defence_seed(ring) == {}
+    _, ring_count, ring_bonus = coherence_of(ring, MODS)
+    assert ring_bonus == 0

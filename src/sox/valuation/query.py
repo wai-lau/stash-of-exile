@@ -251,6 +251,31 @@ def pseudo_totals(item: dict, index=None) -> list[tuple[str, int, list[str]]]:
     return out
 
 
+# The item's own defence type is itself an archetype. A recharge-rate mod on
+# an Energy Shield chest serves the same buyer the base does; the same mod on
+# a ring serves nobody in particular. Seeding the coherence count with what
+# the item IS lets its defensive mods cluster with it.
+DEFENCE_TAG_BY_PROPERTY = {
+    "Energy Shield": "es",
+    "Armour": "armour",
+    "Evasion Rating": "evasion",
+    "Evasion": "evasion",
+}
+
+
+def defence_seed(item: dict) -> dict[str, int]:
+    """One coherence vote per defence the item actually provides."""
+    seed: dict[str, int] = {}
+    for prop_name, tag in DEFENCE_TAG_BY_PROPERTY.items():
+        if _property(item, prop_name):
+            seed[tag] = 1
+    # Deliberately NOT seeding the umbrella "defence" tag. Nearly every
+    # defensive mod carries it, so seeding it lets the catch-all outvote the
+    # specific archetype and report "defence" for an item that is plainly an
+    # armour item.
+    return seed
+
+
 def searchable_mods(item: dict) -> list[str]:
     """Every mod that can go into a query, from every source.
 
@@ -360,7 +385,8 @@ def build_query(
     # a 3ex quarterstaff to a 50ex median.
     from sox.valuation.mods import coherence_keys, dominant_archetype, matched
 
-    dominant, _count = dominant_archetype(matched(all_mods, index))
+    dominant, _count = dominant_archetype(matched(all_mods, index),
+                                          seed=defence_seed(item))
     totals = []
     for pseudo_id, value, used in pseudo_totals(item, index):
         if dominant is not None:
@@ -397,6 +423,7 @@ def build_query(
         tiers=item.get("modTiers") or {},
         texts={id(e): t for _, t, e in mod_items},
         rolls=item.get("modRanges") or {},
+        seed=defence_seed(item),
     )
     by_entry = {id(e): t for _, t, e in mod_items}
 
@@ -478,7 +505,7 @@ def explain_selection(
             texts.setdefault(id(entry), text)
     chosen, group = select_synergistic(
         entries, max_stats, tiers=item.get("modTiers") or {}, texts=texts,
-        rolls=item.get("modRanges") or {},
+        rolls=item.get("modRanges") or {}, seed=defence_seed(item),
     )
     return (group or None), [e.text for e in chosen]
 

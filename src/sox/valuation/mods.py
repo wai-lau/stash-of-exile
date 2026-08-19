@@ -109,14 +109,18 @@ def coherence_keys(entry: ModEntry) -> tuple[str, ...]:
     return tuple(entry.tags)
 
 
-def dominant_archetype(entries: list[ModEntry]) -> tuple[str | None, int]:
+def dominant_archetype(
+    entries: list[ModEntry], seed: dict[str, int] | None = None
+) -> tuple[str | None, int]:
     """The buyer group the most mods on this item serve.
 
     A group of one is not a cluster. With every archetype at a count of one
     the winner is whichever happened to be seen first, and ordering the query
     by it put an incidental mana roll ahead of the item's best mod.
     """
-    counts: dict[str, int] = {}
+    # The item's own defence type votes: an ES chest is an ES item before any
+    # mod is read.
+    counts: dict[str, int] = dict(seed or {})
     for entry in entries:
         for key in coherence_keys(entry):
             counts[key] = counts.get(key, 0) + 1
@@ -134,6 +138,7 @@ def select_synergistic(
     tiers: dict[str, int] | None = None,
     texts: dict[int, str] | None = None,
     rolls: dict[str, tuple[float, float, float]] | None = None,
+    seed: dict[str, int] | None = None,
 ) -> tuple[list[ModEntry], str]:
     """Order the mods for the query: cohering first, then the rest.
 
@@ -147,7 +152,7 @@ def select_synergistic(
     if not entries:
         return [], ""
 
-    key, _ = dominant_archetype(entries)
+    key, _ = dominant_archetype(entries, seed=seed)
 
     def rank(entry: ModEntry) -> tuple[int, float, int]:
         text = (texts or {}).get(id(entry))
@@ -180,7 +185,10 @@ def select_synergistic(
     return (cohering + others)[:limit], key
 
 
-def coherence_bonus(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[int, str]:
+def coherence_bonus(
+    item_mods: list[str], index: dict[str, ModEntry],
+    seed: dict[str, int] | None = None,
+) -> tuple[int, str]:
     """Reward many mods serving ONE archetype.
 
     Counted over archetype tags and subjects, not allowlist categories: a real
@@ -189,7 +197,7 @@ def coherence_bonus(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[i
     builds (+Melee Skills and +Spell Skills share no buyer).
     """
     entries = matched(item_mods, index)
-    key, top = dominant_archetype(entries)
+    key, top = dominant_archetype(entries, seed=seed)
     if key is None:
         return 0, ""
     bonus = min(max(top - 1, 0), MAX_COHERENCE_BONUS)

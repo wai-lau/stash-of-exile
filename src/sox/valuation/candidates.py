@@ -153,9 +153,12 @@ def coherence_of(item: dict, index) -> tuple[str | None, int, int]:
     mean a single buyer wants the whole item, which is what a price-check
     overlay leaves to the player to judge.
     """
+    from sox.valuation.query import defence_seed
+
     entries = matched(item_mods(item), index)
-    name, count = dominant_archetype(entries)
-    bonus, _ = coherence_bonus(item_mods(item), index)
+    seed = defence_seed(item)
+    name, count = dominant_archetype(entries, seed=seed)
+    bonus, _ = coherence_bonus(item_mods(item), index, seed=seed)
     return name, count, bonus
 
 
