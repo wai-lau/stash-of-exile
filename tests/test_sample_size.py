@@ -171,3 +171,24 @@ def test_only_cohering_mods_are_searched():
     group, stats = explain_selection(item, MODS, NOTABLES, relax=0)
     assert group == "spell"
     assert "#% increased Attack Speed" not in stats
+
+
+def test_low_scoring_items_are_still_priced():
+    """The score says whether an item is worth LISTING, not whether to answer.
+
+    Copying an item is a request for its price. A cheap rare that scores
+    below the search threshold must still come back with a number, or the one
+    question actually asked goes unanswered.
+    """
+    from sox.cli import wants_search
+    from sox.valuation import candidates
+    from sox.valuation.allowlists import load_bases, load_uniques
+
+    item = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nDragon Visor\nFreebooter Cap\n"
+        "--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n+42 to maximum Life\n"
+    )
+    verdict = candidates.assess(item, None, MODS, load_bases(), load_uniques())
+    assert not verdict.should_search, "scores too low to be worth listing"
+    assert wants_search(verdict, None, item), "but must still be priced on request"

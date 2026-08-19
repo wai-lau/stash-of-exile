@@ -105,6 +105,13 @@ def main(argv: list[str] | None = None) -> int:
         cache.close()
 
 
+def wants_search(verdict, entry, item) -> bool:
+    """Search when escalation calls for it, or when nothing else can price it."""
+    if verdict.should_search:
+        return True
+    return entry is None and category_for(item) is not None
+
+
 def run_watch(args, cfg, cache, scout, league) -> int:
     """Price every item copied to the clipboard, until interrupted."""
     index = scout.prices(league.short)
@@ -139,7 +146,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                 name = f"{name}  [{item.get('baseType')}]"
             entry_ = index_price_for(item, index)
             verdict = candidates.assess(item, entry_, mod_index, base_rules, unique_rules)
-            searching = verdict.should_search and trade is not None
+            searching = wants_search(verdict, entry_, item) and trade is not None
             print(watch_ui.detected(name, "searching…" if searching else "index"),
                   flush=True)
 
@@ -176,7 +183,11 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
 
     verdict = candidates.assess(item, entry, mod_index, base_rules, unique_rules)
 
-    if verdict.should_search and trade is not None:
+    # The score decides whether an item is WORTH listing, not whether to
+    # answer. Copying an item is a request for its price, so anything the
+    # index cannot price gets searched regardless of how it scored — refusing
+    # would leave the one question that was actually asked unanswered.
+    if wants_search(verdict, entry, item) and trade is not None:
         category = category_for(item)
         if category:
             result = price_by_search(
