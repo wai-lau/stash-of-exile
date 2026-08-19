@@ -75,15 +75,33 @@ def equipment_minimum(item: dict, property_name: str, flat, percent) -> int | No
         return None
 
     ranges = item.get("modRanges") or {}
-    flat_actual = flat_min = 0.0
-    pct_actual = pct_min = 0.0
+    rune_texts = set(item.get("runeMods") or [])
+
+    # Everything contributing to the displayed total, including runes...
+    flat_actual = pct_actual = 0.0
+    # ...but only the item's OWN mods are rebuilt at their floor rolls, so a
+    # socketed rune's bonus is removed rather than searched for.
+    flat_min = pct_min = 0.0
     for text, (actual, low, _high) in ranges.items():
         if flat.search(text):
             flat_actual += actual
-            flat_min += low
+            if text not in rune_texts:
+                flat_min += low
         elif percent.search(text):
             pct_actual += actual
-            pct_min += low
+            if text not in rune_texts:
+                pct_min += low
+    for text in rune_texts:
+        # A rune without a reported range still inflates the total.
+        if text in ranges:
+            continue
+        values = parse_values(text)
+        if not values:
+            continue
+        if flat.search(text):
+            flat_actual += values[0]
+        elif percent.search(text):
+            pct_actual += values[0]
 
     base = total / (1 + pct_actual / 100) - flat_actual
     minimum = (base + flat_min) * (1 + pct_min / 100)
@@ -197,17 +215,10 @@ def pseudo_totals(item: dict, index=None) -> list[tuple[str, int, list[str]]]:
     one scraped from a single weak roll.
     """
     ranges = item.get("modRanges") or {}
-    # EVERY source counts toward a total. A buyer filtering on total life does
-    # not care whether it came from an explicit roll, a desecrated one, a rune
-    # or the base's implicit — the stat is the stat.
-    mods = (
-        list(item.get("explicitMods") or [])
-        + list(item.get("fracturedMods") or [])
-        + list(item.get("runeMods") or [])
-        + list(item.get("implicitMods") or [])
-        + list(item.get("desecratedMods") or [])
-        + list(item.get("enchantMods") or [])
-    )
+    # Every source the ITEM owns counts toward a total — explicit, desecrated,
+    # fractured, the base's implicit. Runes do not: their bonus leaves with the
+    # rune.
+    mods = searchable_mods(item) + list(item.get("implicitMods") or [])
 
     out = []
     for pseudo_id, patterns in PSEUDO_TOTALS:
@@ -243,14 +254,13 @@ def pseudo_totals(item: dict, index=None) -> list[tuple[str, int, list[str]]]:
 def searchable_mods(item: dict) -> list[str]:
     """Every mod that can go into a query, from every source.
 
-    Desecrated mods were missing here while being counted by the score, so a
-    revealed desecrated roll — often the strongest mod on the item — was
-    scored and then never searched on.
+    Rune mods are excluded: a socketed rune belongs to the socket, not the
+    item. The buyer sockets their own, and the rune has its own price — so
+    searching on its bonus prices an item the seller is not selling.
     """
     return (
         list(item.get("explicitMods") or [])
         + list(item.get("fracturedMods") or [])
-        + list(item.get("runeMods") or [])
         + list(item.get("desecratedMods") or [])
         + list(item.get("enchantMods") or [])
     )

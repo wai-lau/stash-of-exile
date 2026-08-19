@@ -421,11 +421,11 @@ def test_notables_outrank_pseudo_totals_and_mods():
         assert all("stat_2954116742" in i for i in ids), "notables must survive"
 
 
-def test_every_mod_source_feeds_the_pseudo_total():
-    """A buyer filtering on total life does not care where the life came from.
+def test_every_source_the_item_owns_feeds_the_pseudo_total():
+    """A buyer filtering on total life does not care where it came from.
 
-    Explicit, desecrated, rune, fractured and implicit all contribute to the
-    same total, so all of them must be summed.
+    Explicit, desecrated, fractured and the base's implicit all contribute.
+    A socketed rune does not: its bonus leaves with the rune.
     """
     from sox.valuation.query import pseudo_totals
 
@@ -440,7 +440,7 @@ def test_every_mod_source_feeds_the_pseudo_total():
         "+15 to maximum Life (rune)\n"
     )
     totals = dict((pid, value) for pid, value, _ in pseudo_totals(item, MODS))
-    assert totals["pseudo.pseudo_total_life"] == 20 + 96 + 40 + 15
+    assert totals["pseudo.pseudo_total_life"] == 20 + 96 + 40, "the rune's 15 is excluded"
 
 
 def test_desecrated_mods_reach_the_query():
@@ -520,3 +520,47 @@ def test_weight_leads_the_ranking():
     )  # w3, near-floor roll
     _, stats = explain_selection(item, MODS, NOTABLES, relax=3)   # keeps 1
     assert stats == ["#% of Armour also applies to Elemental Damage"]
+
+
+def test_a_socketed_rune_does_not_inflate_the_equipment_filter():
+    """The displayed total includes the rune; the search must not.
+
+    A chest showing 500 ES where 100 of it comes from a socketed rune is a
+    400-ES item, and pricing it as a 500-ES item asks for something the
+    seller is not selling.
+    """
+    from sox.valuation.query import DEFENCE_PROPERTIES, equipment_minimum
+
+    _, flat, percent = DEFENCE_PROPERTIES["Energy Shield"]
+    with_rune = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Rare\nX\nVaal Cuirass\n"
+        "--------\nEnergy Shield: 500\n--------\nItem Level: 82\n--------\n"
+        "{ Prefix Modifier }\n+400(380-420) to maximum Energy Shield\n"
+        "--------\n+100 to maximum Energy Shield (rune)\n"
+    )
+    assert with_rune["runeMods"] == ["+100 to maximum Energy Shield"]
+    # 500 shown - 400 own - 100 rune = 0 base, rebuilt at the mod's floor roll.
+    assert equipment_minimum(with_rune, "Energy Shield", flat, percent) == 380
+
+    # Without the rune the same item shows 400 and asks for the same floor,
+    # which is the point: the rune changes the display, not the item.
+    without = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Rare\nX\nVaal Cuirass\n"
+        "--------\nEnergy Shield: 400\n--------\nItem Level: 82\n--------\n"
+        "{ Prefix Modifier }\n+400(380-420) to maximum Energy Shield\n"
+    )
+    assert equipment_minimum(without, "Energy Shield", flat, percent) == 380
+
+
+def test_rune_mods_are_neither_scored_nor_searched():
+    from sox.valuation.candidates import item_mods
+    from sox.valuation.query import searchable_mods
+
+    item = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Rare\nX\nVaal Cuirass\n"
+        "--------\nItem Level: 82\n--------\n"
+        "{ Prefix Modifier }\n+96 to maximum Life\n"
+        "--------\n36% increased Physical Damage (rune)\n"
+    )
+    assert "36% increased Physical Damage" not in item_mods(item)
+    assert "36% increased Physical Damage" not in searchable_mods(item)

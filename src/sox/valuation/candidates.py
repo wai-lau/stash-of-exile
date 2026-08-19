@@ -36,13 +36,13 @@ class Verdict:
 def item_mods(item: dict) -> list[str]:
     """Every mod that can be scored and searched on.
 
-    Excludes unrevealed desecrated modifiers: their stat is unknown until
-    revealed, so they are worth nothing and cannot be searched.
+    Excludes unrevealed desecrated modifiers, whose stat is unknown until
+    revealed, and rune mods, whose bonus belongs to the socketed rune rather
+    than to the item being priced.
     """
     return (
         list(item.get("explicitMods") or [])
         + list(item.get("fracturedMods") or [])
-        + list(item.get("runeMods") or [])
         + list(item.get("desecratedMods") or [])
     )
 
