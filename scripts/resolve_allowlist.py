@@ -507,6 +507,27 @@ def expand_patterns(stats):
                     break
 
 
+# Eight stats exist twice: once as a LOCAL mod on the item that provides the
+# stat, once as a GLOBAL mod. "+145 to Evasion Rating" on a helmet is the
+# local one; the same text on an amulet is the global one. The clipboard shows
+# identical text for both, so the item's category has to decide — searching
+# the global id for a helmet mod matches nothing, which is how a 20ex helmet
+# priced at 0.2ex.
+LOCAL_SUFFIX = " (Local)"
+
+
+def local_variants(stats):
+    """Canonical text -> local stat id, for stats that have a local twin."""
+    out = {}
+    for group in stats["result"]:
+        if group["id"] != "explicit":
+            continue
+        for entry in group["entries"]:
+            if entry["text"].endswith(LOCAL_SUFFIX):
+                out[entry["text"][: -len(LOCAL_SUFFIX)]] = entry["id"]
+    return out
+
+
 def build_index(stats):
     """normalized text -> [(group, id)] in table order."""
     idx = {}
@@ -567,6 +588,7 @@ def resolve(text, idx, lock, valid_ids):
 def main():
     stats = json.load(open(sys.argv[1]))
     idx = build_index(stats)
+    locals_by_text = local_variants(stats)
     valid_ids = {e["id"] for g in stats["result"] for e in g["entries"]}
 
     lock_path = sys.argv[2] if len(sys.argv) > 2 else "src/sox/data/mod_allowlist.toml"
@@ -620,6 +642,9 @@ def main():
             out.append(f'slug = "{slugify(text)}"')
             out.append(f'text = "{text}"')
             out.append(f"weight = {weight}")
+            local = locals_by_text.get(text)
+            if local:
+                out.append(f'local_ids = ["{local}"]')
             tags = tags_for(text)
             if tags:
                 out.append("tags = [" + ", ".join(f'"{t}"' for t in tags) + "]")

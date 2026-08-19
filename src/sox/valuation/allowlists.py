@@ -21,6 +21,7 @@ class ModEntry:
     weight: int
     category: str
     tags: tuple[str, ...] = ()
+    local_ids: tuple[str, ...] = ()
     subject: str = "self"
     minion_subtype: str | None = None
     ambiguous: bool = False
@@ -58,6 +59,7 @@ def load_mods() -> list[ModEntry]:
                 weight=int(mod["weight"]),
                 category=category["name"],
                 tags=tuple(mod.get("tags", ())),
+                local_ids=tuple(mod.get("local_ids", ())),
                 subject=mod.get("subject", "self"),
                 minion_subtype=mod.get("minion_subtype"),
                 ambiguous=bool(mod.get("ambiguous", False)),

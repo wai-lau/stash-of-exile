@@ -31,6 +31,7 @@ ids = ["explicit.stat_3489782002"]
 slug = "to_maximum_energy_shield"
 text = "# to maximum Energy Shield"
 weight = 2
+local_ids = ["explicit.stat_4052037485"]
 tags = ["defence", "es"]
 note = "still core for ES builds"
 
@@ -53,6 +54,7 @@ ids = ["explicit.stat_2106365538"]
 slug = "increased_evasion_rating"
 text = "#% increased Evasion Rating"
 weight = 1
+local_ids = ["explicit.stat_124859000"]
 tags = ["defence", "evasion"]
 
 [[category.mod]]
@@ -60,6 +62,7 @@ ids = ["explicit.stat_2866361420"]
 slug = "increased_armour"
 text = "#% increased Armour"
 weight = 1
+local_ids = ["explicit.stat_1062208444"]
 tags = ["armour", "defence"]
 
 [[category.mod]]
@@ -67,6 +70,7 @@ ids = ["explicit.stat_2144192055"]
 slug = "to_evasion_rating"
 text = "# to Evasion Rating"
 weight = 2
+local_ids = ["explicit.stat_53045048"]
 tags = ["defence", "evasion"]
 
 [[category.mod]]
@@ -74,6 +78,7 @@ ids = ["explicit.stat_809229260"]
 slug = "to_armour"
 text = "# to Armour"
 weight = 2
+local_ids = ["explicit.stat_3484657501"]
 tags = ["armour", "defence"]
 
 [[category.mod]]
@@ -146,6 +151,7 @@ ids = ["explicit.stat_4147897060"]
 slug = "increased_block_chance"
 text = "#% increased Block chance"
 weight = 2
+local_ids = ["explicit.stat_2481353198"]
 tags = ["defence"]
 
 [[category.mod]]
@@ -571,6 +577,7 @@ ids = ["explicit.stat_681332047"]
 slug = "increased_attack_speed"
 text = "#% increased Attack Speed"
 weight = 2
+local_ids = ["explicit.stat_210067635"]
 tags = ["attack"]
 
 [[category.mod]]
@@ -599,6 +606,7 @@ ids = ["explicit.stat_803737631"]
 slug = "to_accuracy_rating"
 text = "# to Accuracy Rating"
 weight = 1
+local_ids = ["explicit.stat_691932474"]
 tags = ["attack"]
 
 [[category.mod]]

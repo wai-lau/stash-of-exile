@@ -67,6 +67,23 @@ class _Notable:
         self.stat_id = stat_id
 
 
+# Categories where a defence/speed mod belongs to the item itself, so the
+# LOCAL stat id applies. On jewellery and jewels the same text is global.
+LOCAL_CATEGORY_PREFIXES = ("armour.", "weapon.")
+
+
+def stat_ids_for(entry: ModEntry, category: str) -> tuple[str, ...]:
+    """The ids to search, choosing the local twin where the item provides it.
+
+    "+145 to Evasion Rating" reads identically on a helmet and an amulet, but
+    they are different stats to the trade API. Searching the global id for a
+    helmet mod matches nothing.
+    """
+    if entry.local_ids and category.startswith(LOCAL_CATEGORY_PREFIXES):
+        return entry.local_ids
+    return tuple(entry.ids)
+
+
 def category_for(item: dict) -> str | None:
     return ITEM_CLASS_CATEGORIES.get((item.get("itemClass") or "").casefold())
 
@@ -163,16 +180,17 @@ def build_query(
             and_filters.append({"id": entry.stat_id, "value": {}})
             continue
         minimum = round(parse_values(text)[0] * scale, 2)
-        if entry.ambiguous:
+        ids = stat_ids_for(entry, category)
+        if len(ids) > 1:
             or_groups.append({
                 "type": "count",
                 "value": {"min": 1},
                 "filters": [
-                    {"id": stat_id, "value": {"min": minimum}} for stat_id in entry.ids
+                    {"id": stat_id, "value": {"min": minimum}} for stat_id in ids
                 ],
             })
         else:
-            and_filters.append({"id": entry.ids[0], "value": {"min": minimum}})
+            and_filters.append({"id": ids[0], "value": {"min": minimum}})
 
     query: dict = {
         "query": {

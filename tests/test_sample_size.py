@@ -194,3 +194,37 @@ def test_low_scoring_items_are_called_junk_not_searched():
     assert not verdict.should_search, "scores too low to be worth a search"
     assert not wants_search(verdict, None, item), "so no search is spent"
     assert wants_search(verdict, None, item, force=True), "--force overrides"
+
+
+def test_armour_uses_the_local_stat_id():
+    """"+145 to Evasion Rating" on a helmet is a different stat to the API.
+
+    A helmet worth 20ex priced at 0.2ex because the global id was searched
+    and matched nothing, driving the ladder down to a single weak filter.
+    """
+    from sox.valuation.mods import normalize_mod
+    from sox.valuation.query import build_query, category_for, stat_ids_for
+
+    entry = MODS[normalize_mod("+145 to Evasion Rating")]
+    assert entry.local_ids, "flat evasion must know its local twin"
+    assert stat_ids_for(entry, "armour.helmet") == entry.local_ids
+    assert stat_ids_for(entry, "accessory.amulet") == tuple(entry.ids)
+
+    helmet = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nDragon Visor\nFreebooter Cap\n"
+        "--------\nEvasion Rating: 582\n--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n+145 to Evasion Rating\n"
+    )
+    query = build_query(helmet, category_for(helmet), MODS, NOTABLES)
+    ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
+    assert entry.local_ids[0] in ids
+    assert entry.ids[0] not in ids
+
+
+def test_local_defences_do_not_leak_onto_jewellery():
+    from sox.valuation.mods import normalize_mod
+    from sox.valuation.query import stat_ids_for
+
+    for text in ("# to Armour", "# to maximum Energy Shield", "#% increased Attack Speed"):
+        entry = MODS[normalize_mod(text)]
+        assert stat_ids_for(entry, "accessory.ring") == tuple(entry.ids)
