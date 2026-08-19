@@ -238,15 +238,24 @@ def rune_free_defence(item: dict, property_name: str, flat, percent) -> float | 
 
 
 def meets_without_runes(item: dict, required: dict) -> bool:
-    """Whether a listing still clears every defence floor without its runes."""
+    """Whether a listing still clears every floor without its runes.
+
+    Covers DPS as well as the defences: a weapon reaching our damage only
+    because of a socketed rune is a worse weapon wearing our numbers.
+    """
     by_id = {fid: (name, flat, pct)
              for name, (fid, flat, pct) in DEFENCE_PROPERTIES.items()}
     for filter_id, bound in (required or {}).items():
         minimum = (bound or {}).get("min")
-        spec = by_id.get(filter_id)
-        if minimum is None or spec is None:
+        if minimum is None:
             continue
-        actual = rune_free_defence(item, spec[0], spec[1], spec[2])
+        if filter_id == "dps":
+            actual = rune_free_dps(item)
+        else:
+            spec = by_id.get(filter_id)
+            if spec is None:
+                continue
+            actual = rune_free_defence(item, spec[0], spec[1], spec[2])
         if actual is not None and actual < minimum:
             return False
     return True
@@ -489,17 +498,108 @@ def _average_range(text: str | None) -> float:
     return (low + high) / 2
 
 
+# Local damage mods: the tooltip has already folded these into the damage
+# ranges DPS is computed from, so a rune's share must come back out the same
+# way it went in. NOTHING matches the never-regex; elemental and chaos runes
+# add flat damage and no weapon-local percent exists for them.
+NEVER = re.compile(r"(?!)")
+_FLAT = r"^adds \d[\d.,]* to \d[\d.,]* {} damage$"
+RUNE_DAMAGE_TYPES = (
+    (("Physical Damage",), re.compile(_FLAT.format("physical"), re.I),
+     re.compile(r"^\d[\d.]*% increased physical damage$", re.I)),
+    (("Fire Damage",), re.compile(_FLAT.format("fire"), re.I), NEVER),
+    (("Cold Damage",), re.compile(_FLAT.format("cold"), re.I), NEVER),
+    (("Lightning Damage",), re.compile(_FLAT.format("lightning"), re.I), NEVER),
+    (("Chaos Damage",), re.compile(_FLAT.format("chaos"), re.I), NEVER),
+)
+ATTACK_SPEED_PCT = re.compile(r"^\d[\d.]*% increased attack speed$", re.I)
+
+
+def _own_and_rune_totals(item: dict, flat: re.Pattern, percent: re.Pattern):
+    """(flat_rune, pct_rune, pct_own) for one local damage axis.
+
+    Flat rune adds are averaged, because the tooltip range they inflated is
+    itself read as an average. The item's own flat adds are not needed: they
+    stay, so they can sit inside the recovered base untouched.
+    """
+    def totals(texts):
+        flat_sum = pct_sum = 0.0
+        for text in texts:
+            values = parse_values(text)
+            if not values:
+                continue
+            if flat.search(text):
+                flat_sum += (values[0] + values[1]) / 2 if len(values) > 1 else values[0]
+            elif percent.search(text):
+                pct_sum += values[0]
+        return flat_sum, pct_sum
+
+    flat_rune, pct_rune = totals(_listing_texts(item, "runeMods"))
+    own = sum((_listing_texts(item, k)
+               for k in ("explicitMods", "implicitMods", "enchantMods")), [])
+    _flat_own, pct_own = totals(own)
+    return flat_rune, pct_rune, pct_own
+
+
+def _strip_runes(shown: float, flat_rune: float, pct_rune: float, pct_own: float) -> float:
+    """The same algebra rune_free_defence uses, on a damage average.
+
+        shown = (base + flat_own + flat_rune) * (1 + pct_own + pct_rune)
+        want  = (shown / (1 + pct_own + pct_rune) - flat_rune) * (1 + pct_own)
+    """
+    if shown <= 0:
+        return 0.0
+    base = shown / (1 + (pct_own + pct_rune) / 100) - flat_rune
+    return max(base * (1 + pct_own / 100), 0.0)
+
+
+def rune_free_aps(item: dict) -> float:
+    """Attacks per Second with any rune-granted attack speed removed."""
+    shown = _average_range(_property_text(item, "Attacks per Second"))
+    if not shown:
+        try:
+            shown = float((_property_text(item, "Attacks per Second") or "0").replace(",", ""))
+        except ValueError:
+            return 0.0
+    _flat, pct_rune, pct_own = _own_and_rune_totals(item, NEVER, ATTACK_SPEED_PCT)
+    return _strip_runes(shown, 0.0, pct_rune, pct_own)
+
+
+def rune_free_dps(item: dict) -> float | None:
+    """Total DPS with the socketed runes taken back out.
+
+    Works on our own item and on a fetched listing alike: both carry the
+    damage as tooltip ranges and the runes as `runeMods`.
+    """
+    aps = rune_free_aps(item)
+    if not aps:
+        return None
+    combined = 0.0
+    for names, flat, percent in RUNE_DAMAGE_TYPES:
+        shown = sum(_average_range(_property_text(item, n)) for n in names)
+        if shown <= 0:
+            continue
+        combined += _strip_runes(shown, *_own_and_rune_totals(item, flat, percent))
+    if combined <= 0:
+        return None
+    return combined * aps
+
+
 def damage_filters(item: dict) -> dict[str, dict]:
     """Total DPS, with the socketed runes taken back out.
 
-    Runes are NOT taken out, and this is where DPS parts company with the
-    defences. The API computes a listing's dps from its displayed damage,
-    runes included, so a rune-free minimum is asking the wrong question: it
-    admits every weapon between our real DPS and our stripped one. On one mace
-    that gap was 448 against 482, and the cheapest match went from 1 divine to
-    29 exalted — a weaker weapon that only cleared the floor because we had
-    lowered it. The defences can strip runes because the listings are stripped
-    too, client-side; there is no equivalent pass here.
+    Runes come off here for the same reason they come off the defences: the
+    buyer sockets their own, and the rune has its own price. Both sides are
+    stripped — the floor is built rune-free, and `meets_without_runes` then
+    recomputes each listing rune-free and discards the ones that only cleared
+    it while wearing a rune.
+
+    Stripping only ONE side is what breaks. A rune-free floor against
+    rune-inclusive listings admits every weapon between our real DPS and our
+    stripped one: on one mace that gap was 448 against 482 and the cheapest
+    match fell from 1 divine to 29 exalted, a weaker weapon that qualified
+    only because the floor had dropped. That is an argument for stripping the
+    listings too, which is now done, not for leaving our own runes in.
 
     Total DPS only, not pdps and edps alongside it. Splitting it pins the
     SOURCE of the damage: a weapon reaching the same DPS through fire instead
@@ -512,23 +612,8 @@ def damage_filters(item: dict) -> dict[str, dict]:
     weapon is not a worse one — so a minimum on either excludes comparables
     rather than weak items.
     """
-    aps = _average_range(_property_text(item, "Attacks per Second"))
-    if not aps:
-        try:
-            aps = float((_property_text(item, "Attacks per Second") or "0").replace(",", ""))
-        except ValueError:
-            aps = 0.0
-    if not aps:
-        return {}
-
-    combined = sum(
-        _average_range(_property_text(item, name))
-        for names in DAMAGE_PROPERTIES.values()
-        for name in names
-    )
-    if combined <= 0:
-        return {}
-    return {"dps": {"min": round(combined * aps, 1)}}
+    dps = rune_free_dps(item)
+    return {} if dps is None else {"dps": {"min": round(dps, 1)}}
 
 
 def _property(item: dict, name: str) -> int | None:

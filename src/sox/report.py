@@ -158,7 +158,7 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         out.append(f"             {found}")
         if priced.rune_inflated:
             out.append(f"             {priced.rune_inflated} skipped — met your "
-                         "defences only with their runes")
+                         "numbers only with their runes")
         if priced.relax_used:
             out.append("             found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")

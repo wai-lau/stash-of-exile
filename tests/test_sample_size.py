@@ -300,14 +300,19 @@ def test_a_damage_mod_covered_by_dps_is_not_also_a_stat_filter():
     assert ids == ["explicit.stat_3035140377"], "only the attack-level mod is left"
 
 
-def test_a_weapon_dps_keeps_its_runes():
-    """DPS is where the rune rule parts company with the defences.
+def test_a_weapon_dps_drops_its_runes():
+    """DPS strips runes, the same as the defences do.
 
-    The API computes a listing's dps from its displayed damage, runes
-    included, so a rune-free minimum asks the wrong question: it admits every
-    weapon between our real DPS and our stripped one. On one mace that gap was
-    448 against 482, and the cheapest match went from 1 divine to 29 exalted —
-    a weaker weapon that only cleared the floor because we had lowered it.
+    Both sides come off: the floor is built rune-free here, and
+    `meets_without_runes` recomputes each listing rune-free before comparing.
+    Stripping only the floor would admit every weapon between our real DPS
+    and our stripped one — on one mace that gap was 448 against 482 and the
+    cheapest match fell from 1 divine to 29 exalted. That is an argument for
+    stripping the listings too, not for keeping our own runes.
+
+    The two items below differ by one 36% rune. 728.5 average damage against
+    100% of our own is a 364.25 base; the runed copy divides by 2.36 instead
+    of 2 and rebuilds at 2, so 617.4 average and 1278 dps.
     """
     from sox.valuation.query import damage_filters
 
@@ -317,10 +322,8 @@ def test_a_weapon_dps_keeps_its_runes():
             "{ Prefix Modifier }\n100(80-120)% increased Physical Damage\n")
     bare = itemtext.parse(text)
     runed = itemtext.parse(text + "--------\n36% increased Physical Damage (rune)\n")
-    # 728.5 average * 2.07. The rune is already inside the displayed range,
-    # and it is inside the listings' displayed ranges too.
-    assert damage_filters(bare)["dps"] == {"min": 1508.0}
-    assert damage_filters(runed)["dps"] == {"min": 1508.0}
+    assert damage_filters(bare)["dps"] == {"min": 1508.0}, "no rune, nothing to strip"
+    assert damage_filters(runed)["dps"] == {"min": 1278.0}
 
 
 def test_requirements_are_capped_not_floored():
