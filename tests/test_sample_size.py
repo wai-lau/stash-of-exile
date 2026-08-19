@@ -184,10 +184,12 @@ def test_low_scoring_items_are_still_priced():
     from sox.valuation import candidates
     from sox.valuation.allowlists import load_bases, load_uniques
 
+    # Corrupted, so no open-affix bonus, and only a weight-1 resistance.
     item = itemtext.parse(
         "Item Class: Helmets\nRarity: Rare\nDragon Visor\nFreebooter Cap\n"
-        "--------\nItem Level: 81\n--------\n"
-        "{ Prefix Modifier }\n+42 to maximum Life\n"
+        "--------\nItem Level: 70\n--------\n"
+        "{ Suffix Modifier }\n+8% to Fire Resistance\n"
+        "--------\nCorrupted\n"
     )
     verdict = candidates.assess(item, None, MODS, load_bases(), load_uniques())
     assert not verdict.should_search, "scores too low to be worth listing"
