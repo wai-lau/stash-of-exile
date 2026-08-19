@@ -33,11 +33,18 @@ class TradeClient:
         self._cache = cache
         self._league = league
 
-    def search(self, query: dict) -> tuple[str, list[str]]:
+    def search(self, query: dict) -> tuple[str, list[str], int]:
+        """Query id, the matching listing hashes, and how many matched.
+
+        The hash list is what we can fetch; `total` is how big the market for
+        this item actually is, and only the second is evidence about how well
+        the price is supported.
+        """
         payload = self._session.post(
             f"{BASE}/search/poe2/{self._league}", json=query
         ).json()
-        return payload.get("id", ""), payload.get("result", [])
+        hashes = payload.get("result", [])
+        return payload.get("id", ""), hashes, int(payload.get("total") or len(hashes))
 
     def fetch(self, query_id: str, hashes: list[str]) -> list[Listing]:
         listings: list[Listing] = []

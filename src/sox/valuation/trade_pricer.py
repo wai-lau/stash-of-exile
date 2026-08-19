@@ -30,8 +30,9 @@ class TradeResult:
     median_ex: float | None       # middle of the sample; outlier-resistant
     suggested_ask_ex: float | None
     tag: str
-    listings: int
+    listings: int                 # how many we priced: the cheapest FETCH_LIMIT
     searches_used: int
+    matches: int = 0              # how many the search actually found
     confidence: str = "firm"      # firm | thin | very-thin
     relax_used: int = 0           # which ladder rung produced this
     p25_ex: float | None = None   # lower quartile; the ask is based on this
@@ -90,9 +91,9 @@ def price_by_search(
             # recorded when it was first computed must not be reported again.
             return TradeResult(**{**cached, "searches_used": 0, "from_cache": True})
 
-        query_id, hashes = trade.search(query)
+        query_id, hashes, matches = trade.search(query)
         searches += 1
-        if len(hashes) < min_results:
+        if matches < min_results:
             continue
 
         listings = trade.fetch(query_id, hashes[:FETCH_LIMIT])
@@ -116,8 +117,9 @@ def price_by_search(
             suggested_ask_ex=round(basis * SUGGESTED_ASK_FACTOR, 2),
             tag="exact" if step == 0 else f"relaxed:{step}",
             listings=len(prices),
+            matches=matches,
             searches_used=searches,
-            confidence=_confidence(len(hashes)),
+            confidence=_confidence(matches),
             relax_used=step,
             skewed=skewed,
         )

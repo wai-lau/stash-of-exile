@@ -40,15 +40,22 @@ RELAX_STEPS = (4, 3, 2, 1)
 # damage is dominated by its base and quality, so constraining it excludes
 # comparable items for no gain.
 # property -> (filter id, flat-mod pattern, percent-mod pattern)
+# The percent patterns must catch hybrid mods wherever the defence sits in the
+# list. "increased Evasion and Energy Shield" ends on Energy Shield, so an
+# Evasion pattern anchored to the end of the line missed it entirely — that
+# mod adjusted the ES total and left Evasion untouched on the same item.
+# The lookaheads keep the recharge and armour-break stats out, which is what
+# the end-anchor used to do.
 DEFENCE_PROPERTIES = {
     "Energy Shield": ("es", re.compile(r"to maximum Energy Shield$", re.I),
-                      re.compile(r"increased .*Energy Shield$", re.I)),
+                      re.compile(r"increased\b.*\bEnergy Shield\b"
+                                 r"(?!\s*(Recharge|Regeneration))", re.I)),
     "Armour": ("ar", re.compile(r"to Armour$", re.I),
-               re.compile(r"increased Armour\b.*$", re.I)),
+               re.compile(r"increased\b.*\bArmour\b(?!\s*Break)", re.I)),
     "Evasion Rating": ("ev", re.compile(r"to Evasion Rating$", re.I),
-                       re.compile(r"increased (Evasion Rating|.*and Evasion)$", re.I)),
+                       re.compile(r"increased\b.*\bEvasion\b", re.I)),
     "Evasion": ("ev", re.compile(r"to Evasion Rating$", re.I),
-                re.compile(r"increased (Evasion Rating|.*and Evasion)$", re.I)),
+                re.compile(r"increased\b.*\bEvasion\b", re.I)),
     "Runic Ward": ("ward", re.compile(r"to maximum Runic Ward$", re.I),
                    re.compile(r"increased maximum Runic Ward$", re.I)),
     "Spirit": ("spirit", re.compile(r"to Spirit$", re.I),
@@ -66,6 +73,12 @@ def equipment_minimum(item: dict, property_name: str, flat, percent) -> int | No
     for 485 would exclude the identical item with a worse roll, which is
     exactly a comparable.
 
+    NOT for uniques. Every copy carries the same mods, so the roll is the only
+    thing separating them and is precisely what is being priced. Rebuilding a
+    Forgotten Warden's (200-300)% hybrid at 200% turned 414 Energy Shield into
+    312 and 1355 Evasion into 1021 — a search for the worst copy of the item
+    in hand.
+
     Flat mods subtract directly; percent mods are multiplicative on the base,
     so the base is recovered first and rebuilt at the minimum rolls:
 
@@ -81,18 +94,20 @@ def equipment_minimum(item: dict, property_name: str, flat, percent) -> int | No
 
     # Everything contributing to the displayed total, including runes...
     flat_actual = pct_actual = 0.0
-    # ...but only the item's OWN mods are rebuilt at their floor rolls, so a
-    # socketed rune's bonus is removed rather than searched for.
+    # ...but only the item's OWN mods are kept, so a socketed rune's bonus is
+    # removed rather than searched for.
     flat_min = pct_min = 0.0
+    keep_rolls = classify(item) is ItemClass.UNIQUE
     for text, (actual, low, _high) in ranges.items():
+        kept = actual if keep_rolls else low
         if flat.search(text):
             flat_actual += actual
             if text not in rune_texts:
-                flat_min += low
+                flat_min += kept
         elif percent.search(text):
             pct_actual += actual
             if text not in rune_texts:
-                pct_min += low
+                pct_min += kept
     for text in rune_texts:
         # A rune without a reported range still inflates the total.
         if text in ranges:
@@ -405,6 +420,14 @@ def build_query(
     if ilvl:
         type_filters["ilvl"] = {"min": int(ilvl * scale)}
 
+    # Quality only on gems. Everywhere else currency takes an item to 20%, so
+    # pinning it excludes cheaper copies a buyer would happily quality up
+    # themselves; on a gem the quality IS part of what is being bought.
+    if classify(item) is ItemClass.GEM:
+        quality = _property(item, "Quality")
+        if quality:
+            type_filters["quality"] = {"min": quality}
+
     equipment: dict = {}
     for prop_name, (filter_id, flat, percent) in DEFENCE_PROPERTIES.items():
         value = equipment_minimum(item, prop_name, flat, percent)
@@ -526,11 +549,19 @@ def build_query(
     # Pinned only when ours is neither. Once the item has been touched at all
     # the whole market is comparable again, so both stay unconstrained rather
     # than pinning the one flag we happen not to carry.
+    misc: dict = {}
     if not item.get("corrupted") and not item.get("sanctified"):
-        query["query"]["filters"]["misc_filters"] = {"filters": {
-            "corrupted": {"option": "false"},
-            "sanctified": {"option": "false"},
-        }}
+        misc["corrupted"] = {"option": "false"}
+        misc["sanctified"] = {"option": "false"}
+    # Twice corrupted is the one corruption state that is strictly scarcer
+    # rather than merely different: it is the only way an item carries a
+    # Corruption Enhancement, so a singly-corrupted copy is not a comparable.
+    # On a twice-corrupted Forgotten Warden it is the whole price — 196
+    # matches from 4 divine without it, 64 from 10 with a 22 divine quartile.
+    if item.get("twiceCorrupted"):
+        misc["twice_corrupted"] = {"option": "true"}
+    if misc:
+        query["query"]["filters"]["misc_filters"] = {"filters": misc}
     if item.get("name") and classify(item) is ItemClass.UNIQUE:
         query["query"]["name"] = item["name"]
     return query

@@ -33,7 +33,7 @@ class ScriptedTrade:
     def search(self, query):
         count, _ = self.rungs[min(self.searches, len(self.rungs) - 1)]
         self.searches += 1
-        return f"q{self.searches}", [f"h{i}" for i in range(count)]
+        return f"q{self.searches}", [f"h{i}" for i in range(count)], count
 
     def fetch(self, query_id, hashes):
         _, prices = self.rungs[min(self.searches - 1, len(self.rungs) - 1)]
@@ -292,19 +292,22 @@ def test_added_damage_filters_on_the_average():
     assert 152.0 in mins
 
 
-def test_default_status_includes_offline_sellers():
-    """PoE2 trade is asynchronous, so most of the market is offline.
+def test_default_status_is_instant_buyout():
+    """Only a listing someone can actually complete is evidence of a price.
 
-    Verified live on one query: status=online returned 1 listing while
-    status=any returned 918, cheapest 1 exalted. Pricing off the online
-    slice put a 3ex item in the hundreds.
+    "any" includes listings nobody can buy — a seller who quit the league
+    still shows a number, and the cheapest-match ceiling lands on exactly
+    those. Not "online" either: PoE2 trade is asynchronous, and filtering to
+    online sellers cut one query from 918 listings to 1, which then priced a
+    3ex item in the hundreds.
     """
     from sox.config import Config
     from sox.valuation.query import build_query, category_for
 
-    assert Config().status == "any"
-    query = build_query(ITEM, category_for(ITEM), MODS, NOTABLES)
-    assert query["query"]["status"]["option"] == "any"
+    assert Config().status == "securable"
+    query = build_query(ITEM, category_for(ITEM), MODS, NOTABLES,
+                        status=Config().status)
+    assert query["query"]["status"]["option"] == "securable"
 
 
 def test_a_cached_price_does_not_claim_a_search(tmp_path):
@@ -646,3 +649,36 @@ def test_the_granted_skill_shows_as_searched_not_ignored():
     assert granted_skill_text(wand) == ["Grants Skill: Level 20 Chaos Bolt"]
     rows = score_rows(wand, MODS, {})
     assert rows[0] == ("Grants Skill: Level 20 Chaos Bolt", None, "filter")
+
+
+def test_the_reported_count_is_what_matched_not_what_we_fetched(tmp_path):
+    """"10 listings" appeared on every item with a real market.
+
+    One fetch call is enough to find the cheap end, so we only ever price the
+    cheapest 10 — but reporting that count as the market size made a thin
+    result and a thousand-listing result look identical.
+    """
+    from sox.report import PricedItem, render
+
+    class WideMarket:
+        searches = 0
+
+        def search(self, query):
+            return "q1", [f"h{i}" for i in range(10)], 842
+
+        def fetch(self, query_id, hashes):
+            return [Listing(amount=p, currency="exalted", account="a")
+                    for p in range(1, 11)]
+
+    result = price_by_search(
+        ITEM, category_for(ITEM), MODS, NOTABLES, WideMarket(),
+        Cache(tmp_path / "c.sqlite"), RATES,
+    )
+    assert result.listings == 10, "we priced the cheapest 10"
+    assert result.matches == 842, "but 842 items matched"
+
+    text = render(ITEM, PricedItem(
+        name="X", item_class="Helmets", price_ex=1.0, source="trade",
+        tag="exact", listings=result.listings, matches=result.matches,
+    ), 320.0)
+    assert "cheapest 10 of 842 listings" in text

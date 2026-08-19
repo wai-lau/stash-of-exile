@@ -26,7 +26,8 @@ class PricedItem:
     source: str            # index | trade | unpriced
     tag: str | None
     reason: str = ""
-    listings: int = 0
+    listings: int = 0              # how many we priced
+    matches: int = 0               # how many the search found
     from_cache: bool = False
     median_ex: float | None = None
     p25_ex: float | None = None
@@ -97,7 +98,16 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         if priced.median_ex is not None:
             market += f"  ·  median {fmt_price(priced.median_ex, divine_ratio)}"
         lines.append(f"  market     {MARKET}{market}{RESET}")
-        lines.append(f"             {priced.listings} listings, {priced.tag}")
+        # `listings` is only ever the cheapest handful — one fetch call is
+        # enough to find the low end, so it reads 10 for anything with a real
+        # market. The match count is the number that says whether the price is
+        # supported, so lead with it.
+        if priced.matches and priced.matches > priced.listings:
+            found = (f"cheapest {priced.listings} of {priced.matches:,} "
+                     f"listings, {priced.tag}")
+        else:
+            found = f"{priced.listings} listings, {priced.tag}"
+        lines.append(f"             {found}")
         if priced.relax_used:
             lines.append("             found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")

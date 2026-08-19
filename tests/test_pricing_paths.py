@@ -534,7 +534,12 @@ def test_twice_corrupted_reads_as_corrupted():
     assert item["corrupted"] is True and item["twiceCorrupted"] is True
 
     filters = build_query(item, category_for(item), MODS, NOTABLES)
-    assert "misc_filters" not in filters["query"]["filters"]
+    # Corrupted and sanctified go unconstrained once ours is touched, but
+    # twice-corrupted is pinned: it is the only way to carry a Corruption
+    # Enhancement, so a singly-corrupted copy is not a comparable.
+    assert filters["query"]["filters"]["misc_filters"]["filters"] == {
+        "twice_corrupted": {"option": "true"}
+    }
     assert should_search_unique_of(item) == "corrupted"
 
 
@@ -599,3 +604,46 @@ def test_the_granted_skill_survives_a_leading_property_line():
     )
     assert granted_skill_filter(inline) is not None
     assert inline["explicitMods"] == ["+24 to Dexterity"], "the mod survived"
+
+
+def test_a_uniques_defences_are_not_rebuilt_at_its_worst_roll():
+    """Every copy of a unique carries the same mods, so the roll is the only
+    thing separating them — and it is exactly what is being priced.
+
+    Rebuilding Forgotten Warden's (200-300)% hybrid at 200% asked the market
+    for the worst copy of the item in hand: 414 Energy Shield became 312 and
+    1355 Evasion became 1021, which live matched 196 listings from 4 divine
+    instead of 64 from 10.
+    """
+    item = itemtext.parse(_warden_text())
+    equipment = build_query(item, category_for(item), MODS, NOTABLES)[
+        "query"]["filters"]["equipment_filters"]["filters"]
+    # The rune's 18% is still removed — its bonus is not the item's.
+    assert equipment == {"es": {"min": 395}, "ev": {"min": 1294}}
+
+
+def test_a_hybrid_defence_mod_counts_for_every_defence_it_names():
+    """"increased Evasion and Energy Shield" ends on Energy Shield, so an
+    Evasion pattern anchored to the end of the line missed it — the same mod
+    adjusted the ES total and left Evasion untouched."""
+    from sox.valuation.query import DEFENCE_PROPERTIES
+
+    def hit(text):
+        return sorted({fid for _, (fid, _, pct) in DEFENCE_PROPERTIES.items()
+                       if pct.search(text)})
+
+    assert hit("280% increased Evasion and Energy Shield") == ["es", "ev"]
+    assert hit("18% increased Armour, Evasion and Energy Shield") == ["ar", "es", "ev"]
+    # The end-anchor used to keep these out; the lookaheads do it now.
+    assert hit("25% increased Energy Shield Recharge Rate") == []
+    assert hit("40% increased Armour Break duration") == []
+
+
+def test_quality_is_searched_on_gems_only():
+    """Currency takes any other item to 20%, so pinning quality excludes
+    cheaper copies a buyer would happily quality up themselves."""
+    warden = itemtext.parse(_warden_text())
+    assert warden["properties"][0]["name"] == "Quality"
+    types = build_query(warden, category_for(warden), MODS, NOTABLES)[
+        "query"]["filters"]["type_filters"]["filters"]
+    assert "quality" not in types
