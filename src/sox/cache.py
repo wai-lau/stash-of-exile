@@ -14,6 +14,8 @@ TTL = {
     "stats_data": 7 * 86400,
     "index_price": 6 * 3600,
     "trade_price": 12 * 3600,
+    "exchange_static": 7 * 86400,
+    "exchange_book": 6 * 3600,
 }
 
 _SCHEMA = """

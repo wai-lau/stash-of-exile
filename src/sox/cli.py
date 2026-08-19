@@ -21,12 +21,14 @@ from sox.cache import Cache
 from sox.config import load_config
 from sox.ggg.governor import RateGovernor
 from sox.ggg.session import GGGError, GGGSession
+from sox.ggg.exchange import ExchangeClient
 from sox.ggg.trade import TradeClient
 from sox.scout import ScoutClient
 from sox.valuation import candidates
 from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_uniques
 from sox.valuation.classify import ItemClass, classify, display_name
-from sox.valuation.index_pricer import index_price_for
+from sox.valuation.exchange_pricer import exchange_rates, price_by_exchange
+from sox.valuation.index_pricer import index_key, index_price_for
 from sox.valuation.mods import build_index, explain_score
 from sox.valuation.rolls import (
     roll_percentiles,
@@ -112,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
         base_rules, unique_rules = load_bases(), load_uniques()
         notables = load_notables()
 
-        trade = None
+        trade = exchange = None
         if not args.no_trade:
             def announce(seconds: float, reason: str) -> None:
                 print(f"… waiting {seconds:.0f}s ({reason})", file=sys.stderr, flush=True)
@@ -120,12 +122,14 @@ def main(argv: list[str] | None = None) -> int:
             session = GGGSession(RateGovernor(on_wait=announce),
                                  httpx.Client(timeout=30), cfg.user_agent)
             trade = TradeClient(session, cache, cfg.league or league.value)
+            exchange = ExchangeClient(session, cache, cfg.league or league.value)
+            rates = exchange_rates(exchange, rates)
 
         for n, block in enumerate(blocks):
             if n:
                 print()
             print(price_one(block, index, rates, mod_index, base_rules,
-                            unique_rules, notables, trade, cache, cfg))
+                            unique_rules, notables, trade, cache, cfg, exchange))
         return 0
     except (GGGError, httpx.HTTPError) as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -199,7 +203,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
     base_rules, unique_rules = load_bases(), load_uniques()
     notables = load_notables()
 
-    trade = None
+    trade = exchange = None
     if not args.no_trade:
         def announce(seconds: float, reason: str) -> None:
             print(watch_ui.waiting_on_limit(seconds, reason), flush=True)
@@ -207,8 +211,11 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         governor = RateGovernor(on_wait=announce)
         session = GGGSession(governor, httpx.Client(timeout=30), cfg.user_agent)
         trade = TradeClient(session, cache, cfg.league or league.value)
+        exchange = ExchangeClient(session, cache, cfg.league or league.value)
+        rates = exchange_rates(exchange, rates)
 
-    print(watch_ui.banner(league.value, league.divine_price_ex,
+    divine_ex = rates.get("divine") or league.divine_price_ex
+    print(watch_ui.banner(league.value, divine_ex,
                           clipboard.describe_backend()), flush=True)
     stats = watch_ui.Session()
 
@@ -261,7 +268,8 @@ def run_watch(args, cfg, cache, scout, league) -> int:
 
                 try:
                     priced = _price_item(item, index, rates, mod_index, base_rules,
-                                         unique_rules, notables, trade, cache, cfg)
+                                         unique_rules, notables, trade, cache, cfg,
+                                         exchange)
                 except (GGGError, httpx.HTTPError) as exc:
                     # One bad lookup must not end the session; the next copy retries.
                     timer.cancel()
@@ -281,9 +289,9 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                     # The header is already on screen; only the detail is left.
                     print(watch_ui.body_lines(body), flush=True)
                 else:
-                    print(watch_ui.entry(body, priced.price_ex, league.divine_price_ex),
+                    print(watch_ui.entry(body, priced.price_ex, divine_ex),
                           flush=True)
-                print(watch_ui.status(stats, league.divine_price_ex), flush=True)
+                print(watch_ui.status(stats, divine_ex), flush=True)
         except KeyboardInterrupt:
             if stop.is_set() or not interactive:
                 break
@@ -296,20 +304,20 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         break
 
     print()
-    print(watch_ui.status(stats, league.divine_price_ex))
+    print(watch_ui.status(stats, divine_ex))
     return 0
 
 
 def price_one(block, index, rates, mod_index, base_rules, unique_rules,
-              notables, trade, cache, cfg) -> str:
+              notables, trade, cache, cfg, exchange=None) -> str:
     item = itemtext.parse(block)
     priced = _price_item(item, index, rates, mod_index, base_rules,
-                         unique_rules, notables, trade, cache, cfg)
+                         unique_rules, notables, trade, cache, cfg, exchange)
     return report.render(item, priced, rates)
 
 
 def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
-                notables, trade, cache, cfg) -> report.PricedItem:
+                notables, trade, cache, cfg, exchange=None) -> report.PricedItem:
     item_class = classify(item)
     entry = index_price_for(item, index)
 
@@ -345,6 +353,21 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 searches_used=result.searches_used, from_cache=result.from_cache,
                 searched_group=group, searched_stats=stats,
                 searched_texts=tuple(highlighted),
+            )
+
+    # The exchange is the deeper book and it answers first. It carries only
+    # what trades in bulk — currency, runes, essences, omens, fragments, gems,
+    # waystones — and returns nothing for gear, so the index still prices
+    # everything else. Currency never reaches the trade search, which is how
+    # the index drifted to 26.5 ex on an omen the exchange sold at 1.
+    if exchange is not None:
+        bulk = price_by_exchange(index_key(item), exchange)
+        if bulk is not None:
+            return report.PricedItem(
+                name=display_name(item), item_class=item_class,
+                price_ex=bulk.price_ex, source="exchange", tag=None,
+                reason=verdict.reason, offers=bulk.offers, stock=bulk.stock,
+                ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
             )
 
     if entry is not None:

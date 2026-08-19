@@ -23,7 +23,7 @@ class PricedItem:
     name: str
     item_class: ItemClass
     price_ex: float | None
-    source: str            # index | trade | unpriced
+    source: str            # index | exchange | trade | unpriced
     tag: str | None
     reason: str = ""
     listings: int = 0              # how many we priced
@@ -43,6 +43,10 @@ class PricedItem:
     suggested_ask_ex: float | None = None
     searches_used: int = 0
     quantity: int = 0
+    offers: int = 0        # exchange: sellers in the book
+    stock: int = 0         # exchange: units they hold
+    ask_ex: float | None = None   # exchange: what one costs to buy
+    bid_ex: float | None = None   # exchange: what someone will pay
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
     searched_texts: tuple[str, ...] = ()   # the ITEM's wording, for highlighting
@@ -162,6 +166,22 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         if priced.relax_used:
             out.append("             found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")
+
+    elif priced.source == "exchange":
+        # The deep book. Depth is the evidence here, not listing count: the
+        # junk end of every book is thin, and stock is what steps over it.
+        out.append(f"  exchange   {fmt_price(priced.price_ex, rates)}"
+                     + (f"   ({priced.offers:,} offers, {priced.stock:,} in stock)"
+                        if priced.offers else ""))
+        # The spread is the honest width of the answer. A price quoted without
+        # it reads as one number when the market is two.
+        if priced.bid_ex is not None and priced.ask_ex is not None:
+            bid, ask = fmt_row([priced.bid_ex, priced.ask_ex], rates)
+            out.append(f"             bid {bid}  ·  ask {ask}")
+        elif priced.ask_ex is not None and priced.offers:
+            out.append("             ask only — nobody is bidding for these")
+        if priced.stock and priced.stock < 20:
+            out.append("             thin book — few units are actually offered")
 
     else:
         out.append(f"  index      {fmt_price(priced.price_ex, rates)}"
