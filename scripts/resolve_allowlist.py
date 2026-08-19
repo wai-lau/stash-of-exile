@@ -448,6 +448,18 @@ def tags_for(text):
     for needle, applied in TAG_RULES:
         if needle in lowered:
             tags.update(applied)
+
+    # Penetration is OFFENSIVE: your damage cutting through the enemy's
+    # resistance, not resistance on you. Matching the word "Resistance" filed
+    # it as a defence and clustered it with life and resistance rolls.
+    if "penetrat" in lowered:
+        tags -= {"defence", "resistance"}
+
+    # A skill name is not a defence. "+to Level of all Armour Breaker Skills"
+    # and "Arctic Armour Skills" were tagged armour and defence purely for
+    # containing the word.
+    if "level of all" in lowered:
+        tags -= {"defence", "armour", "es", "evasion", "resistance"}
     return sorted(tags)
 
 

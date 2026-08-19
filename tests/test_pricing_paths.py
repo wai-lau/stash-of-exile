@@ -377,3 +377,24 @@ def test_endgame_families_classify_as_endgame():
                  "Expedition Logbook", "Simulacrum", "Waystone (Tier 15)"):
         item = {"itemClass": base, "baseType": base, "frameType": 0}
         assert classify(item) is ItemClass.ENDGAME, base
+
+
+def test_penetration_is_offensive_not_defensive():
+    """Penetration cuts through the ENEMY's resistance.
+
+    Matching the word "Resistance" filed it as a defence, clustering it with
+    life and resistance rolls for coherence.
+    """
+    by_text = {m.text: m for m in load_mods()}
+    pen = by_text["Damage Penetrates #% Cold Resistance"]
+    assert "defence" not in pen.tags
+    assert "resistance" not in pen.tags
+    assert "elemental" in pen.tags
+
+
+def test_a_skill_name_is_not_a_defence():
+    by_text = {m.text: m for m in load_mods()}
+    for text in ("+# to Level of all Armour Breaker Skills",
+                 "+# to Level of all Arctic Armour Skills"):
+        assert "defence" not in by_text[text].tags, text
+        assert "armour" not in by_text[text].tags, text

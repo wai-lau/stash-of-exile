@@ -1064,7 +1064,7 @@ ids = ["explicit.stat_3417711605"]
 slug = "damage_penetrates_cold_resistance"
 text = "Damage Penetrates #% Cold Resistance"
 weight = 3
-tags = ["defence", "elemental", "resistance"]
+tags = ["elemental"]
 
 [[category.mod]]
 ids = ["explicit.stat_239367161"]
@@ -1098,7 +1098,7 @@ ids = ["explicit.stat_818778753"]
 slug = "damage_penetrates_lightning_resistance"
 text = "Damage Penetrates #% Lightning Resistance"
 weight = 3
-tags = ["defence", "elemental", "resistance"]
+tags = ["elemental"]
 
 [[category.mod]]
 ids = ["explicit.stat_591105508"]
@@ -1119,7 +1119,7 @@ ids = ["explicit.stat_2653955271"]
 slug = "damage_penetrates_fire_resistance"
 text = "Damage Penetrates #% Fire Resistance"
 weight = 3
-tags = ["defence", "elemental", "resistance"]
+tags = ["elemental"]
 
 [[category.mod]]
 ids = ["explicit.stat_2254480358"]
@@ -1207,7 +1207,7 @@ ids = ["explicit.stat_2101383955"]
 slug = "damage_penetrates_elemental_resistances"
 text = "Damage Penetrates #% Elemental Resistances"
 weight = 3
-tags = ["defence", "elemental", "resistance"]
+tags = ["elemental"]
 
 [[category.mod]]
 ids = ["explicit.stat_1992191903"]
@@ -1737,7 +1737,6 @@ ids = ["explicit.stat_448592698|135"]
 slug = "to_level_of_all_armour_breaker_skills"
 text = "+# to Level of all Armour Breaker Skills"
 weight = 3
-tags = ["armour", "defence"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -1907,7 +1906,6 @@ ids = ["explicit.stat_448592698|119"]
 slug = "to_level_of_all_arctic_armour_skills"
 text = "+# to Level of all Arctic Armour Skills"
 weight = 3
-tags = ["armour", "defence"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -1988,7 +1986,6 @@ ids = ["explicit.stat_448592698|174"]
 slug = "to_level_of_all_armour_piercing_rounds_skills"
 text = "+# to Level of all Armour Piercing Rounds Skills"
 weight = 3
-tags = ["armour", "defence"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
