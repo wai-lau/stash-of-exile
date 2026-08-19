@@ -84,3 +84,17 @@ def test_a_price_is_quoted_in_one_currency():
     assert fmt_price(None, RATES) == "—"
     # No chaos rate yet: fall through rather than crash.
     assert fmt_price(120.0, {"divine": 340.6}) == "120 ex"
+
+
+def test_a_market_row_is_quoted_in_one_unit():
+    """"low 9 ex · 25th 32.23 ex · median 3.5 chaos" is ascending, but you
+    have to know chaos is 33 ex to see it. The row exists to be compared
+    across, so it gets one scale."""
+    from sox.report import fmt_row
+
+    assert fmt_row([9.0, 32.23, 117.0], RATES) == ["9 ex", "32.23 ex", "117 ex"]
+    assert fmt_row([1600.0, 2240.0, 4480.0], RATES) == [
+        "4.7 div", "6.58 div", "13.15 div"]
+    # Anchored on the low: the largest would push it to "0.27 chaos".
+    assert fmt_row([9.0, 32.23, 117.0], RATES)[0] == "9 ex"
+    assert fmt_row([None, None, None], RATES) == ["—", "—", "—"]

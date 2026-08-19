@@ -72,6 +72,29 @@ def fmt_price(ex: float | None, rates: dict[str, float]) -> str:
     return f"{_round(ex)} ex"
 
 
+def fmt_row(values: list[float | None], rates: dict[str, float]) -> list[str]:
+    """Several prices in ONE unit, chosen from the first of them.
+
+    Per-value units made a row unreadable: "low 9 ex · 25th 32.23 ex · median
+    3.5 chaos" is ascending, but you have to know chaos is 33 ex to see it.
+    The row exists to be compared across, so it gets one scale.
+
+    Anchored on the low rather than the largest value, because the largest
+    pushes the low into fractions — "0.27 chaos · 0.96 chaos · 3.5 chaos"
+    reads worse than "9 ex · 32.23 ex · 117 ex".
+    """
+    real = [v for v in values if v is not None]
+    if not real:
+        return ["—" for _ in values]
+    anchor = real[0]
+    for code, label in PRICE_UNITS:
+        rate = rates.get(code) or 0.0
+        if rate > 0 and anchor >= rate:
+            return [f"{_round(v / rate)} {label}" if v is not None else "—"
+                    for v in values]
+    return [f"{_round(v)} ex" if v is not None else "—" for v in values]
+
+
 def _round(value: float) -> str:
     if value >= 100:
         return f"{value:,.0f}"
@@ -110,11 +133,13 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         elif priced.confidence == "thin":
             out.append(f"  !! THIN    only {priced.listings} comparable listings — "
                          "treat the number as a rough bound")
-        market = f"low {fmt_price(priced.price_ex, rates)}"
+        low, p25, median = fmt_row(
+            [priced.price_ex, priced.p25_ex, priced.median_ex], rates)
+        market = f"low {low}"
         if priced.p25_ex is not None:
-            market += f"  ·  25th {fmt_price(priced.p25_ex, rates)}"
+            market += f"  ·  25th {p25}"
         if priced.median_ex is not None:
-            market += f"  ·  median {fmt_price(priced.median_ex, rates)}"
+            market += f"  ·  median {median}"
         out.append(f"  market     {MARKET}{market}{RESET}")
         # `listings` is only ever the cheapest handful — one fetch call is
         # enough to find the low end, so it reads 10 for anything with a real

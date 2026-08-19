@@ -759,3 +759,41 @@ def test_rune_inflated_listings_are_replaced_not_just_dropped(tmp_path):
     assert result.rune_inflated == 10, "the propped-up listings were skipped"
     assert result.listings == 10, "and replaced from deeper in the results"
     assert result.ceiling_ex == 20.0 * 320.0, "the cheap ones set no price"
+
+
+def test_an_archetype_tie_is_broken_by_weight_not_by_parse_order():
+    """A hybrid weapon is 2-2 constantly, and taking the first was a coin flip.
+
+    A Bandit Mace with two elemental mods and two physical ones counted
+    elemental 2, physical 2, and 'elemental' won only because the cold roll
+    was parsed first.
+    """
+    from sox.valuation.mods import dominant_archetype, matched
+    from sox.valuation.candidates import item_mods
+
+    item = itemtext.parse(
+        "Item Class: One Hand Maces\nRarity: Rare\nPain Ram\nBandit Mace\n"
+        "--------\nItem Level: 80\n--------\n"
+        "{ Prefix Modifier }\nAdds 58(40-60) to 97(80-110) Cold Damage\n"
+        "{ Prefix Modifier }\n127(100-129)% increased Physical Damage\n"
+        "{ Prefix Modifier }\nAdds 5(4-8) to 195(150-200) Lightning Damage\n"
+        "{ Suffix Modifier }\nLeeches 7.85(5-8)% of Physical Damage as Mana\n"
+    )
+    entries = matched(item_mods(item), MODS)
+    # elemental: two weight-3 mods. physical: one weight-3 and one weight-2.
+    assert dominant_archetype(entries) == ("elemental", 2)
+
+
+def test_an_archetype_tied_on_weight_too_is_no_cluster():
+    """The item genuinely serves both, and claiming either is worse than
+    admitting there is no cluster."""
+    from sox.valuation.allowlists import ModEntry
+    from sox.valuation.mods import dominant_archetype
+
+    def entry(tag, weight):
+        return ModEntry(ids=[], slug="x", text="x", weight=weight,
+                        category="c", tags=(tag,))
+
+    tied = [entry("elemental", 3), entry("elemental", 2),
+            entry("physical", 3), entry("physical", 2)]
+    assert dominant_archetype(tied) == (None, 2)

@@ -117,18 +117,32 @@ def dominant_archetype(
     A group of one is not a cluster. With every archetype at a count of one
     the winner is whichever happened to be seen first, and ordering the query
     by it put an incidental mana roll ahead of the item's best mod.
+
+    Counts tie constantly — a hybrid weapon carrying two elemental mods and
+    two physical ones is 2-2 — and taking the first was the same coin flip in
+    a different place. The heavier group wins: two build-defining mods
+    describe a buyer better than one build-defining and one supporting. If the
+    weights tie too the item genuinely serves both, and claiming either is
+    worse than admitting there is no cluster.
     """
     # The item's own defence type votes: an ES chest is an ES item before any
     # mod is read.
     counts: dict[str, int] = dict(seed or {})
+    weights: dict[str, int] = {}
     for entry in entries:
         for key in coherence_keys(entry):
             counts[key] = counts.get(key, 0) + 1
+            weights[key] = weights.get(key, 0) + entry.weight
     if not counts:
         return None, 0
-    key, top = max(counts.items(), key=lambda kv: kv[1])
+    ranked = sorted(counts.items(), key=lambda kv: (-kv[1], -weights.get(kv[0], 0)))
+    key, top = ranked[0]
     if top < 2:
         return None, top
+    if len(ranked) > 1:
+        runner, second = ranked[1]
+        if second == top and weights.get(runner, 0) == weights.get(key, 0):
+            return None, top
     return key, top
 
 
