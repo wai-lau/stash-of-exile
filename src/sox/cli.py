@@ -124,6 +124,16 @@ def main(argv: list[str] | None = None) -> int:
         cache.close()
 
 
+def _identity_fields(item) -> dict:
+    """The game's own label and the trade category we search it under.
+
+    More use than the internal pricing path: the category is what a search
+    actually queries, and a wrong one silently returns the wrong market.
+    """
+    return {"item_class_name": item.get("itemClass") or "",
+            "category": category_for(item)}
+
+
 def _coherence_fields(item, mod_index) -> dict:
     group, count, bonus = candidates.coherence_of(item, mod_index)
     return {"coherence_group": group, "coherence_count": count,
@@ -266,7 +276,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 tag=result.tag, reason=verdict.reason, listings=result.listings,
                 score=verdict.score,
                 breakdown=tuple(candidates.score_rows(item, mod_index, base_rules)),
-                **_coherence_fields(item, mod_index),
+                **_coherence_fields(item, mod_index), **_identity_fields(item),
                 median_ex=result.median_ex, p25_ex=result.p25_ex,
                 confidence=result.confidence, skewed=result.skewed,
                 relax_used=result.relax_used,
@@ -301,7 +311,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
         name=display_name(item), item_class=item_class, price_ex=None,
         source="unpriced", tag=tag, reason=verdict.reason, score=verdict.score,
         breakdown=tuple(candidates.score_rows(item, mod_index, base_rules)),
-        **_coherence_fields(item, mod_index),
+        **_coherence_fields(item, mod_index), **_identity_fields(item),
     )
 
 

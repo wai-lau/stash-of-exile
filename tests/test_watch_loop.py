@@ -68,6 +68,7 @@ def test_watch_prices_a_copied_item(monkeypatch, capsys, tmp_path):
     assert code == 0
     assert "Oblivion Strike" in out
     assert "market" in out
+    assert "weapon.bow" in out, "the searched category is shown"
     assert trade.searches >= 1
 
 

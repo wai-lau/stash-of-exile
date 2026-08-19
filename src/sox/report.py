@@ -42,6 +42,8 @@ class PricedItem:
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
     searched_texts: tuple[str, ...] = ()   # the ITEM's wording, for highlighting
+    item_class_name: str = ""              # the game's own label, e.g. "Quarterstaves"
+    category: str | None = None            # the trade category searched
     roll_pct: float | None = None
 
 
@@ -57,8 +59,9 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
     lines = [
         f"{display_name(item)}"
         + (f"  [{item.get('baseType')}]" if item.get("name") else ""),
-        f"  class      {priced.item_class}"
-        + (f"  ilvl {item['ilvl']}" if item.get("ilvl") else ""),
+        f"  type       {priced.item_class_name or priced.item_class}"
+        + (f" → {priced.category}" if priced.category else "")
+        + (f"   ilvl {item['ilvl']}" if item.get("ilvl") else ""),
     ]
 
     if priced.price_ex is None:
@@ -99,8 +102,7 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         if priced.median_ex is not None:
             market += f"  ·  median {fmt_price(priced.median_ex, divine_ratio)}"
         lines.append(f"  market     {market}")
-        lines.append(f"  ask        {fmt_price(priced.suggested_ask_ex, divine_ratio)}"
-                     f"   ({priced.listings} listings, {priced.tag})")
+        lines.append(f"             {priced.listings} listings, {priced.tag}")
         if priced.skewed:
             lines.append("             the low is far under the rest of the market — "
                          "someone is dumping, so the ask uses the 25th percentile")
