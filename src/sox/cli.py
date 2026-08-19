@@ -232,7 +232,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",
                 tag=result.tag, reason=verdict.reason, listings=result.listings,
                 score=verdict.score,
-                breakdown=tuple(explain_score(candidates.item_mods(item), mod_index)),
+                breakdown=tuple(candidates.score_rows(item, mod_index, base_rules)),
                 median_ex=result.median_ex, p25_ex=result.p25_ex,
                 confidence=result.confidence, skewed=result.skewed,
                 relax_used=result.relax_used,
@@ -265,8 +265,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
     return report.PricedItem(
         name=display_name(item), item_class=item_class, price_ex=None,
         source="unpriced", tag=tag, reason=verdict.reason, score=verdict.score,
-        breakdown=tuple(explain_score(candidates.item_mods(item), mod_index))
-        if tag == "junk" else (),
+        breakdown=tuple(candidates.score_rows(item, mod_index, base_rules)),
     )
 
 

@@ -118,17 +118,17 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         lines.append(head)
         for stat in priced.searched_stats:
             lines.append(f"             - {stat}")
-    if priced.reason:
+    if priced.breakdown:
         lines.append(f"  coherence  {priced.score}")
-        lines.append(f"             {priced.reason}")
-        for text, weight in priced.breakdown:
+        width = max((len(str(t)) for t, _, _ in priced.breakdown), default=0)
+        for text, weight, tag in priced.breakdown:
             if weight is None:
-                mark, note = "?", "  (not in allowlist)"
+                mark, note = "?", "(not in allowlist)"
             elif weight == 0:
-                mark, note = "·", "  (minor-mod cap reached)"
+                mark, note = "·", "(minor-mod cap reached)"
             else:
-                mark, note = f"+{weight}", ""
-            lines.append(f"             {mark:<3} {text}{note}")
+                mark, note = f"+{weight}", f"({tag})" if tag else ""
+            lines.append(f"             {mark:<3} {str(text):<{width}}  {note}".rstrip())
     if priced.searches_used:
         lines.append(f"  cost       {priced.searches_used} search"
                      f"{'es' if priced.searches_used != 1 else ''}")

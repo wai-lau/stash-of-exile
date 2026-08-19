@@ -7,7 +7,15 @@ from dataclasses import dataclass
 from sox.scout import IndexEntry
 from sox.valuation.allowlists import BaseRules, ModEntry, UniqueRules
 from sox.valuation.classify import ItemClass, Rarity, classify, display_name, rarity_of
-from sox.valuation.mods import coherence_bonus, match_mod, score_mods
+from sox.valuation.mods import (
+    coherence_bonus,
+    coherence_keys,
+    dominant_archetype,
+    explain_score,
+    match_mod,
+    matched,
+    score_mods,
+)
 from sox.valuation.rolls import roll_score, spread_of
 
 AVOID_PENALTY = 3
@@ -136,6 +144,41 @@ def score_gear(item: dict, index: dict[str, ModEntry], base_rules: BaseRules) ->
     # The caller prints the total, then these components beneath it.
     detail = " · ".join(reasons) if reasons else "nothing recognised"
     return total, detail
+
+
+def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
+    """Every line that adds up to the coherence total.
+
+    One row per mod with the archetype it serves, then a row per bonus. The
+    rows sum to the total, so the number needs no separate explanation.
+    """
+    mods = item_mods(item)
+    entries = matched(mods, index)
+    dominant, _ = dominant_archetype(entries)
+
+    rows: list[tuple[str, object, str]] = []
+    for text, weight in explain_score(mods, index):
+        entry = match_mod(text, index)
+        tag = ""
+        if entry is not None and dominant and dominant in coherence_keys(entry):
+            tag = dominant
+        rows.append((text, weight, tag))
+
+    mod_score, _ = score_mods(mods, index)
+    bonus, why = coherence_bonus(mods, index)
+    if bonus:
+        count = why.split("x")[-1] if "x" in why else "?"
+        rows.append((f"{count} mods share {dominant}", bonus, ""))
+        mod_score += bonus
+
+    has_premium = any(
+        (e := match_mod(text, index)) is not None and e.weight >= 3 for text in mods
+    )
+    open_bonus, open_why = open_affix_bonus(item, mod_score, has_premium)
+    if open_bonus:
+        slots = open_why.replace("open", "")
+        rows.append((f"{slots} open affixes", open_bonus, ""))
+    return rows
 
 
 def qualifies(item: dict, score: int) -> bool:

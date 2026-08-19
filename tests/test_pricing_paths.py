@@ -272,3 +272,39 @@ def test_score_line_shows_how_the_total_was_reached():
     # beneath it, so it must NOT repeat the total.
     assert "mods" in reason and "elemental" in reason
     assert total > 0
+
+
+def test_breakdown_rows_sum_to_the_total():
+    """The rows ARE the explanation, so they must add up to the number."""
+    from sox.valuation.allowlists import load_bases
+    from sox.valuation.candidates import score_gear, score_rows
+
+    item = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nDragon Bane\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "Adds 121 to 183 Cold Damage\n"
+        "Adds 6 to 102 Lightning Damage\n"
+        "+21 to Intelligence\n"
+        "Leeches 8.66% of Physical Damage as Life\n"
+        "Gain 66 Life per enemy killed\n"
+        "Unrevealed Suffix Modifier\n"
+    )
+    base_rules = load_bases()
+    total, _ = score_gear(item, MODS, base_rules)
+    rows = score_rows(item, MODS, base_rules)
+    assert sum(w for _, w, _ in rows if isinstance(w, int)) == total
+
+
+def test_mods_carry_the_archetype_they_serve():
+    from sox.valuation.allowlists import load_bases
+    from sox.valuation.candidates import score_rows
+
+    item = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "Adds 121 to 183 Cold Damage\nAdds 6 to 102 Lightning Damage\n"
+        "+21 to Intelligence\n"
+    )
+    rows = {text: tag for text, _, tag in score_rows(item, MODS, load_bases())}
+    assert rows["Adds 121 to 183 Cold Damage"] == "elemental"
+    assert rows["+21 to Intelligence"] == "", "not part of the dominant group"
