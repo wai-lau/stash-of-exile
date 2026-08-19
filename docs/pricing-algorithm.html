@@ -1,0 +1,653 @@
+<title>How sox Prices an Item</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+
+<style>
+  /* Palette taken from what sox already prints: cyan marks a searched mod,
+     amber marks the market row. Neutrals carry a blue-slate bias so they
+     read as chosen against that cyan rather than as default grey. */
+  :root {
+    --paper:      #EDF1F5;
+    --surface:    #F7F9FB;
+    --sunken:     #E2E8EE;
+    --line:       #C9D3DC;
+    --line-soft:  #DBE2E9;
+    --ink:        #16202B;
+    --ink-soft:   #46586A;
+    --ink-faint:  #6C7E90;
+    --cyan:       #0E7C86;
+    --cyan-soft:  #D6EBED;
+    --amber:      #8A6209;
+    --amber-soft: #F3E7C9;
+    --red:        #A8322D;
+    --red-soft:   #F5DEDC;
+    --diagram-bg: #E2E8EE;
+
+    --measure: 68ch;
+    --step--1: 0.815rem;
+    --step-0:  1rem;
+    --step-1:  1.2rem;
+    --step-2:  1.5rem;
+    --step-3:  2rem;
+    --step-4:  2.75rem;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:      #10151B;
+      --surface:    #161D25;
+      --sunken:     #1C242E;
+      --line:       #2E3A46;
+      --line-soft:  #232C36;
+      --ink:        #DCE5ED;
+      --ink-soft:   #9BABBA;
+      --ink-faint:  #71838F;
+      --cyan:       #35C2CE;
+      --cyan-soft:  #12313A;
+      --amber:      #E3B341;
+      --amber-soft: #33290F;
+      --red:        #E5766F;
+      --red-soft:   #38191A;
+      --diagram-bg: #1C242E;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:      #10151B;
+    --surface:    #161D25;
+    --sunken:     #1C242E;
+    --line:       #2E3A46;
+    --line-soft:  #232C36;
+    --ink:        #DCE5ED;
+    --ink-soft:   #9BABBA;
+    --ink-faint:  #71838F;
+    --cyan:       #35C2CE;
+    --cyan-soft:  #12313A;
+    --amber:      #E3B341;
+    --amber-soft: #33290F;
+    --red:        #E5766F;
+    --red-soft:   #38191A;
+    --diagram-bg: #1C242E;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    font-size: var(--step-0);
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: clamp(2rem, 5vw, 4.5rem) clamp(1.1rem, 4vw, 2.5rem) 6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3.25rem;
+  }
+
+  .prose { max-width: var(--measure); }
+
+  h1, h2, h3 {
+    font-family: Spectral, ui-serif, Georgia, serif;
+    font-weight: 600;
+    text-wrap: balance;
+    margin: 0;
+    line-height: 1.16;
+  }
+  h1 { font-size: var(--step-4); letter-spacing: -0.015em; }
+  h2 { font-size: var(--step-3); letter-spacing: -0.01em; }
+  h3 { font-size: var(--step-1); }
+
+  p { margin: 0; }
+  .prose > * + * { margin-top: 0.95rem; }
+
+  a { color: var(--cyan); }
+
+  code, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+    font-variant-ligatures: none;
+  }
+  :not(pre) > code {
+    font-size: 0.87em;
+    background: var(--sunken);
+    border: 1px solid var(--line-soft);
+    border-radius: 3px;
+    padding: 0.08em 0.34em;
+    word-break: break-word;
+  }
+
+  /* ---- masthead ---- */
+  header { display: flex; flex-direction: column; gap: 1.15rem; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: var(--step--1);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+  .standfirst {
+    font-size: var(--step-1);
+    color: var(--ink-soft);
+    max-width: var(--measure);
+  }
+  .rule { height: 1px; background: var(--line); border: 0; margin: 0; }
+
+  /* ---- the thesis callout ---- */
+  .thesis {
+    border-left: 3px solid var(--cyan);
+    background: var(--surface);
+    padding: 1.15rem 1.4rem;
+    max-width: var(--measure);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+  .thesis .claim {
+    font-family: Spectral, serif;
+    font-size: var(--step-2);
+    line-height: 1.3;
+  }
+
+  /* ---- numbered stages: the pipeline really is a sequence ---- */
+  .stage { display: grid; grid-template-columns: 2.75rem 1fr; gap: 0 1.1rem; }
+  .stage + .stage { margin-top: 2.5rem; }
+  .stage-n {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: var(--step--1);
+    font-weight: 600;
+    color: var(--cyan);
+    padding-top: 0.42rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .stage-body { display: flex; flex-direction: column; gap: 0.95rem; min-width: 0; }
+  .stage-body > p, .stage-body > ul { max-width: var(--measure); }
+
+  ul { margin: 0; padding-left: 1.15rem; }
+  li + li { margin-top: 0.4rem; }
+
+  /* ---- tables ---- */
+  .scroll { overflow-x: auto; border: 1px solid var(--line); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.925rem; }
+  th, td {
+    text-align: left;
+    padding: 0.6rem 0.85rem;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+  }
+  thead th {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: var(--step--1);
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: var(--sunken);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.mono, th.mono { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ---- diagram ---- */
+  .diagram {
+    background: var(--diagram-bg);
+    border: 1px solid var(--line);
+    padding: 1.5rem 1rem;
+    overflow-x: auto;
+  }
+  .diagram pre.mermaid { margin: 0; display: flex; justify-content: center; min-width: 620px; }
+  figcaption {
+    font-size: var(--step--1);
+    color: var(--ink-faint);
+    margin-top: 0.7rem;
+    max-width: var(--measure);
+  }
+
+  /* ---- terminal sample ---- */
+  .term {
+    background: #10151B;
+    color: #DCE5ED;
+    border: 1px solid var(--line);
+    padding: 1.05rem 1.2rem;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.82rem;
+    line-height: 1.75;
+    margin: 0;
+    white-space: pre;
+  }
+  .term .t-cyan  { color: #35C2CE; }
+  .term .t-amber { color: #E3B341; font-weight: 600; }
+  .term .t-dim   { color: #71838F; }
+
+  /* ---- caveats ---- */
+  .caveats { display: flex; flex-direction: column; gap: 0.9rem; }
+  .caveat {
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--tone, var(--ink-faint));
+    background: var(--surface);
+    padding: 0.95rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .caveat.wrong  { --tone: var(--red); }
+  .caveat.sharp  { --tone: var(--amber); }
+  .caveat.known  { --tone: var(--cyan); }
+  .caveat h3 { font-family: "IBM Plex Sans", sans-serif; font-size: var(--step-0); font-weight: 600; }
+  .caveat p { color: var(--ink-soft); font-size: 0.94rem; max-width: 74ch; }
+  .chip {
+    align-self: flex-start;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    padding: 0.13rem 0.45rem;
+    border-radius: 2px;
+    color: var(--tone);
+    background: var(--chip-bg, var(--sunken));
+    border: 1px solid var(--tone);
+  }
+  .caveat.wrong .chip { background: var(--red-soft); }
+  .caveat.sharp .chip { background: var(--amber-soft); }
+  .caveat.known .chip { background: var(--cyan-soft); }
+
+  .footnote {
+    font-size: var(--step--1);
+    color: var(--ink-faint);
+    max-width: var(--measure);
+  }
+
+  @media (max-width: 640px) {
+    .stage { grid-template-columns: 1fr; gap: 0.35rem; }
+    .stage-n { padding-top: 0; }
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">sox · valuation pipeline</div>
+    <h1>How sox Prices an Item</h1>
+    <p class="standfirst">
+      What happens between pressing <code>Ctrl+C</code> in game and a number
+      appearing on the second monitor — the routing, the query, the widening
+      ladder, and the places it is still wrong.
+    </p>
+    <hr class="rule">
+  </header>
+
+  <section class="prose">
+    <div class="thesis">
+      <div class="claim">The search is not “find my item”.</div>
+      <p>
+        It is <em>find the cheapest item at least as good as mine</em>. Every
+        constraint is a minimum at our own value and there are no maximums, so
+        every listing returned is better than ours on every axis we asked
+        about. The cheapest one is therefore a <strong>ceiling</strong> on what
+        we can ask — not a comparable sale.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <h2>The path an item takes</h2>
+    <figure class="diagram" style="margin: 1.25rem 0 0;">
+<pre class="mermaid">
+%%{init: {'theme':'base','themeVariables':{
+  'background':'transparent',
+  'primaryColor':'#233040','primaryTextColor':'#E6EDF4','primaryBorderColor':'#3E4D5E',
+  'secondaryColor':'#2C3A4A','tertiaryColor':'#2C3A4A',
+  'lineColor':'#7E90A2','fontFamily':'IBM Plex Mono, monospace','fontSize':'13px'
+}}}%%
+flowchart TD
+  A["clipboard text"] --> B["parse: mods, properties,<br/>rolls, flags"]
+  B --> C{"item class"}
+
+  C -->|currency, gem| IDX["index price<br/>(poe2scout)"]
+  C -->|endgame| SRCH
+  C -->|jewel w/ notable| SRCH
+  C -->|unique| U{"index can<br/>describe it?"}
+  C -->|gear| S["score the mods"]
+
+  U -->|"yes"| IDX
+  U -->|"corrupted · not indexed · chase price<br/>· grants a skill · any roll ≥ 75th"| SRCH
+
+  S --> Q{"qualifies?<br/>or absent from index"}
+  Q -->|no| JUNK["junk — no search"]
+  Q -->|yes| SRCH["build query"]
+
+  SRCH --> R["search trade2"]
+  R --> M{"matches ≥ 1?"}
+  M -->|no| W["widen one rung"]
+  W --> SRCH
+  M -->|yes| F["fetch cheapest 10<br/>(up to 30 deep)"]
+  F --> DROP["drop listings that clear<br/>our defences only on runes"]
+  DROP --> ST["low · 25th · median"]
+  ST --> CONF{"sample ≥ 8?"}
+  CONF -->|no| W
+  CONF -->|yes| OUT["price"]
+
+  classDef terminal fill:#0E7C86,stroke:#0E7C86,color:#FFFFFF;
+  classDef reject fill:#7A2C28,stroke:#7A2C28,color:#FFFFFF;
+  class OUT,IDX terminal;
+  class JUNK reject;
+</pre>
+      <figcaption>
+        The ladder is a loop: a rung that finds nothing, or finds too few
+        listings to mean anything, widens and searches again. Five rungs
+        maximum, one API search each.
+      </figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <h2>Stage by stage</h2>
+
+    <div class="stage">
+      <div class="stage-n">01</div>
+      <div class="stage-body">
+        <h3>Parse the clipboard</h3>
+        <p>
+          The clipboard is the only input — <strong>there is no PoE2 stash
+          API</strong>. The parser reads mods by kind (prefix, suffix,
+          implicit, fractured, desecrated, rune, enchant, corruption
+          enhancement), the property block, requirements, and flags like
+          <code>Corrupted</code> and <code>Twice Corrupted</code>.
+        </p>
+        <p>
+          With <em>Advanced Item Descriptions</em> on, each mod carries its
+          roll and range inline — <code>+24(20-30) to Dexterity</code>. That
+          range drives roll quality, the implicit floor, and the pseudo totals.
+        </p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-n">02</div>
+      <div class="stage-body">
+        <h3>Route: index or search</h3>
+        <p>
+          An index lookup is free; a search costs an API call against a shared
+          rate limit. Anything the index cannot describe gets searched.
+        </p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Class</th><th>Route</th><th>Why</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Currency, gems</td><td>index</td><td>Fungible; one price describes every copy.</td></tr>
+              <tr><td>Endgame (waystones, ultimatums…)</td><td>always search</td><td>No index covers them at all.</td></tr>
+              <tr><td>Jewel allocating a notable</td><td>always search</td><td>Value is <em>which</em> notables; the index reports ~1 ex for all 25,000 Megalomaniacs.</td></tr>
+              <tr><td>Unique</td><td>index unless escalated</td><td>See below.</td></tr>
+              <tr><td>Rare / magic / normal gear</td><td>search if it scores</td><td>Rare needs score ≥ 6, or ≥ 4 at ilvl 80+. Everything else ≥ 4.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>A unique escalates from index to search when <em>any</em> holds:</p>
+        <ul>
+          <li>it allocates a notable, or is corrupted, or is absent from the index;</li>
+          <li>the index has no mods for it but our copy does;</li>
+          <li>the index price is ≥ 5,000 ex;</li>
+          <li>it grants a skill — <strong>no unique in the index records one</strong>, so the level is invisible to its price;</li>
+          <li><strong>any single roll</strong> sits at the 75th percentile or above.</li>
+        </ul>
+        <p>
+          That last clause is the best roll, not the mean. A copy with one
+          near-perfect build-defining roll beside poor filler averages out to
+          mediocre, and the market does not price it that way.
+        </p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-n">03</div>
+      <div class="stage-body">
+        <h3>Score the mods</h3>
+        <p>
+          Each mod matched against a 398-entry allowlist generated from build
+          guides, weighted 3 (build-defining) / 2 (strong) / 1 (supporting).
+          A pile of weight-1 mods is capped at 2 — four low-tier mods make an
+          item worth <em>less</em>, since they occupy affixes a buyer would
+          craft into.
+        </p>
+        <p>
+          <strong>Coherence</strong> is separate from the score: it is the
+          clustering of mods onto one buyer archetype. Two or more mods sharing
+          a tag is a cluster; one is not. The item's own defence type votes —
+          an Energy Shield chest is an ES item before a mod is read. Ties break
+          on summed weight, and if the weights tie too there is no cluster.
+        </p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-n">04</div>
+      <div class="stage-body">
+        <h3>Build the query</h3>
+        <p>
+          Coherence decides <em>which</em> stats to search on. This is the
+          judgement the mature overlays leave to the player.
+        </p>
+        <div class="scroll">
+          <table>
+            <thead>
+              <tr><th>Filter</th><th class="mono">Bound</th><th>Rule</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Category, rarity</td><td class="mono">exact</td><td>Every rarity searches itself — a rare and a normal of the same base are different goods.</td></tr>
+              <tr><td>Item level</td><td class="mono">min</td><td>Ours.</td></tr>
+              <tr><td>Quality</td><td class="mono">min</td><td><strong>Gems only.</strong> Currency takes anything else to 20%.</td></tr>
+              <tr><td>Requirements (lvl, str, dex, int)</td><td class="mono">max</td><td>A requirement is a cost. An item demanding less is easier to equip and <em>is</em> a comparable.</td></tr>
+              <tr><td>Defences (ar, ev, es, ward, block, spirit)</td><td class="mono">min</td><td>The displayed total, runes removed. On a rare, rebuilt at the mods' floor rolls; on a unique, kept at the actual roll — the roll is all that separates copies.</td></tr>
+              <tr><td>DPS</td><td class="mono">min</td><td>Total only, <strong>runes included</strong>. Not pdps/edps: splitting it pins the damage source.</td></tr>
+              <tr><td>Granted skill</td><td class="mono">min</td><td>At its own level. Exempt from the widening ladder.</td></tr>
+              <tr><td>Pseudo totals</td><td class="mono">min</td><td>Summed at each contributor's <em>floor</em>. A buyer filters total resistance, not its sources.</td></tr>
+              <tr><td>Explicit mods</td><td class="mono">min</td><td>Our actual roll. Added-damage mods filter on the average of the two numbers.</td></tr>
+              <tr><td>Implicits</td><td class="mono">min</td><td>At the <em>floor</em> of the range — the implicit comes with the base, and the buyer wants the base.</td></tr>
+              <tr><td>Corrupted, sanctified</td><td class="mono">= No</td><td>Only when ours is neither. Once touched, the whole market is comparable again.</td></tr>
+              <tr><td>Attacks/sec, crit, sockets</td><td class="mono">—</td><td>Traded off against damage rather than added to it.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Anything covered by an equipment filter stops being a stat filter, or
+          it is asked for twice. Stat ids are group-scoped:
+          <code>implicit.</code>, <code>enchant.</code> and
+          <code>explicit.</code> are different tables for the same numeric
+          stat, and asking the wrong one silently matches nothing.
+        </p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-n">05</div>
+      <div class="stage-body">
+        <h3>Widen until the sample means something</h3>
+        <p>
+          <strong>Minimums are never lowered.</strong> Searching below our own
+          values asks what <em>worse</em> items are worth, which answers a
+          different question and drags the price down. Widening drops the
+          weakest mod instead — by the game's own tier where the item reports
+          one.
+        </p>
+        <div class="scroll">
+          <table>
+            <thead><tr><th class="mono">Rung</th><th class="mono">Stats kept</th><th>What remains</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">0</td><td class="num mono">4</td><td>Tagged <code>exact</code>.</td></tr>
+              <tr><td class="mono">1</td><td class="num mono">3</td><td rowspan="2">The weakest cohering mods fall away first.</td></tr>
+              <tr><td class="mono">2</td><td class="num mono">2</td></tr>
+              <tr><td class="mono">3</td><td class="num mono">1</td><td>One stat left.</td></tr>
+              <tr><td class="mono">4</td><td class="num mono">0</td><td>Category, rarity, ilvl, requirements and the equipment totals. On a weapon that is DPS plus requirements — how you would search by hand. Notable jewels still keep one notable.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          A rung is accepted the moment its sample is <em>firm</em> — at least
+          8 matches. Fewer than 8 is kept as a fallback but the ladder keeps
+          going; fewer than 3 is labelled <code>!! GUESS</code> in the output.
+        </p>
+      </div>
+    </div>
+
+    <div class="stage">
+      <div class="stage-n">06</div>
+      <div class="stage-body">
+        <h3>Filter the listings, then take statistics</h3>
+        <p>
+          The cheapest 10 listings are fetched, reading up to 30 deep when
+          drops thin the sample. A listing that clears our defence floor
+          <em>only</em> because of its socketed runes is discarded — the buyer
+          sockets their own, so it is a worse item wearing our defences. On one
+          Forgotten Warden, 20 of the first 30 matches were rune-inflated.
+        </p>
+        <p>
+          From what survives: the low, the 25th percentile, and the median. A
+          low more than 10× under the median is flagged as a dump listing, and
+          the suggested ask is based on the quartile instead.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Reading the output</h2>
+    <pre class="term">Forgotten Warden  [Primal Markings]
+  type       Body Armours → armour.chest   ilvl 84
+  searched   as attribute
+  score      0
+             <span class="t-cyan">+1  +24 to Dexterity</span>
+             +0  18% increased Rarity of Items found  (implicit)
+  coherence  none — the mods serve different builds
+  market     <span class="t-amber">low 4.7 div  ·  25th 6.58 div  ·  median 13.15 div</span>
+             <span class="t-dim">cheapest 10 of 196 listings, exact</span>
+             <span class="t-dim">20 skipped — met your defences only with their runes</span></pre>
+    <p class="footnote" style="margin-top: 0.8rem;">
+      Cyan marks a mod that drove the search. <code>(filter)</code> marks one
+      searched through a total rather than as a stat. The market row is last
+      because the rows above it explain how the number was reached.
+    </p>
+  </section>
+
+  <section>
+    <h2>Caveats</h2>
+    <p class="prose" style="margin-bottom: 1.4rem;">
+      Ordered by how likely each is to hand you a wrong number.
+    </p>
+    <div class="caveats">
+
+      <div class="caveat wrong">
+        <span class="chip">known wrong</span>
+        <h3>Currency prices come from an index that is sometimes badly off</h3>
+        <p>
+          Omen of the Sovereign reported <strong>26.5 ex</strong> from a sample
+          of 31 listings. The bulk exchange showed 1,303 offers at roughly 1:1
+          with exalted — about 27× lower. Currency never reaches the trade
+          search, so nothing cross-checks the index. The fix is the exchange
+          endpoint, which is not wired up.
+        </p>
+      </div>
+
+      <div class="caveat wrong">
+        <span class="chip">known wrong</span>
+        <h3>The trade item-search cannot price stackables</h3>
+        <p>
+          Sorted by price ascending, <em>Divine Orb</em> — worth ~340 ex —
+          shows listings of “1 exalted” for a stack of 10. The bottom of the
+          item search is junk for anything stackable, so it is not a usable
+          fallback for the index above.
+        </p>
+      </div>
+
+      <div class="caveat sharp">
+        <span class="chip">sharp edge</span>
+        <h3>Runes are handled asymmetrically between defences and DPS</h3>
+        <p>
+          Defences are compared rune-free on <em>both</em> sides: ours stripped,
+          and rune-propped listings discarded. DPS is compared rune-<em>inclusive</em>
+          on both sides, because the API computes a listing's dps from its
+          displayed damage and there is no client-side stripping pass for
+          weapons. Both are internally consistent; they are not consistent with
+          each other.
+        </p>
+      </div>
+
+      <div class="caveat sharp">
+        <span class="chip">sharp edge</span>
+        <h3>Item level is never relaxed</h3>
+        <p>
+          <code>ilvl ≥ ours</code> survives every rung of the ladder. A
+          genuinely comparable weapon a few levels lower is excluded — a
+          hand-built search for one mace surfaced an ilvl-75 listing that sox
+          could not see. Augmentable sockets are not filtered at all.
+        </p>
+      </div>
+
+      <div class="caveat sharp">
+        <span class="chip">sharp edge</span>
+        <h3>Advanced Item Descriptions must be on</h3>
+        <p>
+          Without inline ranges there is no roll quality, no implicit floor,
+          and no way to tell an implicit from an explicit — the
+          <code>{ Implicit Modifier }</code> header is what classifies it.
+          Pricing degrades toward a stricter search rather than a wrong one,
+          but it degrades.
+        </p>
+      </div>
+
+      <div class="caveat known">
+        <span class="chip">by design</span>
+        <h3>The number is a ceiling, not a sale</h3>
+        <p>
+          Every listing matched is better than ours on every constrained axis,
+          and being <em>listed</em> is not being <em>sold</em>. Nobody may have
+          paid the low. This is the whole basis of the method and the reason
+          the 25th percentile and median are shown beside it.
+        </p>
+      </div>
+
+      <div class="caveat known">
+        <span class="chip">unvalidated</span>
+        <h3>The weights are hand-assigned</h3>
+        <p>
+          Mod weights come from reading build guides, not from regression
+          against realised prices. Coherence tags likewise. They order the
+          search sensibly; they are not calibrated. The endgame item classes
+          have never been price-verified live at all.
+        </p>
+      </div>
+
+      <div class="caveat known">
+        <span class="chip">stale data</span>
+        <h3>Prices are cached</h3>
+        <p>
+          A search result is replayed for 12 hours and the index for 6, keyed
+          on the exact query. A cached row is labelled, but it can be a day
+          behind a moving market. Rate limits are the reason:
+          <code>5:10:60</code> searches per window, shared across everything
+          the session does.
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="rule">
+  <p class="footnote">
+    Generated from the implementation in <code>src/sox/valuation/</code> —
+    <code>candidates.py</code> routes, <code>query.py</code> builds,
+    <code>trade_pricer.py</code> widens and averages. Where this page and the
+    code disagree, the code is right and this page is stale.
+  </p>
+
+</div>
