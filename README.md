@@ -81,7 +81,8 @@ session, so sox holds no credentials at all.
 
 | Item | How it is priced |
 |---|---|
-| Currency, gems, most uniques | poe2scout index — free, no API call |
+| Currency, runes, essences, omens, fragments, gems | bulk exchange book, priced from both sides |
+| Most uniques | poe2scout index — free, no API call |
 | Rares, bases, jewels | trade search for "the cheapest item at least as good as yours" |
 | Waystones, tablets, relics, charms | trade search; no index covers them |
 | Notable jewels (Megalomaniac) | searched by the exact notables they allocate |
@@ -105,10 +106,12 @@ Megalomaniac  [Diamond]
 
 | File | Contents |
 |---|---|
-| `mod_allowlist.toml` | 405 mods with weights, archetype tags, subjects |
-| `notables.toml` | 874 notable → stat id, for notable-granting jewels |
-| `base_allowlist.toml` | ilvl tiers, 19 slots, named crafting bases |
-| `unique_allowlist.toml` | 38 build-relevant uniques with escalation thresholds |
+| `mod_allowlist.toml` | Searchable mods with weights, archetype tags, subjects |
+| `notables.toml` | Notable → stat id, for notable-granting jewels |
+| `skills.toml` | Granted skill → stat ids, for `Grants Skill: Level N X` |
+| `flag_mods.toml` | Value-less mod text → stat id, for mods with no roll to search at |
+| `base_allowlist.toml` | ilvl tiers, equipment slots, named crafting bases |
+| `unique_allowlist.toml` | Build-relevant uniques with escalation thresholds |
 
 Regenerate after a patch:
 
@@ -116,6 +119,8 @@ Regenerate after a patch:
 curl -A 'sox' https://www.pathofexile.com/api/trade2/data/stats -o stats.json
 python3 scripts/resolve_allowlist.py stats.json > src/sox/data/mod_allowlist.toml
 python3 scripts/resolve_notables.py stats.json > src/sox/data/notables.toml
+python3 scripts/resolve_skills.py stats.json > src/sox/data/skills.toml
+python3 scripts/resolve_flag_mods.py stats.json > src/sox/data/flag_mods.toml
 ```
 
 The generators fail loudly rather than dropping an entry they cannot resolve,
@@ -127,4 +132,4 @@ and reuse previously resolved ids so a reworded mod cannot silently vanish.
 uv run --with pytest python -m pytest -q
 ```
 
-35 tests, no network calls. Item fixtures are real clipboard captures.
+No network calls. Item fixtures are real clipboard captures.
