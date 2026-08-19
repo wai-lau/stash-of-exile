@@ -173,11 +173,11 @@ def test_only_cohering_mods_are_searched():
     assert "#% increased Attack Speed" not in stats
 
 
-def test_low_scoring_items_are_called_junk_not_searched():
-    """Searches are rate limited, so junk is skipped rather than confirmed.
+def test_coherence_reports_but_does_not_gate_the_search():
+    """Coherence picks WHICH stats to search on, not WHETHER to search.
 
-    The point is the wording: a skipped item has a verdict ("junk"), which is
-    different from the tool failing to find a price.
+    A low score is worth reporting — it says the item is unremarkable — but
+    withholding the price on account of it answers a question nobody asked.
     """
     from sox.cli import wants_search
     from sox.valuation import candidates
@@ -191,9 +191,9 @@ def test_low_scoring_items_are_called_junk_not_searched():
         "--------\nCorrupted\n"
     )
     verdict = candidates.assess(item, None, MODS, load_bases(), load_uniques())
-    assert not verdict.should_search, "scores too low to be worth a search"
-    assert not wants_search(verdict, None, item), "so no search is spent"
-    assert wants_search(verdict, None, item, force=True), "--force overrides"
+    assert not verdict.should_search, "still scored as unremarkable"
+    assert verdict.score >= 0, "and the score is still reported"
+    assert wants_search(verdict, None, item), "but it is priced anyway"
 
 
 def test_armour_uses_the_local_stat_id():

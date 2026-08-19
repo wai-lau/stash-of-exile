@@ -38,9 +38,12 @@ class RateGovernor:
         self,
         clock: Callable[[], float] = time.monotonic,
         sleeper: Callable[[float], None] = time.sleep,
+        on_wait: Callable[[float, str], None] | None = None,
     ) -> None:
         self._clock = clock
         self._sleep = sleeper
+        # Waiting silently looks identical to hanging, so callers can show it.
+        self._on_wait = on_wait or (lambda seconds, reason: None)
         self.rules: list[Rule] = []
         self._history: deque[float] = deque()
         self._consecutive_429 = 0
@@ -78,6 +81,7 @@ class RateGovernor:
             wait = self._wait_needed()
             if wait <= 0:
                 return
+            self._on_wait(wait, "rate limit")
             self._sleep(wait)
 
     def _wait_needed(self) -> float:
@@ -96,9 +100,12 @@ class RateGovernor:
     def on_429(self, retry_after: float | None) -> None:
         self._consecutive_429 += 1
         if retry_after is not None:
+            self._on_wait(retry_after, "429, server asked us to wait")
             self._sleep(retry_after)
             return
-        self._sleep(min(BASE_BACKOFF * (2 ** (self._consecutive_429 - 1)), MAX_BACKOFF))
+        backoff = min(BASE_BACKOFF * (2 ** (self._consecutive_429 - 1)), MAX_BACKOFF)
+        self._on_wait(backoff, "429, backing off")
+        self._sleep(backoff)
 
     def on_success(self) -> None:
         self._consecutive_429 = 0

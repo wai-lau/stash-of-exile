@@ -95,7 +95,11 @@ def main(argv: list[str] | None = None) -> int:
 
         trade = None
         if not args.no_trade:
-            session = GGGSession(RateGovernor(), httpx.Client(timeout=30), cfg.user_agent)
+            def announce(seconds: float, reason: str) -> None:
+                print(f"… waiting {seconds:.0f}s ({reason})", file=sys.stderr, flush=True)
+
+            session = GGGSession(RateGovernor(on_wait=announce),
+                                 httpx.Client(timeout=30), cfg.user_agent)
             trade = TradeClient(session, cache, cfg.league or league.value)
 
         for n, block in enumerate(blocks):
@@ -115,12 +119,14 @@ def main(argv: list[str] | None = None) -> int:
 def wants_search(verdict, entry, item, force: bool = False) -> bool:
     """Whether to spend a search on this item.
 
-    A low-scoring item is deliberately NOT searched: searches are rate
-    limited to 5 per 10 seconds, and spending one to confirm that a junk rare
-    is junk is a bad trade. It is reported as not worth searching rather than
-    left looking like a failure. --force overrides.
+    Coherence decides WHICH stats to search on, and is reported so you can
+    judge the answer — but it no longer decides WHETHER to search. Anything
+    the index cannot price gets searched, so copying an item always produces
+    a number rather than a verdict about the item's quality.
     """
-    return bool(force or verdict.should_search)
+    if force or verdict.should_search:
+        return True
+    return entry is None and category_for(item) is not None
 
 
 def run_watch(args, cfg, cache, scout, league) -> int:
@@ -133,7 +139,11 @@ def run_watch(args, cfg, cache, scout, league) -> int:
 
     trade = None
     if not args.no_trade:
-        session = GGGSession(RateGovernor(), httpx.Client(timeout=30), cfg.user_agent)
+        def announce(seconds: float, reason: str) -> None:
+            print(watch_ui.waiting_on_limit(seconds, reason), flush=True)
+
+        governor = RateGovernor(on_wait=announce)
+        session = GGGSession(governor, httpx.Client(timeout=30), cfg.user_agent)
         trade = TradeClient(session, cache, cfg.league or league.value)
 
     print(watch_ui.banner(league.value, league.divine_price_ex,
@@ -173,7 +183,11 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                                      unique_rules, notables, trade, cache, cfg)
             except (GGGError, httpx.HTTPError) as exc:
                 # One bad lookup must not end the session; the next copy retries.
-                print(watch_ui.error(str(exc)), flush=True)
+                print(watch_ui.error(f"{type(exc).__name__}: {exc}"), flush=True)
+                continue
+            except Exception as exc:  # noqa: BLE001 - the feed must survive
+                print(watch_ui.error(f"unexpected {type(exc).__name__}: {exc}"),
+                      flush=True)
                 continue
 
             body = report.render(item, priced, league.divine_price_ex)

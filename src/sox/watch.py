@@ -127,4 +127,9 @@ def waiting(message: str) -> str:
 
 
 def error(message: str) -> str:
-    return f"{RED}! {message}{RESET}"
+    return f"{RED}{BOLD}!! ERROR{RESET}   {RED}{message}{RESET}"
+
+
+def waiting_on_limit(seconds: float, reason: str) -> str:
+    return (f"{YELLOW}·· waiting {seconds:.0f}s{RESET}  {DIM}({reason}) — "
+            f"copies made while waiting are still picked up{RESET}")
