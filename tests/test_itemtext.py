@@ -133,3 +133,14 @@ def test_rune_and_fractured_markers_route_by_line_not_header():
     assert any("Physical Damage" in m for m in item["fracturedMods"])
     joined = " ".join(item["fracturedMods"] + item["runeMods"])
     assert "(fractured)" not in joined and "(rune)" not in joined
+
+
+def test_trade_note_is_not_a_modifier():
+    """A copied listing carries "Note: ~b/o 1 aug" — the seller's price."""
+    item = parse(
+        "Item Class: Shields\nRarity: Normal\nPolished Targe\n"
+        "--------\nBlock chance: 25%\n--------\nItem Level: 54\n"
+        "--------\nNote: ~b/o 1 aug\n"
+    )
+    assert item["note"] == "~b/o 1 aug"
+    assert not any("Note:" in m for m in item["explicitMods"])

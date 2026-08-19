@@ -69,17 +69,9 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
             # The generic advice about --force lives in the watch banner; on
             # every junk item it is noise. What is worth showing is what this
             # particular item scored, and why.
+            # The score block below prints the same rows, so the verdict
+            # only needs the number it failed against.
             lines.append(f"  verdict    JUNK  (score {priced.score}, needs 6)")
-            for text, weight in priced.breakdown:
-                if weight is None:
-                    mark, note = "?", "  (not in allowlist)"
-                elif weight == 0:
-                    # Minor mods stop counting after the cap: a pile of them
-                    # makes an item worse, not better.
-                    mark, note = "·", "  (minor-mod cap reached)"
-                else:
-                    mark, note = f"+{weight}", ""
-                lines.append(f"             {mark:<3} {text}{note}")
         elif priced.tag == "unpriced:above-market":
             lines.append("  price      no comparable listing")
             lines.append("             nothing at least as good is listed — "

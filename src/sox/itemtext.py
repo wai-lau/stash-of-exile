@@ -208,6 +208,11 @@ def _parse_section(section: list[str], item: dict) -> None:
         return
     if section[0].startswith("Requires"):
         return
+    note = NOTE_LINE.match(section[0].strip())
+    if note:
+        # Keep it: it is the seller's own asking price, worth reporting.
+        item["note"] = note.group(1).strip()
+        return
     if "modifier" in joined and "{" in joined:
         _parse_mod_section(section, item)
         return
@@ -244,8 +249,15 @@ def _parse_section(section: list[str], item: dict) -> None:
             item[field].append(strip_rolls(stripped))
 
 
+# A copied trade listing carries the seller's asking price as a note. It is
+# not a modifier and must not be scored as one.
+NOTE_LINE = re.compile(r"^Note:\s*(.*)$", re.I)
+
+
 def _looks_like_mod(line: str) -> bool:
     """A stat line contains a number or a known stat verb; flavour text does not."""
+    if NOTE_LINE.match(line.strip()):
+        return False
     if any(ch.isdigit() for ch in line):
         return True
     return bool(re.search(r"\b(cannot|immune|gain|grants|has|have)\b", line, re.I))
