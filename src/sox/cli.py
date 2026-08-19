@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import _thread
 import threading
 from dataclasses import replace
 from pathlib import Path
@@ -155,8 +156,24 @@ def wants_search(verdict, entry, item, force: bool = False) -> bool:
     return entry is None and category_for(item) is not None
 
 
+def _stop_on_eof(stop: threading.Event) -> None:
+    """Set `stop` when stdin reaches EOF, i.e. the user pressed Ctrl-D.
+
+    The watch loop blocks polling the clipboard and never reads stdin, so EOF
+    has to be waited on separately and then interrupt the main thread to break
+    it out of the poll.
+    """
+    try:
+        while sys.stdin.readline():
+            pass
+    except (ValueError, OSError):
+        return
+    stop.set()
+    _thread.interrupt_main()
+
+
 def run_watch(args, cfg, cache, scout, league) -> int:
-    """Price every item copied to the clipboard, until interrupted."""
+    """Price every item copied to the clipboard, until Ctrl-D."""
     index = scout.prices(league.short)
     rates = scout.currency_rates(index)
     mod_index = build_index(load_mods())
@@ -176,71 +193,91 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                           clipboard.describe_backend()), flush=True)
     stats = watch_ui.Session()
 
-    try:
-        for text in clipboard.watch(args.poll):
-            if not clipboard.looks_like_item(text):
-                continue
+    # Ctrl+C is how you copy an item in game. Hitting it with the terminal
+    # focused instead of the game is a slip that used to end the session, so
+    # Ctrl-D stops instead and Ctrl+C only says so. Without a tty there is no
+    # Ctrl-D to press, so there Ctrl+C must still work or nothing does.
+    stop = threading.Event()
+    interactive = sys.stdin.isatty()
+    if interactive:
+        threading.Thread(target=_stop_on_eof, args=(stop,), daemon=True).start()
 
-            # Acknowledge the item before doing any network work. Deciding
-            # whether a search is needed costs nothing, so the header can say
-            # which is coming.
-            try:
-                item = itemtext.parse(text)
-            except ValueError:
-                continue
-            name = display_name(item)
-            if item.get("name"):
-                name = f"{name}  [{item.get('baseType')}]"
-            entry_ = index_price_for(item, index)
-            verdict = candidates.assess(item, entry_, mod_index, base_rules, unique_rules)
-            searching = wants_search(verdict, entry_, item,
-                                     force=getattr(cfg, "force", False)) \
-                and trade is not None
+    while True:
+        try:
+            for text in clipboard.watch(args.poll):
+                if not clipboard.looks_like_item(text):
+                    continue
 
-            # Most items resolve in one search and print immediately, so
-            # announcing "searching…" up front is noise. It earns its place
-            # only when the wait is real — a rate-limit block or a walk down
-            # the widening ladder — so a timer prints it and is cancelled if
-            # the result arrives first.
-            announced = threading.Event()
+                # Acknowledge the item before doing any network work. Deciding
+                # whether a search is needed costs nothing, so the header can say
+                # which is coming.
+                try:
+                    item = itemtext.parse(text)
+                except ValueError:
+                    continue
+                name = display_name(item)
+                if item.get("name"):
+                    name = f"{name}  [{item.get('baseType')}]"
+                entry_ = index_price_for(item, index)
+                verdict = candidates.assess(item, entry_, mod_index, base_rules, unique_rules)
+                searching = wants_search(verdict, entry_, item,
+                                         force=getattr(cfg, "force", False)) \
+                    and trade is not None
 
-            def announce_slow(item_name: str = name) -> None:
-                announced.set()
-                print(watch_ui.detected(item_name, "searching…"), flush=True)
+                # Most items resolve in one search and print immediately, so
+                # announcing "searching…" up front is noise. It earns its place
+                # only when the wait is real — a rate-limit block or a walk down
+                # the widening ladder — so a timer prints it and is cancelled if
+                # the result arrives first.
+                announced = threading.Event()
 
-            timer = threading.Timer(SLOW_SEARCH_SECONDS, announce_slow)
-            timer.daemon = True
-            if searching:
-                timer.start()
+                def announce_slow(item_name: str = name) -> None:
+                    announced.set()
+                    print(watch_ui.detected(item_name, "searching…"), flush=True)
 
-            try:
-                priced = _price_item(item, index, rates, mod_index, base_rules,
-                                     unique_rules, notables, trade, cache, cfg)
-            except (GGGError, httpx.HTTPError) as exc:
-                # One bad lookup must not end the session; the next copy retries.
+                timer = threading.Timer(SLOW_SEARCH_SECONDS, announce_slow)
+                timer.daemon = True
+                if searching:
+                    timer.start()
+
+                try:
+                    priced = _price_item(item, index, rates, mod_index, base_rules,
+                                         unique_rules, notables, trade, cache, cfg)
+                except (GGGError, httpx.HTTPError) as exc:
+                    # One bad lookup must not end the session; the next copy retries.
+                    timer.cancel()
+                    print(watch_ui.error(f"{type(exc).__name__}: {exc}"), flush=True)
+                    continue
+                except Exception as exc:  # noqa: BLE001 - the feed must survive
+                    timer.cancel()
+                    print(watch_ui.error(f"unexpected {type(exc).__name__}: {exc}"),
+                          flush=True)
+                    continue
                 timer.cancel()
-                print(watch_ui.error(f"{type(exc).__name__}: {exc}"), flush=True)
-                continue
-            except Exception as exc:  # noqa: BLE001 - the feed must survive
-                timer.cancel()
-                print(watch_ui.error(f"unexpected {type(exc).__name__}: {exc}"),
-                      flush=True)
-                continue
-            timer.cancel()
 
-            body = report.render(item, priced, league.divine_price_ex)
-            stats.record(name, priced.price_ex, priced.searches_used,
-                         junk=priced.tag == "junk")
-            if announced.is_set():
-                # The header is already on screen; only the detail is left.
-                print(watch_ui.body_lines(body), flush=True)
-            else:
-                print(watch_ui.entry(body, priced.price_ex, league.divine_price_ex),
-                      flush=True)
-            print(watch_ui.status(stats, league.divine_price_ex), flush=True)
-    except KeyboardInterrupt:
-        print()
-        print(watch_ui.status(stats, league.divine_price_ex))
+                body = report.render(item, priced, league.divine_price_ex)
+                stats.record(name, priced.price_ex, priced.searches_used,
+                             junk=priced.tag == "junk")
+                if announced.is_set():
+                    # The header is already on screen; only the detail is left.
+                    print(watch_ui.body_lines(body), flush=True)
+                else:
+                    print(watch_ui.entry(body, priced.price_ex, league.divine_price_ex),
+                          flush=True)
+                print(watch_ui.status(stats, league.divine_price_ex), flush=True)
+        except KeyboardInterrupt:
+            if stop.is_set() or not interactive:
+                break
+            # A slip of the copy key. The generator died with the exception, so
+            # the loop restarts — skipping whatever is on the clipboard now, which
+            # is either already priced or was never an item.
+            print()
+            print(watch_ui.interrupted_hint(), flush=True)
+            continue
+        break
+
+    print()
+    print(watch_ui.status(stats, league.divine_price_ex))
     return 0
 
 

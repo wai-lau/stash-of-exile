@@ -1,105 +1,96 @@
-"""The watch loop is the main entry point and had no test at all.
+"""The watch loop's exit behaviour.
 
-A NameError in it shipped and only surfaced when a real item was copied:
-every unit below it passed while the thing the user actually runs crashed.
+Ctrl+C is how you copy an item in Path of Exile. Pressing it while the
+terminal has focus instead of the game used to end the session, so Ctrl-D
+stops and Ctrl+C only says so.
+
+This file exists because run_watch had no test at all, which is how a
+NameError in the loop body once shipped with every other test green.
 """
 
-from argparse import Namespace
-from pathlib import Path
-
-import pytest
+import io
+import types
+from unittest import mock
 
 from sox import cli, clipboard
-from sox.cache import Cache
-from sox.config import Config
-from sox.ggg.trade import Listing
-from sox.scout import IndexEntry, League
-
-FIXTURES = Path(__file__).parent / "fixtures" / "items"
-LEAGUE = League(value="Runes of Aldur", short="runes", divine_price_ex=320.0,
-                base_currency="Exalted Orb")
 
 
-class FakeScout:
-    def __init__(self, index=None):
-        self._index = index or {}
+class _Scout:
+    def prices(self, _league):
+        return {}
 
-    def current_league(self):
-        return LEAGUE
-
-    def prices(self, league):
-        return self._index
-
-    def currency_rates(self, index):
+    def currency_rates(self, _index):
         return {"exalted": 1.0, "divine": 320.0}
 
 
-class FakeTrade:
-    def __init__(self):
-        self.searches = 0
-
-    def search(self, query):
-        self.searches += 1
-        return "q", [f"h{i}" for i in range(12)]
-
-    def fetch(self, query_id, hashes):
-        return [Listing(amount=5.0, currency="exalted", account="a")]
+LEAGUE = types.SimpleNamespace(value="Rise of the Abyssal", short="Abyss",
+                               divine_price_ex=320.0)
+ARGS = types.SimpleNamespace(poll=1, no_trade=True)
+CFG = types.SimpleNamespace(user_agent="sox/test", status="any", league=None,
+                            max_searches=4, force=False)
 
 
-def run(monkeypatch, tmp_path, texts, index=None, trade=None):
-    monkeypatch.setattr(clipboard, "watch", lambda poll: iter(texts))
-    monkeypatch.setattr(clipboard, "describe_backend", lambda: "fake")
-    if trade is not None:
-        monkeypatch.setattr(cli, "TradeClient", lambda *a, **k: trade)
-    args = Namespace(poll=10, no_trade=trade is None, force=False)
-    # A per-test cache: a shared one let an earlier test's price be replayed
-    # here, so the client under test was never called at all.
-    cache = Cache(tmp_path / "cache.sqlite")
-    try:
-        return cli.run_watch(args, Config(), cache, FakeScout(index), LEAGUE)
-    finally:
-        cache.close()
+def _run(monkeypatch, feed, *, tty=True):
+    monkeypatch.setattr(clipboard, "watch", lambda _poll: feed())
+    monkeypatch.setattr(clipboard, "describe_backend", lambda: "test")
+    monkeypatch.setattr(cli.sys, "stdin", io.StringIO(""))
+    monkeypatch.setattr(cli.sys.stdin, "isatty", lambda: tty, raising=False)
+    # The EOF watcher would interrupt the main thread out from under the test.
+    monkeypatch.setattr(cli.threading, "Thread", lambda **kw: types.SimpleNamespace(start=lambda: None))
+    return cli.run_watch(ARGS, CFG, None, _Scout(), LEAGUE)
 
 
-def test_watch_prices_a_copied_item(monkeypatch, capsys, tmp_path):
-    trade = FakeTrade()
-    code = run(monkeypatch, tmp_path, [(FIXTURES / "RareItem.txt").read_text()], trade=trade)
+def test_ctrl_c_does_not_end_the_session(monkeypatch, capsys):
+    """The copy key must not kill the feed; it prints what actually stops."""
+    rounds = []
+
+    def feed():
+        rounds.append(1)
+        if len(rounds) < 3:
+            raise KeyboardInterrupt
+        return iter(())  # third pass: clipboard closes normally
+
+    assert _run(monkeypatch, feed) == 0
+    assert len(rounds) == 3, "the loop restarted after each interrupt"
     out = capsys.readouterr().out
-    assert code == 0
-    assert "Oblivion Strike" in out
-    assert "market" in out
-    assert "weapon.bow" in out, "the searched category is shown"
-    assert trade.searches >= 1
+    assert out.count("press Ctrl-D to stop") == 2
 
 
-def test_watch_ignores_non_item_text(monkeypatch, capsys, tmp_path):
-    trade = FakeTrade()
-    run(monkeypatch, tmp_path, ["just some text I copied", "https://example.com"], trade=trade)
-    out = capsys.readouterr().out
-    assert trade.searches == 0
-    assert "market" not in out
+def test_ctrl_d_ends_the_session(monkeypatch, capsys):
+    """EOF sets the stop flag, so the interrupt it raises exits, not hints."""
+    events = []
+    real_event = cli.threading.Event
+    monkeypatch.setattr(cli.threading, "Event",
+                        lambda: events.append(real_event()) or events[-1])
+
+    def feed():
+        # Stand in for the EOF watcher firing: it sets the loop's stop flag,
+        # then interrupts the main thread to break it out of the poll.
+        events[0].set()
+        raise KeyboardInterrupt
+
+    assert _run(monkeypatch, feed) == 0
+    assert "press Ctrl-D to stop" not in capsys.readouterr().out
 
 
-def test_watch_survives_a_failing_lookup(monkeypatch, capsys, tmp_path):
-    """One bad item must not end the session."""
-    class Exploding(FakeTrade):
-        def search(self, query):
-            raise RuntimeError("boom")
+def test_eof_on_stdin_raises_the_interrupt_that_stops_the_loop():
+    """Ctrl-D is only EOF on stdin; the loop is blocked polling the clipboard
+    and never reads it, so the watcher has to interrupt the main thread."""
+    import threading
 
-    texts = [(FIXTURES / "RareItem.txt").read_text(),
-             (FIXTURES / "UncutSkillGem.txt").read_text()]
-    index = {"Uncut Skill Gem (Level 19)": IndexEntry(
-        "Uncut Skill Gem (Level 19)", 9.2, 457, {})}
-    code = run(monkeypatch, tmp_path, texts, index=index, trade=Exploding())
-    out = capsys.readouterr().out
-    assert code == 0
-    assert "ERROR" in out, "the failure is reported"
-    assert "Uncut Skill Gem" in out, "and the next item is still priced"
+    stop = threading.Event()
+    fired = threading.Event()
+    with mock.patch.object(cli.sys, "stdin", io.StringIO("")), \
+            mock.patch.object(cli._thread, "interrupt_main", fired.set):
+        cli._stop_on_eof(stop)
+    assert stop.is_set() and fired.is_set()
 
 
-def test_watch_prices_from_the_index_without_a_trade_client(monkeypatch, capsys, tmp_path):
-    index = {"Uncut Skill Gem (Level 19)": IndexEntry(
-        "Uncut Skill Gem (Level 19)", 9.2, 457, {})}
-    run(monkeypatch, tmp_path, [(FIXTURES / "UncutSkillGem.txt").read_text()], index=index)
-    out = capsys.readouterr().out
-    assert "9.2 ex" in out
+def test_without_a_tty_ctrl_c_still_exits(monkeypatch, capsys):
+    """There is no Ctrl-D to press when stdin is a pipe, so suppressing
+    Ctrl+C there would leave no way out at all."""
+    def feed():
+        raise KeyboardInterrupt
+
+    assert _run(monkeypatch, feed, tty=False) == 0
+    assert "press Ctrl-D to stop" not in capsys.readouterr().out

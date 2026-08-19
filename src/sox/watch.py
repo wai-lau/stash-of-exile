@@ -64,9 +64,15 @@ def banner(league: str, divine_ex: float, backend: str) -> str:
         rule("═"),
         f"{BOLD}sox watch{RESET}  ·  {league}  ·  1 div = {divine_ex:,.0f} ex",
         f"{DIM}clipboard: {backend}{RESET}",
-        f"{DIM}copy an item in game (Ctrl+C) and it is priced here · Ctrl-C to stop{RESET}",
+        f"{DIM}copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop{RESET}",
         rule("═"),
     ])
+
+
+def interrupted_hint() -> str:
+    """Ctrl+C is the game's copy key. Hitting it with the terminal focused is
+    a slip, not a request to end the session, so say what actually stops."""
+    return f"{DIM}(Ctrl+C is the in-game copy key — press Ctrl-D to stop){RESET}"
 
 
 def timestamp() -> str:
