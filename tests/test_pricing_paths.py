@@ -398,3 +398,24 @@ def test_a_skill_name_is_not_a_defence():
                  "+# to Level of all Arctic Armour Skills"):
         assert "defence" not in by_text[text].tags, text
         assert "armour" not in by_text[text].tags, text
+
+
+def test_named_skills_get_the_tags_of_what_they_actually_are():
+    """Verified against the PoE2 wikis, not inferred from the name."""
+    by_text = {m.text: m for m in load_mods()}
+    breaker = by_text["+# to Level of all Armour Breaker Skills"]
+    assert {"attack", "melee", "physical"} <= set(breaker.tags)
+
+    arctic = by_text["+# to Level of all Arctic Armour Skills"]
+    assert {"spirit", "elemental"} <= set(arctic.tags), "a Spirit gem, cold buff"
+
+    piercing = by_text["+# to Level of all Armour Piercing Rounds Skills"]
+    assert {"attack", "projectile"} <= set(piercing.tags), "crossbow ammunition"
+
+
+def test_minion_defences_do_not_carry_the_players_defence_tags():
+    """Minion life is not your life, and must not cluster with it."""
+    for entry in load_mods():
+        if entry.subject in ("minion", "companion", "totem"):
+            assert not {"defence", "life", "es", "armour", "evasion",
+                        "resistance"} & set(entry.tags), entry.text

@@ -597,7 +597,7 @@ ids = ["explicit.stat_770672621"]
 slug = "minions_have_increased_maximum_life"
 text = "Minions have #% increased maximum Life"
 weight = 2
-tags = ["defence", "life", "minion"]
+tags = ["minion"]
 subject = "minion"
 note = "minion defensive core"
 
@@ -614,7 +614,7 @@ ids = ["explicit.stat_943702197"]
 slug = "minions_gain_of_their_maximum_life_as_extra_maximum_energy_shield"
 text = "Minions gain #% of their maximum Life as Extra maximum Energy Shield"
 weight = 2
-tags = ["defence", "es", "life", "minion"]
+tags = ["minion"]
 subject = "minion"
 
 [[category.mod]]
@@ -646,7 +646,7 @@ ids = ["explicit.stat_2479683456"]
 slug = "minions_regenerate_of_maximum_life_per_second"
 text = "Minions Regenerate #% of maximum Life per second"
 weight = 1
-tags = ["defence", "life", "minion"]
+tags = ["minion"]
 subject = "minion"
 
 [[category.mod]]
@@ -654,7 +654,7 @@ ids = ["explicit.stat_3837707023"]
 slug = "minions_have_to_chaos_resistance"
 text = "Minions have #% to Chaos Resistance"
 weight = 1
-tags = ["chaos", "defence", "minion", "resistance"]
+tags = ["chaos", "minion"]
 subject = "minion"
 
 [[category.mod]]
@@ -662,7 +662,7 @@ ids = ["explicit.stat_1423639565"]
 slug = "minions_have_to_all_elemental_resistances"
 text = "Minions have #% to all Elemental Resistances"
 weight = 1
-tags = ["defence", "elemental", "minion", "resistance"]
+tags = ["elemental", "minion"]
 subject = "minion"
 note = "Disciple of Varashta guides warn this conflicts with their build"
 
@@ -731,7 +731,7 @@ ids = ["explicit.stat_3850614073"]
 slug = "allies_in_your_presence_have_to_all_elemental_resistances"
 text = "Allies in your Presence have #% to all Elemental Resistances"
 weight = 1
-tags = ["defence", "elemental", "minion", "resistance"]
+tags = ["elemental", "minion"]
 subject = "minion"
 
 [[category.mod]]
@@ -748,7 +748,7 @@ ids = ["explicit.stat_1805182458"]
 slug = "companions_have_increased_maximum_life"
 text = "Companions have #% increased maximum Life"
 weight = 2
-tags = ["companion", "defence", "life", "minion"]
+tags = ["companion", "minion"]
 subject = "companion"
 minion_subtype = "companion"
 
@@ -784,7 +784,7 @@ ids = ["explicit.stat_3787460122"]
 slug = "offerings_have_increased_maximum_life"
 text = "Offerings have #% increased Maximum Life"
 weight = 2
-tags = ["defence", "life", "minion"]
+tags = ["minion"]
 subject = "minion"
 
 [[category.mod]]
@@ -1737,6 +1737,7 @@ ids = ["explicit.stat_448592698|135"]
 slug = "to_level_of_all_armour_breaker_skills"
 text = "+# to Level of all Armour Breaker Skills"
 weight = 3
+tags = ["aoe", "attack", "melee", "physical"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -1906,6 +1907,7 @@ ids = ["explicit.stat_448592698|119"]
 slug = "to_level_of_all_arctic_armour_skills"
 text = "+# to Level of all Arctic Armour Skills"
 weight = 3
+tags = ["elemental", "spirit"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -1986,6 +1988,7 @@ ids = ["explicit.stat_448592698|174"]
 slug = "to_level_of_all_armour_piercing_rounds_skills"
 text = "+# to Level of all Armour Piercing Rounds Skills"
 weight = 3
+tags = ["attack", "projectile"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]

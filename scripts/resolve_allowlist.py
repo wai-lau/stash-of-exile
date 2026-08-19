@@ -427,6 +427,18 @@ def minion_subtype(text, subject):
     return None
 
 
+# Skills whose NAME does not describe what they are. Verified against the
+# PoE2 wikis:
+#   Armour Breaker         mace strike — Attack, AoE, Melee, Physical
+#   Arctic Armour          a Spirit gem: a cold buff that freezes attackers
+#   Armour Piercing Rounds crossbow ammunition — attack, projectile
+SKILL_TAGS = {
+    "armour breaker": ("attack", "melee", "physical", "aoe"),
+    "arctic armour": ("spirit", "elemental"),
+    "armour piercing rounds": ("attack", "projectile"),
+}
+
+
 def subject_for(text):
     lowered = normalize(text)
     for needle, subject in SUBJECT_RULES:
@@ -457,9 +469,19 @@ def tags_for(text):
 
     # A skill name is not a defence. "+to Level of all Armour Breaker Skills"
     # and "Arctic Armour Skills" were tagged armour and defence purely for
-    # containing the word.
+    # containing the word. Named skills whose name does not describe them get
+    # their real tags from SKILL_TAGS.
     if "level of all" in lowered:
         tags -= {"defence", "armour", "es", "evasion", "resistance"}
+        for name, applied in SKILL_TAGS.items():
+            if name in lowered:
+                tags.update(applied)
+
+    # A minion, companion or totem mod is filed under that subject. Carrying
+    # the player's defensive tags too put minion life beside your own life
+    # when coherence was computed.
+    if subject_for(text) != "self":
+        tags -= {"defence", "life", "es", "armour", "evasion", "resistance"}
     return sorted(tags)
 
 
