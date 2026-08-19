@@ -122,7 +122,8 @@ def main(argv: list[str] | None = None) -> int:
             session = GGGSession(RateGovernor(on_wait=announce),
                                  httpx.Client(timeout=30), cfg.user_agent)
             trade = TradeClient(session, cache, cfg.league or league.value)
-            exchange = ExchangeClient(session, cache, cfg.league or league.value)
+            exchange = ExchangeClient(_exchange_session(cfg, announce), cache,
+                                      cfg.league or league.value)
             rates = exchange_rates(exchange, rates)
 
         for n, block in enumerate(blocks):
@@ -195,6 +196,20 @@ def _stop_on_eof(stop: threading.Event) -> None:
     _thread.interrupt_main()
 
 
+def _exchange_session(cfg, announce) -> GGGSession:
+    """A session of its own, because the exchange has its own limit policy.
+
+    Search answers `trade-search-request-limit` at 5:10:60,15:60:300 and the
+    exchange answers `trade-exchange-request-limit` at 5:15:60,10:90:300. A
+    governor keeps one rule set and one request history, so sharing it makes
+    every response overwrite the other endpoint's rules and count its calls
+    against the wrong budget — throttling one endpoint on the other's traffic
+    while under-counting its own.
+    """
+    return GGGSession(RateGovernor(on_wait=announce),
+                      httpx.Client(timeout=30), cfg.user_agent)
+
+
 def run_watch(args, cfg, cache, scout, league) -> int:
     """Price every item copied to the clipboard, until Ctrl-D."""
     index = scout.prices(league.short)
@@ -211,7 +226,8 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         governor = RateGovernor(on_wait=announce)
         session = GGGSession(governor, httpx.Client(timeout=30), cfg.user_agent)
         trade = TradeClient(session, cache, cfg.league or league.value)
-        exchange = ExchangeClient(session, cache, cfg.league or league.value)
+        exchange = ExchangeClient(_exchange_session(cfg, announce), cache,
+                                  cfg.league or league.value)
         rates = exchange_rates(exchange, rates)
 
     divine_ex = rates.get("divine") or league.divine_price_ex
