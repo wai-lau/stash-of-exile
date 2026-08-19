@@ -28,6 +28,7 @@ class PricedItem:
     reason: str = ""
     listings: int = 0              # how many we priced
     matches: int = 0               # how many the search found
+    rune_inflated: int = 0         # dropped: only met the floor via runes
     from_cache: bool = False
     median_ex: float | None = None
     p25_ex: float | None = None
@@ -108,6 +109,9 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         else:
             found = f"{priced.listings} listings, {priced.tag}"
         lines.append(f"             {found}")
+        if priced.rune_inflated:
+            lines.append(f"             {priced.rune_inflated} skipped — met your "
+                         "defences only with their runes")
         if priced.relax_used:
             lines.append("             found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")

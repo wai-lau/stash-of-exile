@@ -682,3 +682,80 @@ def test_the_reported_count_is_what_matched_not_what_we_fetched(tmp_path):
         tag="exact", listings=result.listings, matches=result.matches,
     ), 320.0)
     assert "cheapest 10 of 842 listings" in text
+
+
+def _listed(evasion, energy_shield, own_pct, rune_pct):
+    """A listing payload in the shape the fetch endpoint returns.
+
+    Game terms arrive wrapped in markup — "[Evasion|Evasion Rating]" renders
+    as "Evasion Rating" — and every mod carries its actual roll inline.
+    """
+    return {
+        "properties": [
+            {"name": "[Evasion|Evasion Rating]", "values": [[str(evasion), 1]]},
+            {"name": "[EnergyShield|Energy Shield]", "values": [[str(energy_shield), 1]]},
+        ],
+        "explicitMods": [{"description":
+                          f"{own_pct}% increased [Evasion] and "
+                          "[EnergyShield|Energy Shield]"}],
+        "runeMods": ([{"description":
+                       f"{rune_pct}% increased [Armour|Armour], [Evasion|Evasion] "
+                       "and [EnergyShield|Energy Shield]"}] if rune_pct else []),
+    }
+
+
+def test_a_listing_that_only_meets_our_defences_with_runes_is_not_a_comparable():
+    """The buyer sockets their own runes, so a listing propped up by them is a
+    worse item wearing our defences.
+
+    Live, all four cheapest matches for a 1294-Evasion Forgotten Warden were
+    rune-inflated — 1376 showing, 1260 without — and they set the price.
+    """
+    from sox.valuation.query import meets_without_runes, rune_free_defence
+    from sox.valuation.query import DEFENCE_PROPERTIES
+
+    required = {"ev": {"min": 1294}, "es": {"min": 395}}
+
+    inflated = _listed(evasion=1376, energy_shield=421, own_pct=292, rune_pct=36)
+    _, flat, pct = DEFENCE_PROPERTIES["Evasion Rating"]
+    assert round(rune_free_defence(inflated, "Evasion Rating", flat, pct)) == 1260
+    assert not meets_without_runes(inflated, required)
+
+    # The same defences with no rune behind them clear the floor honestly.
+    genuine = _listed(evasion=1376, energy_shield=421, own_pct=292, rune_pct=0)
+    assert meets_without_runes(genuine, required)
+
+
+def test_rune_inflated_listings_are_replaced_not_just_dropped(tmp_path):
+    """Dropping them thins the sample, so the pricer reads deeper rather than
+    pricing off whatever the first page happened to leave."""
+    class Padded:
+        def search(self, query):
+            return "q1", [f"h{i}" for i in range(40)], 196
+
+        def fetch(self, query_id, hashes):
+            out = []
+            for h in hashes:
+                n = int(h[1:])
+                # The first ten are cheap and rune-propped; the rest are real.
+                cheap = n < 10
+                out.append(Listing(
+                    amount=5.0 if cheap else 20.0, currency="divine", account="a",
+                    item=_listed(1376, 421, 292, 36 if cheap else 0)))
+            return out
+
+    # A unique: its floor is its actual roll, so a rune-propped listing that
+    # merely reaches the same displayed number does not clear it.
+    item = itemtext.parse(
+        "Item Class: Body Armours\nRarity: Unique\nForgotten Warden\n"
+        "Primal Markings\n--------\nEvasion Rating: 1376\nEnergy Shield: 421\n"
+        "--------\nItem Level: 84\n--------\n"
+        "{ Unique Modifier }\n292(200-300)% increased Evasion and Energy Shield\n"
+    )
+    result = price_by_search(
+        item, category_for(item), MODS, NOTABLES, Padded(),
+        Cache(tmp_path / "c.sqlite"), RATES,
+    )
+    assert result.rune_inflated == 10, "the propped-up listings were skipped"
+    assert result.listings == 10, "and replaced from deeper in the results"
+    assert result.ceiling_ex == 20.0 * 320.0, "the cheap ones set no price"

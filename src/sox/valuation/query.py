@@ -159,6 +159,92 @@ class _Notable:
 LOCAL_CATEGORY_PREFIXES = ("armour.", "weapon.")
 
 
+# Listing payloads wrap every game term in markup: "[Evasion|Evasion Rating]"
+# renders as "Evasion Rating", "[Quality]" as "Quality".
+_MARKUP_ALIAS = re.compile(r"\[[^\]|]*\|([^\]]*)\]")
+_MARKUP_PLAIN = re.compile(r"\[([^\]]*)\]")
+
+
+def clean_markup(text: str) -> str:
+    return _MARKUP_PLAIN.sub(r"\1", _MARKUP_ALIAS.sub(r"\1", text or ""))
+
+
+def _listing_texts(item: dict, key: str) -> list[str]:
+    """Mod descriptions under `key`, with their markup stripped.
+
+    Each carries its ACTUAL roll inline — "292% increased Evasion and Energy
+    Shield" — which is what a defence total has to be unwound with.
+    """
+    out = []
+    for mod in item.get(key) or []:
+        text = mod.get("description") if isinstance(mod, dict) else mod
+        if text:
+            out.append(clean_markup(text))
+    return out
+
+
+def rune_free_defence(item: dict, property_name: str, flat, percent) -> float | None:
+    """A listed item's defence total with its socketed runes removed.
+
+    A listing can clear our floor purely on runes the buyer supplies
+    themselves, and it is then not a comparable at all — it is a worse item
+    wearing our defences. Live, the cheapest match for a 1294-Evasion
+    Forgotten Warden showed 1376 and was 1260 once its rune came off.
+
+        total = (base + flat_own + flat_rune) * (1 + pct_own + pct_rune)
+        want  = (total / (1 + pct_own + pct_rune) - flat_rune) * (1 + pct_own)
+    """
+    total = None
+    for prop in item.get("properties") or []:
+        if clean_markup(prop.get("name", "")) != property_name:
+            continue
+        values = prop.get("values") or []
+        if values and values[0]:
+            try:
+                total = float(str(values[0][0]).split()[0].rstrip("%"))
+            except (ValueError, IndexError):
+                return None
+    if total is None:
+        return None
+
+    rune_texts = _listing_texts(item, "runeMods")
+    own_texts = sum((_listing_texts(item, k) for k in
+                     ("explicitMods", "implicitMods", "enchantMods")), [])
+
+    def totals(texts):
+        flat_sum = pct_sum = 0.0
+        for text in texts:
+            values = parse_values(text)
+            if not values:
+                continue
+            if flat.search(text):
+                flat_sum += values[0]
+            elif percent.search(text):
+                pct_sum += values[0]
+        return flat_sum, pct_sum
+
+    flat_rune, pct_rune = totals(rune_texts)
+    _flat_own, pct_own = totals(own_texts)
+
+    base = total / (1 + (pct_own + pct_rune) / 100) - flat_rune
+    return max(base * (1 + pct_own / 100), 0.0)
+
+
+def meets_without_runes(item: dict, required: dict) -> bool:
+    """Whether a listing still clears every defence floor without its runes."""
+    by_id = {fid: (name, flat, pct)
+             for name, (fid, flat, pct) in DEFENCE_PROPERTIES.items()}
+    for filter_id, bound in (required or {}).items():
+        minimum = (bound or {}).get("min")
+        spec = by_id.get(filter_id)
+        if minimum is None or spec is None:
+            continue
+        actual = rune_free_defence(item, spec[0], spec[1], spec[2])
+        if actual is not None and actual < minimum:
+            return False
+    return True
+
+
 def regroup(ids: tuple[str, ...], group: str) -> tuple[str, ...]:
     """The same numeric stats, read from another group's table.
 

@@ -11,10 +11,16 @@ from dataclasses import dataclass
 
 from sox.cache import TTL, Cache
 from sox.valuation.allowlists import ModEntry
-from sox.valuation.query import RELAX_STEPS, build_query, query_hash
+from sox.valuation.query import (
+    RELAX_STEPS,
+    build_query,
+    meets_without_runes,
+    query_hash,
+)
 
 SUGGESTED_ASK_FACTOR = 0.9
-FETCH_LIMIT = 10  # one fetch call is enough to price the cheap end
+FETCH_LIMIT = 10   # the fetch endpoint takes at most 10 hashes per call
+FETCH_CEILING = 30  # at most three calls when rune-inflated listings thin it
 
 # A handful of listings is not a market. With three results the cheapest can
 # easily be a mispriced outlier or a far better item, which is how a
@@ -33,6 +39,7 @@ class TradeResult:
     listings: int                 # how many we priced: the cheapest FETCH_LIMIT
     searches_used: int
     matches: int = 0              # how many the search actually found
+    rune_inflated: int = 0        # dropped: only cleared the floor via runes
     confidence: str = "firm"      # firm | thin | very-thin
     relax_used: int = 0           # which ladder rung produced this
     p25_ex: float | None = None   # lower quartile; the ask is based on this
@@ -96,7 +103,27 @@ def price_by_search(
         if matches < min_results:
             continue
 
-        listings = trade.fetch(query_id, hashes[:FETCH_LIMIT])
+        # A listing can clear our defence floor purely on its socketed runes,
+        # and it is then not a comparable — it is a worse item wearing our
+        # defences. The buyer supplies their own runes, so those come off
+        # before the listing counts. Live, all four cheapest matches for a
+        # 1294-Evasion Forgotten Warden were rune-inflated: 1376 showing,
+        # 1260 without.
+        required = (query["query"]["filters"]
+                    .get("equipment_filters", {}).get("filters", {}))
+        listings, inflated = [], 0
+        # Dropping them thins the sample, so read deeper rather than pricing
+        # off whatever the first page happened to leave.
+        for start in range(0, min(len(hashes), FETCH_CEILING), FETCH_LIMIT):
+            batch = trade.fetch(query_id, hashes[start : start + FETCH_LIMIT])
+            for listing in batch:
+                if required and not meets_without_runes(listing.item, required):
+                    inflated += 1
+                    continue
+                listings.append(listing)
+            if len(listings) >= FETCH_LIMIT or not batch:
+                break
+
         prices = [p for p in (l.to_exalted(rates) for l in listings) if p is not None]
         if not prices:
             continue
@@ -118,6 +145,7 @@ def price_by_search(
             tag="exact" if step == 0 else f"relaxed:{step}",
             listings=len(prices),
             matches=matches,
+            rune_inflated=inflated,
             searches_used=searches,
             confidence=_confidence(matches),
             relax_used=step,

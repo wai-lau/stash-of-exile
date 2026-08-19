@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from sox.cache import TTL, Cache
 from sox.ggg.session import GGGSession
@@ -16,6 +16,9 @@ class Listing:
     amount: float   # raw, in `currency` — NOT exalted
     currency: str   # observed: exalted, divine, chaos, transmute, ...
     account: str
+    # The listed item itself. Kept because a listing can clear our defence
+    # floor purely on its socketed runes, and only the payload says so.
+    item: dict = field(default_factory=dict)
 
     def to_exalted(self, rates: dict[str, float]) -> float | None:
         """Convert to exalted using the index currency table.
@@ -63,6 +66,7 @@ class TradeClient:
                         amount=float(price["amount"]),
                         currency=price.get("currency", ""),
                         account=(listing.get("account") or {}).get("name", ""),
+                        item=(result or {}).get("item") or {},
                     )
                 )
         return listings
