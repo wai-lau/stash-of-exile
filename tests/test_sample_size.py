@@ -253,21 +253,67 @@ def test_equipment_minimum_normalises_to_the_worst_roll():
     assert equipment_minimum(plain, "Evasion Rating", flat, percent) == 485
 
 
-def test_weapon_damage_is_left_out_of_equipment_filters():
-    """Damage, attack speed and sockets are deliberately not constrained."""
-    from sox.valuation.query import DEFENCE_PROPERTIES, build_query, category_for
+def test_a_weapon_is_searched_on_its_dps():
+    """DPS is what a weapon is shopped on — the number the tooltip already
+    worked out, not the mods behind it.
 
-    assert not {"damage", "aps", "crit", "rune_sockets"} & {
-        fid for fid, _, _ in DEFENCE_PROPERTIES.values()
-    }
+    Attack speed, crit and sockets stay unconstrained: speed and crit are
+    traded off against damage rather than added to it, so a minimum on either
+    excludes comparables rather than weak items.
+    """
+    from sox.valuation.query import build_query, category_for
+
     staff = itemtext.parse(
         "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
-        "--------\nPhysical Damage: 54-219\nAttacks per Second: 1.40\n"
+        "--------\nPhysical Damage: 54-219\nCold Damage: 121-183\n"
+        "Attacks per Second: 1.40\n"
         "--------\nItem Level: 81\n--------\n"
         "{ Prefix Modifier }\nAdds 121 to 183 Cold Damage\n"
     )
-    query = build_query(staff, category_for(staff), MODS, NOTABLES)
-    assert "equipment_filters" not in query["query"]["filters"]
+    equipment = build_query(staff, category_for(staff), MODS, NOTABLES)[
+        "query"]["filters"]["equipment_filters"]["filters"]
+    # (136.5 physical + 152 cold) * 1.40. Total only: splitting it into pdps
+    # and edps pins the SOURCE, and a weapon reaching the same DPS through
+    # fire instead of cold is a comparable. Live, all three filters left 65
+    # matches where DPS alone left 995.
+    assert equipment == {"dps": {"min": 403.9}}
+
+
+def test_a_damage_mod_covered_by_dps_is_not_also_a_stat_filter():
+    """Left as a stat filter it would be asked for twice — and worse, it pins
+    the SOURCE: a weapon with the same elemental DPS rolled as fire instead of
+    cold is a comparable, and "Adds # to # Cold Damage" excludes it."""
+    from sox.valuation.query import build_query, category_for, defence_mod_texts
+
+    mace = itemtext.parse(
+        "Item Class: One Hand Maces\nRarity: Rare\nPain Ram\nBandit Mace\n"
+        "--------\nPhysical Damage: 100-200\nCold Damage: 58-97\n"
+        "Attacks per Second: 1.55\n--------\nItem Level: 80\n--------\n"
+        "{ Prefix Modifier }\nAdds 58(40-60) to 97(80-110) Cold Damage\n"
+        "{ Prefix Modifier }\n127(100-129)% increased Physical Damage\n"
+        "{ Suffix Modifier }\n+2 to Level of all Attack Skills\n"
+    )
+    assert defence_mod_texts(mace) == [
+        "Adds 58 to 97 Cold Damage", "127% increased Physical Damage"]
+    ids = [f["id"] for g in build_query(mace, category_for(mace), MODS, NOTABLES)[
+        "query"]["stats"] for f in g["filters"]]
+    assert ids == ["explicit.stat_3035140377"], "only the attack-level mod is left"
+
+
+def test_a_weapon_dps_takes_its_runes_off():
+    """The buyer sockets their own, so a rune's contribution is not part of
+    what is being sold — the same rule the defences already follow."""
+    from sox.valuation.query import damage_filters
+
+    text = ("Item Class: Crossbows\nRarity: Rare\nX\nSiege Crossbow\n"
+            "--------\nPhysical Damage: 414-1,043\nAttacks per Second: 2.07\n"
+            "--------\nItem Level: 79\n--------\n"
+            "{ Prefix Modifier }\n100(80-120)% increased Physical Damage\n")
+    bare = itemtext.parse(text)
+    runed = itemtext.parse(text + "--------\n36% increased Physical Damage (rune)\n")
+    # 728.5 average * 2.07 = 1508 shown; the rune's 36% divides back out.
+    assert damage_filters(bare)["dps"] == {"min": 1508.0}
+    assert damage_filters(runed)["dps"] == {"min": 1108.8}
 
 
 def test_added_damage_filters_on_the_average():
@@ -797,3 +843,33 @@ def test_an_archetype_tied_on_weight_too_is_no_cluster():
     tied = [entry("elemental", 3), entry("elemental", 2),
             entry("physical", 3), entry("physical", 2)]
     assert dominant_archetype(tied) == (None, 2)
+
+
+def test_the_explanation_only_names_stats_the_query_actually_asks_for():
+    """A mod covered by an equipment filter is not searched as a stat.
+
+    Reporting it named a buyer group the query never asked for: once a mace's
+    damage mods had all become one DPS filter, it still read "searched as
+    elemental" with no elemental stat in the query at all.
+    """
+    from sox.valuation.query import build_query, category_for, explain_selection
+
+    mace = itemtext.parse(
+        "Item Class: One Hand Maces\nRarity: Rare\nPain Ram\nBandit Mace\n"
+        "--------\nPhysical Damage: 100-200\nCold Damage: 58-97\n"
+        "Attacks per Second: 1.55\n--------\nItem Level: 80\n--------\n"
+        "{ Prefix Modifier }\nAdds 58(40-60) to 97(80-110) Cold Damage\n"
+        "{ Prefix Modifier }\n127(100-129)% increased Physical Damage\n"
+        "{ Suffix Modifier }\nLeeches 7.85(5-8)% of Physical Damage as Mana\n"
+        "{ Suffix Modifier }\n+2 to Level of all Attack Skills\n"
+    )
+    group, stats = explain_selection(mace, MODS, NOTABLES)
+    assert "Adds # to # Cold Damage" not in stats, "that is the DPS filter"
+    assert group != "elemental", "no elemental stat is searched"
+    assert set(stats) == {"# to Level of all Attack Skills",
+                          "Leeches #% of Physical Damage as Mana"}
+
+    # And the explanation matches what the query really contains.
+    ids = [f["id"] for g in build_query(mace, category_for(mace), MODS, NOTABLES)[
+        "query"]["stats"] for f in g["filters"]]
+    assert len(ids) == len(stats)

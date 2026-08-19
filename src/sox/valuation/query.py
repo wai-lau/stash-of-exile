@@ -442,6 +442,105 @@ def category_for(item: dict) -> str | None:
     return None
 
 
+# Weapons state each damage type as a range and a rate: "Physical Damage:
+# 74-231", "Lightning Damage: 10-273 (lightning)", "Attacks per Second: 1.89".
+# DPS is the axis a weapon is actually shopped on — a buyer compares numbers
+# the tooltip already worked out, not the mods behind them.
+DAMAGE_PROPERTIES = {
+    "physical": ("Physical Damage",),
+    "elemental": ("Fire Damage", "Cold Damage", "Lightning Damage"),
+    "chaos": ("Chaos Damage",),
+}
+DAMAGE_RANGE = re.compile(r"(\d[\d,]*(?:\.\d+)?)\s*-\s*(\d[\d,]*(?:\.\d+)?)")
+# Rune wording for the two ways a rune inflates a weapon's damage.
+RUNE_ADDS = {
+    "physical": re.compile(r"adds .* physical damage", re.I),
+    "elemental": re.compile(r"adds .* (?:fire|cold|lightning) damage", re.I),
+    "chaos": re.compile(r"adds .* chaos damage", re.I),
+}
+RUNE_INCREASES_PHYSICAL = re.compile(r"increased physical damage", re.I)
+
+# Weapon-local damage mods, which the tooltip has already folded into the
+# damage ranges the DPS filters are computed from. "to Attacks" is the global
+# form worn on a ring or gloves and is NOT local, so it stays a stat filter.
+LOCAL_DAMAGE_MODS = (
+    re.compile(r"^adds \d[\d.]* to \d[\d.]* "
+               r"(physical|fire|cold|lightning|chaos) damage$", re.I),
+    re.compile(r"^\d[\d.]*% increased physical damage$", re.I),
+)
+
+
+def _property_text(item: dict, name: str) -> str | None:
+    for prop in item.get("properties") or []:
+        if prop.get("name") == name:
+            values = prop.get("values") or []
+            if values and values[0]:
+                return str(values[0][0])
+    return None
+
+
+def _average_range(text: str | None) -> float:
+    """The midpoint of "74-231". A damage range is shopped on its average."""
+    if not text:
+        return 0.0
+    match = DAMAGE_RANGE.search(text)
+    if not match:
+        return 0.0
+    low, high = (float(g.replace(",", "")) for g in match.groups())
+    return (low + high) / 2
+
+
+def damage_filters(item: dict) -> dict[str, dict]:
+    """Total DPS, with the socketed runes taken back out.
+
+    Same rule as the defences: the buyer sockets their own runes, so a rune's
+    added damage is not part of what is being sold. Physical is recovered
+    through any rune that increases it, elemental by subtracting what the
+    rune adds outright.
+
+    Total DPS only, not pdps and edps alongside it. Splitting it pins the
+    SOURCE of the damage: a weapon reaching the same DPS through fire instead
+    of cold is a comparable, and constraining each component excludes it.
+    Measured live on one mace — 65 matches with all three filters, 995 with
+    DPS alone.
+
+    Attacks per Second and Critical Chance stay unfiltered. Both are traded
+    off against damage rather than added to it — a slower, harder-hitting
+    weapon is not a worse one — so a minimum on either excludes comparables
+    rather than weak items.
+    """
+    aps = _average_range(_property_text(item, "Attacks per Second"))
+    if not aps:
+        try:
+            aps = float((_property_text(item, "Attacks per Second") or "0").replace(",", ""))
+        except ValueError:
+            aps = 0.0
+    if not aps:
+        return {}
+
+    rune_texts = list(item.get("runeMods") or [])
+    by_kind: dict[str, float] = {}
+    for kind, names in DAMAGE_PROPERTIES.items():
+        total = sum(_average_range(_property_text(item, n)) for n in names)
+        rune_flat = sum(
+            _average_range(t) for t in rune_texts if RUNE_ADDS[kind].search(t)
+        )
+        if kind == "physical":
+            # A rune that increases physical damage multiplies the whole
+            # weapon, so it has to be divided back out rather than subtracted.
+            pct = sum(
+                (parse_values(t) or [0])[0] for t in rune_texts
+                if RUNE_INCREASES_PHYSICAL.search(t)
+            )
+            total = total / (1 + pct / 100) if pct else total
+        by_kind[kind] = max(total - rune_flat, 0.0)
+
+    combined = sum(by_kind.values())
+    if combined <= 0:
+        return {}
+    return {"dps": {"min": round(combined * aps, 1)}}
+
+
 def _property(item: dict, name: str) -> int | None:
     for prop in item.get("properties") or []:
         if prop.get("name") == name:
@@ -555,7 +654,7 @@ def build_query(
         if quality:
             type_filters["quality"] = {"min": quality}
 
-    equipment: dict = {}
+    equipment: dict = dict(damage_filters(item))
     for prop_name, (filter_id, flat, percent) in DEFENCE_PROPERTIES.items():
         value = equipment_minimum(item, prop_name, flat, percent)
         if value:
@@ -743,7 +842,13 @@ def explain_selection(
     if notable_texts:
         return "notable", notable_texts[:max_stats]
 
-    plain = [t for t in all_mods if not t.startswith("Allocates ")]
+    # Mods an equipment filter already covers are not searched as stats, so
+    # reporting them here named a buyer group the query never asked for: a
+    # mace whose damage mods had all become one DPS filter still read
+    # "searched as elemental".
+    covered = set(defence_mod_texts(item))
+    plain = [t for t in all_mods
+             if not t.startswith("Allocates ") and t not in covered]
     entries = matched(plain, index)
     texts = {}
     for text in plain:
@@ -770,6 +875,16 @@ def defence_mod_texts(item: dict) -> list[str]:
             continue
         for text in searchable_mods(item):
             if (flat.search(text) or percent.search(text)) and text not in out:
+                out.append(text)
+
+    # A weapon's damage mods are covered by dps/pdps/edps the same way. Left
+    # as stat filters too they would be asked for twice — and worse, they pin
+    # the SOURCE: a weapon with the same elemental DPS rolled as fire instead
+    # of cold is a comparable, and searching "Adds # to # Cold Damage"
+    # excludes it.
+    if damage_filters(item):
+        for text in searchable_mods(item):
+            if any(p.search(text) for p in LOCAL_DAMAGE_MODS) and text not in out:
                 out.append(text)
     return out
 
