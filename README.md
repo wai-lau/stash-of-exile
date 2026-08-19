@@ -3,11 +3,22 @@
 Prices Path of Exile 2 items from the text the game puts on your clipboard.
 
 ```
-uv run sox watch          # live feed: every item you copy gets priced
-uv run sox price          # one-shot: paste, then Ctrl-D
-uv run sox price -f items.txt
-uv run sox leagues
+sox watch          # live feed: every item you copy gets priced
+sox price          # one-shot: paste, then Ctrl-D
+sox price -f items.txt
+sox leagues
 ```
+
+## Install
+
+`bin/sox` is a launcher that resolves its own symlink to find this project,
+so it runs from any directory:
+
+```
+ln -sfn "$PWD/bin/sox" ~/bin/sox
+```
+
+Without the symlink, `uv run sox ...` from the project directory works too.
 
 ## Watch mode
 

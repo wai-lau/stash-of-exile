@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Launcher for sox, so it runs from anywhere.
+#
+# Symlinked into ~/bin, following this machine's convention that project
+# tooling lives in its own repo and is linked in for global use. Resolves the
+# symlink to find the project, so `uv` always runs against the right one no
+# matter the current directory.
+set -euo pipefail
+
+source="${BASH_SOURCE[0]}"
+while [ -L "$source" ]; do
+    dir="$(cd -P "$(dirname "$source")" && pwd)"
+    source="$(readlink "$source")"
+    [[ $source != /* ]] && source="$dir/$source"
+done
+project="$(cd -P "$(dirname "$source")/.." && pwd)"
+
+exec uv run --project "$project" --quiet sox "$@"
