@@ -53,6 +53,8 @@ SLOW_SEARCH_SECONDS = 0.6
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="sox", description="PoE2 item pricer")
     parser.add_argument("--config", type=Path, default=None)
+    parser.add_argument("--hardcore", action="store_true",
+                        help="read the hardcore league instead of softcore")
     sub = parser.add_subparsers(dest="command", required=True)
 
     price = sub.add_parser("price", help="price item text (Ctrl+C in game, then paste)")
@@ -89,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     scout = ScoutClient(httpx.Client(timeout=30), cache, cfg.user_agent)
 
     try:
-        league = scout.current_league()
+        league = scout.current_league(hardcore=args.hardcore or cfg.hardcore)
         if args.command == "leagues":
             print(f"current league : {league.value} ({league.short})")
             print(f"1 divine       : {league.divine_price_ex:,.1f} exalted")

@@ -41,6 +41,19 @@ CURRENCY_ALIASES = {
 }
 
 
+def is_hardcore(entry: dict) -> bool:
+    """Whether a league entry is a hardcore one.
+
+    The index marks it three ways and only inconsistently: temporary leagues
+    prefix the name ("HC Runes of Aldur") and suffix the short name
+    ("runeshc"), while the permanent one is just "Hardcore" and shortens to
+    "hardcore", which carries neither marker.
+    """
+    value = entry.get("Value") or ""
+    short = (entry.get("ShortName") or "").casefold()
+    return value.startswith("HC ") or value == "Hardcore" or short.endswith("hc")
+
+
 @dataclass(frozen=True)
 class League:
     value: str
@@ -63,16 +76,28 @@ class ScoutClient:
         self._cache = cache
         self._headers = {"User-Agent": user_agent, "Accept": "application/json"}
 
-    def current_league(self) -> League:
+    def current_league(self, hardcore: bool = False) -> League:
+        """The league in play, softcore unless asked otherwise.
+
+        TWO entries report IsCurrent at once — a league and its hardcore twin
+        — so taking the first one resolves by list order rather than by logic.
+        Live on 2026-08-19 that order put softcore first, which is luck: HC
+        prices are close enough (divine 361.68 against 358.07) that reading
+        the wrong book would not look wrong anywhere in the output.
+        """
         for entry in self._get("/Leagues"):
-            if entry.get("IsCurrent"):
-                return League(
-                    value=entry["Value"],
-                    short=entry["ShortName"],
-                    divine_price_ex=float(entry.get("DivinePrice") or 0.0),
-                    base_currency=entry.get("BaseCurrencyText", "Exalted Orb"),
-                )
-        raise RuntimeError("no current league reported by the index")
+            if not entry.get("IsCurrent"):
+                continue
+            if is_hardcore(entry) != hardcore:
+                continue
+            return League(
+                value=entry["Value"],
+                short=entry["ShortName"],
+                divine_price_ex=float(entry.get("DivinePrice") or 0.0),
+                base_currency=entry.get("BaseCurrencyText", "Exalted Orb"),
+            )
+        wanted = "hardcore" if hardcore else "softcore"
+        raise RuntimeError(f"no current {wanted} league reported by the index")
 
     def prices(self, league: str) -> dict[str, IndexEntry]:
         """Every indexable item, keyed by display name.

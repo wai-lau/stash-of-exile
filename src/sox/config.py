@@ -37,6 +37,7 @@ class Config:
     cache_path: Path = DEFAULT_CACHE_PATH
     user_agent: str = USER_AGENT
     force: bool = False            # search even low-scoring items
+    hardcore: bool = False         # read the HC twin of the current league
 
     @property
     def league_or_current(self) -> str | None:
@@ -55,6 +56,7 @@ def load_config(path: Path | None = None) -> Config:
         league=raw.get("league"),
         status=raw.get("status", "securable"),
         max_searches=int(raw.get("max_searches", 4)),
+        hardcore=bool(raw.get("hardcore", False)),
     )
     if cfg.status not in VALID_STATUS:
         raise ValueError(f"invalid status {cfg.status!r}; expected one of {VALID_STATUS}")
