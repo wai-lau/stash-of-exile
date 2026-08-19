@@ -85,22 +85,35 @@ def price_by_search(
 ) -> TradeResult:
     searches = 0
     best: TradeResult | None = None
-    best_key: str | None = None
     rungs = min(len(RELAX_STEPS), max_searches)
 
     for step in range(rungs):
         query = build_query(item, category, index, notables, status=status, relax=step)
         key = query_hash(query)
 
+        # EVERY rung is cached, not only the winning one. Storing the winner
+        # alone meant a second copy of the same item re-ran every rung before
+        # it, live: a spear that had relaxed to the last rung paid four
+        # searches to arrive back at the answer already on disk, and then
+        # reported the whole replay as costing nothing.
         cached = cache.get("trade_price", key)
         if cached is not None:
-            # Replaying a stored result costs no API call, so the search count
-            # recorded when it was first computed must not be reported again.
-            return TradeResult(**{**cached, "searches_used": 0, "from_cache": True})
+            if cached.get("empty"):
+                # Searched before and it answered nothing. Widen, as the first
+                # walk did — re-asking cannot produce a different rung.
+                continue
+            result = TradeResult(**{**cached, "from_cache": True})
+            if best is None:
+                best = result
+            if result.confidence == "firm":
+                best = result
+                break
+            continue
 
         query_id, hashes, matches = trade.search(query)
         searches += 1
         if matches < min_results:
+            cache.put("trade_price", key, {"empty": True}, ttl=TTL["trade_price"])
             continue
 
         # A listing can clear our defence floor purely on its socketed runes,
@@ -126,6 +139,7 @@ def price_by_search(
 
         prices = [p for p in (l.to_exalted(rates) for l in listings) if p is not None]
         if not prices:
+            cache.put("trade_price", key, {"empty": True}, ttl=TTL["trade_price"])
             continue
 
         cheapest = min(prices)
@@ -151,19 +165,18 @@ def price_by_search(
             relax_used=step,
             skewed=skewed,
         )
+        cache.put("trade_price", key, result.__dict__, ttl=TTL["trade_price"])
         # Keep the first usable answer, but keep relaxing while the sample is
         # too small to trust — a wider search finds the ordinary listings that
         # actually set the price.
         if best is None:
-            best, best_key = result, key
+            best = result
         if result.confidence == "firm":
-            best, best_key = result, key
+            best = result
             break
 
     if best is None:
         return TradeResult(None, None, None, "unpriced:above-market", 0, searches)
 
-    best = TradeResult(**{**best.__dict__, "searches_used": searches})
-    if best_key:
-        cache.put("trade_price", best_key, best.__dict__, ttl=TTL["trade_price"])
-    return best
+    # What this run actually spent, which on a full replay is nothing.
+    return TradeResult(**{**best.__dict__, "searches_used": searches})

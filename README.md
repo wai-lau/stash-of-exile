@@ -41,7 +41,7 @@ copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
             market     low 4.72 div  ·  25th 4.72 div  ·  median 8.97 div
                        cheapest 10 of 759 listings, relaxed:3
 ────────────────────────────────────────────────────────────────
-total 1,802 ex (4.7 div)  ·  1 priced  ·  1 search
+total 1,803 ex (4.7 div)  ·  1 priced  ·  2 searches
 ────────────────────────────────────────────────────────────────
 ```
 

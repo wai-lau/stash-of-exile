@@ -14,7 +14,7 @@ from sox.cache import Cache
 from sox.ggg.trade import Listing
 from sox.valuation.allowlists import load_bases, load_mods, load_notables
 from sox.valuation.mods import build_index
-from sox.valuation.query import category_for
+from sox.valuation.query import RELAX_STEPS, build_query, category_for
 from sox.valuation.trade_pricer import MIN_SAMPLE, price_by_search
 
 MODS = build_index(load_mods())
@@ -44,10 +44,11 @@ class ScriptedTrade:
         return [Listing(amount=p, currency="exalted", account="a") for p in prices]
 
 
-def price(trade, tmp_path):
+def price(trade, tmp_path, item=None, cache=None):
+    item = ITEM if item is None else item
     return price_by_search(
-        ITEM, category_for(ITEM), MODS, NOTABLES, trade,
-        Cache(tmp_path / "c.sqlite"), RATES,
+        item, category_for(item), MODS, NOTABLES, trade,
+        cache or Cache(tmp_path / "c.sqlite"), RATES,
     )
 
 
@@ -105,15 +106,58 @@ def test_ask_follows_the_low_when_the_market_is_tight(tmp_path):
 
 
 def test_result_records_which_rung_priced_it(tmp_path):
-    """The explanation must describe the search that actually ran."""
+    """The explanation must describe the search that actually ran.
+
+    On an item whose every rung is a different query — ITEM's first four are
+    the same one, so they are searched once between them.
+    """
+    chest = itemtext.parse((FIXTURES / "SpiritLifeChest.txt").read_text())
     trade = ScriptedTrade([
         (0, []),
         (0, []),
         (12, [5.0, 6.0, 7.0]),
     ])
-    result = price(trade, tmp_path)
+    result = price(trade, tmp_path, item=chest)
     assert result.relax_used == 2
     assert result.tag == "relaxed:2"
+
+
+def test_a_rung_that_repeats_the_query_is_not_searched_again(tmp_path):
+    """Widening only widens when it changes the query.
+
+    An item with one searchable mod keeps that mod at rungs 0 through 3 — the
+    cap is 4, 3, 2, 1 — so four of its five rungs are the same search, and
+    they were all issued. That is what "searching…" looked like on a loop.
+    """
+    from sox.valuation.query import query_hash
+
+    rungs = [query_hash(build_query(ITEM, category_for(ITEM), MODS, NOTABLES,
+                                    relax=step))
+             for step in range(len(RELAX_STEPS))]
+    assert len(set(rungs)) == 2, "four rungs, one query, and then the bare one"
+
+    trade = ScriptedTrade([(0, [])])
+    price(trade, tmp_path)
+    assert trade.searches == 2, "one search per distinct rung, not per rung"
+
+
+def test_a_replay_of_the_whole_ladder_costs_nothing(tmp_path):
+    """Only the winning rung used to be stored, so a second copy of the same
+    item re-ran every rung before it — live, and then reported the replay as
+    having cost no searches at all."""
+    cache = Cache(tmp_path / "c.sqlite")
+    chest = itemtext.parse((FIXTURES / "SpiritLifeChest.txt").read_text())
+    script = [(0, []), (0, []), (12, [5.0, 6.0, 7.0])]
+
+    first = price(ScriptedTrade(script), tmp_path, item=chest, cache=cache)
+    assert first.searches_used == 3 and first.from_cache is False
+
+    again = ScriptedTrade(script)
+    second = price(again, tmp_path, item=chest, cache=cache)
+    assert again.searches == 0, "every rung was already on disk"
+    assert second.searches_used == 0 and second.from_cache is True
+    assert (second.ceiling_ex, second.relax_used) == (first.ceiling_ex,
+                                                      first.relax_used)
 
 
 def test_explanation_matches_the_rung_used():
