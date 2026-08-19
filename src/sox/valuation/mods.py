@@ -110,7 +110,12 @@ def coherence_keys(entry: ModEntry) -> tuple[str, ...]:
 
 
 def dominant_archetype(entries: list[ModEntry]) -> tuple[str | None, int]:
-    """The buyer group the most mods on this item serve."""
+    """The buyer group the most mods on this item serve.
+
+    A group of one is not a cluster. With every archetype at a count of one
+    the winner is whichever happened to be seen first, and ordering the query
+    by it put an incidental mana roll ahead of the item's best mod.
+    """
     counts: dict[str, int] = {}
     for entry in entries:
         for key in coherence_keys(entry):
@@ -118,6 +123,8 @@ def dominant_archetype(entries: list[ModEntry]) -> tuple[str | None, int]:
     if not counts:
         return None, 0
     key, top = max(counts.items(), key=lambda kv: kv[1])
+    if top < 2:
+        return None, top
     return key, top
 
 
@@ -155,17 +162,16 @@ def select_synergistic(
             actual, low, high = span
             if high > low:
                 percentile = min(max((actual - low) / (high - low), 0.0), 1.0)
-        # Roll quality leads, tier breaks ties. Tier is the bracket the mod
-        # rolled in; the percentile is how good THIS roll is inside it, and a
-        # tier-1 mod sitting at the floor of its range — "Adds 6 to 102
-        # Lightning" — says less about the item than a strong roll in a lower
-        # bracket. Ranking by tier first also buries any mod the item reports
-        # without one.
-        return (-percentile, tier, -entry.weight)
+        # Weight leads: a build-defining mod belongs in the query whatever it
+        # rolled. Roll quality then separates mods of equal weight — "Adds 6
+        # to 102 Lightning" at the floor of its range says less about the item
+        # than a strong roll of the same weight — and tier breaks what is left.
+        return (-entry.weight, -percentile, tier)
 
     if key is None:
+        # No cluster: rank alone decides, and there is no archetype to name.
         ordered = sorted(entries, key=rank)
-        return ordered[:limit], "top-weight"
+        return ordered[:limit], ""
 
     cohering = [e for e in entries if key in coherence_keys(e)]
     others = [e for e in entries if key not in coherence_keys(e)]

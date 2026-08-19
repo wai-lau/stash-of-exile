@@ -480,3 +480,43 @@ def test_a_weak_roll_is_dropped_before_a_strong_one():
     assert "Adds # to # Cold Damage" in kept
     assert "#% increased Cold Damage" in kept
     assert "Adds # to # Lightning Damage" not in kept, "the 7th-percentile roll goes first"
+
+
+def test_a_group_of_one_is_not_a_cluster():
+    """With every archetype at a count of one, the winner is arbitrary.
+
+    A helmet whose mods each served a different archetype was ordered by
+    whichever was seen first, putting an incidental mana roll ahead of the
+    item's only build-defining mod.
+    """
+    from sox.valuation.mods import dominant_archetype, matched
+    from sox.valuation.query import explain_selection, searchable_mods
+
+    item = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nViper Visor\nWarded Helm\n"
+        "--------\nArmour: 91\n--------\nItem Level: 81\n--------\n"
+        "{ Suffix Modifier }\n+23(20-28) to maximum Mana\n"
+        "{ Suffix Modifier }\n+24(20-26) to Intelligence\n"
+        "--------\n+28(20-30)% of Armour also applies to Elemental Damage (desecrated)\n"
+    )
+    group, _ = dominant_archetype(matched(searchable_mods(item), MODS))
+    assert group is None, "one mod per archetype is not a cluster"
+
+    named, stats = explain_selection(item, MODS, NOTABLES)
+    assert named is None or named == ""
+    assert stats[0] == "#% of Armour also applies to Elemental Damage", \
+        "the build-defining mod leads"
+
+
+def test_weight_leads_the_ranking():
+    """A build-defining mod belongs in the query whatever it rolled."""
+    from sox.valuation.query import explain_selection
+
+    item = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nX\nWarded Helm\n"
+        "--------\nArmour: 91\n--------\nItem Level: 81\n--------\n"
+        "{ Suffix Modifier }\n+28(20-28) to maximum Mana\n"   # near-max roll, w2
+        "--------\n+21(20-30)% of Armour also applies to Elemental Damage (desecrated)\n"
+    )  # w3, near-floor roll
+    _, stats = explain_selection(item, MODS, NOTABLES, relax=3)   # keeps 1
+    assert stats == ["#% of Armour also applies to Elemental Damage"]
