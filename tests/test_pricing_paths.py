@@ -268,5 +268,7 @@ def test_score_line_shows_how_the_total_was_reached():
         "Adds 121 to 183 Cold Damage\nAdds 6 to 102 Lightning Damage\n"
     )
     total, reason = score_gear(item, MODS, load_bases())
-    assert reason.startswith(str(total)), "the total must lead the line"
+    # The total is printed on its own line; the reason lists the components
+    # beneath it, so it must NOT repeat the total.
     assert "mods" in reason and "elemental" in reason
+    assert total > 0

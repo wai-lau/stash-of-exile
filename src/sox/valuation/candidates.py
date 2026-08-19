@@ -133,10 +133,9 @@ def score_gear(item: dict, index: dict[str, ModEntry], base_rules: BaseRules) ->
         total = mod_score + (1 if base_score >= 4 else 0)
     else:
         total = base_score + mod_score
-    # Lead with the total, then how it was reached, so the number is
-    # answerable from the line itself.
+    # The caller prints the total, then these components beneath it.
     detail = " · ".join(reasons) if reasons else "nothing recognised"
-    return total, f"{total}  ({detail})"
+    return total, detail
 
 
 def qualifies(item: dict, score: int) -> bool:
