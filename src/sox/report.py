@@ -126,9 +126,9 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
         width = max((len(str(t)) for t, _, _ in priced.breakdown), default=0)
         for text, weight, tag in priced.breakdown:
             if weight is None:
-                # Shown as +0 rather than "?": every row states what it
-                # contributed, and these rows sum to the total.
-                mark, note = "+0", "(not in allowlist)"
+                # +0 says it all: the mod is not in the allowlist, so it
+                # contributed nothing.
+                mark, note = "+0", ""
             elif weight == 0:
                 mark, note = "·", "(minor-mod cap reached)"
             else:
