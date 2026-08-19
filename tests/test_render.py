@@ -12,7 +12,7 @@ from sox.valuation.classify import ItemClass
 ITEM = {"name": "Doom Shield", "baseType": "Tower Shield", "ilvl": 70}
 ROWS = (
     ("+96 to maximum Life", 3, "defence"),
-    ("+145 to Evasion Rating", None, "equipment filter"),
+    ("+145 to Evasion Rating", None, "filter"),
     ("+8% to Fire Resistance", 0, ""),
 )
 
@@ -45,5 +45,5 @@ def test_equipment_filter_mods_are_marked_not_dismissed():
         breakdown=ROWS, listings=9, median_ex=12.5, p25_ex=12.5,
     )
     text = render(ITEM, priced, divine_ratio=320.0)
-    assert "(equipment filter)" in text, "a mod driving the search must not read as ignored"
+    assert "(filter)" in text, "a mod driving the search must not read as ignored"
     assert "+0  +145 to Evasion Rating" in text

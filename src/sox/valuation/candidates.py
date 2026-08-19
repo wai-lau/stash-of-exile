@@ -184,7 +184,7 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
         elif text in via_equipment:
             # Scores nothing, but the search does use it — as the item's
             # total, through equipment_filters.
-            tag = "equipment filter"
+            tag = "filter"
         rows.append((text, weight, tag))
 
     mod_score, _ = score_mods(mods, index)
