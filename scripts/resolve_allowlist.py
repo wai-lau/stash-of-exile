@@ -30,6 +30,9 @@ ALLOWLIST = OrderedDict(
                 (2, "#% increased Energy Shield", None),
                 (1, "#% increased Evasion Rating", None),
                 (1, "#% increased Armour", None),
+                # Flat defences, which were missing while flat ES was present.
+                (2, "# to Evasion Rating", None),
+                (2, "# to Armour", None),
                 (2, "#% increased Evasion and Energy Shield", "hybrid bases"),
                 (2, "#% increased Armour and Energy Shield", None),
                 (2, "#% increased Armour and Evasion", None),

@@ -59,12 +59,14 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
             lines.append(f"  verdict    JUNK  (coherence {priced.score}, needs 6)")
             for text, weight in priced.breakdown:
                 if weight is None:
-                    note = "not in allowlist"
+                    mark, note = "?", "  (not in allowlist)"
                 elif weight == 0:
-                    note = "capped, added nothing"
+                    # Minor mods stop counting after the cap: a pile of them
+                    # makes an item worse, not better.
+                    mark, note = "·", "  (minor-mod cap reached)"
                 else:
-                    note = f"+{weight}"
-                lines.append(f"             {note:<16} {text}")
+                    mark, note = f"+{weight}", ""
+                lines.append(f"             {mark:<3} {text}{note}")
         elif priced.tag == "unpriced:above-market":
             lines.append("  price      no comparable listing")
             lines.append("             nothing at least as good is listed — "

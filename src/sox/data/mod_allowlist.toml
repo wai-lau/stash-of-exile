@@ -63,6 +63,20 @@ weight = 1
 tags = ["armour", "defence"]
 
 [[category.mod]]
+ids = ["explicit.stat_2144192055"]
+slug = "to_evasion_rating"
+text = "# to Evasion Rating"
+weight = 2
+tags = ["defence", "evasion"]
+
+[[category.mod]]
+ids = ["explicit.stat_809229260"]
+slug = "to_armour"
+text = "# to Armour"
+weight = 2
+tags = ["armour", "defence"]
+
+[[category.mod]]
 ids = ["explicit.stat_1999113824"]
 slug = "increased_evasion_and_energy_shield"
 text = "#% increased Evasion and Energy Shield"
