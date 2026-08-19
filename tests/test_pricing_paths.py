@@ -58,15 +58,20 @@ def test_ladder_trims_notables_last_and_eventually_to_one():
     assert counts[-1] == 1, "the last rung must drop to a single notable"
 
 
-def test_query_constrains_only_the_top_weight_mods():
+def test_the_query_is_capped_by_the_ladder_rung():
     """Constraining on every matched mod returns nothing.
 
-    The rare bow carries fire AND cold AND lightning AND accuracy; demanding
-    all four at once describes one item in the world.
+    The rare bow carries fire AND cold AND lightning AND accuracy AND light
+    radius; demanding all of them at once describes one item in the world.
+    The rung caps how many survive.
     """
+    from sox.valuation.query import RELAX_STEPS
+
     item = load("RareItem")
-    query = build_query(item, category_for(item), MODS, NOTABLES)
-    assert len(query["query"]["stats"][0]["filters"]) <= 3
+    for rung, cap in enumerate(RELAX_STEPS):
+        query = build_query(item, category_for(item), MODS, NOTABLES, relax=rung)
+        sent = len(query["query"]["stats"][0]["filters"])
+        assert sent <= cap, f"rung {rung} sent {sent} filters, cap is {cap}"
 
 
 def test_category_comes_from_item_class():
@@ -334,10 +339,10 @@ def test_searched_mods_are_reported_in_the_items_own_wording():
     _, canonical = explain_selection(item, MODS, notables)
     actual = searched_item_texts(item, MODS, notables)
 
-    assert "# to Intelligence" not in canonical, "not part of the dominant group"
     assert "Adds 121 to 183 Cold Damage" in actual, "item wording, not the template"
-    assert "+21 to Intelligence" not in actual
     assert len(actual) == len(canonical)
+    # Cohering mods lead; Intelligence trails them rather than being dropped.
+    assert canonical.index("Adds # to # Cold Damage") < canonical.index("# to Intelligence")
 
 
 def test_endgame_families_map_to_a_search_category():

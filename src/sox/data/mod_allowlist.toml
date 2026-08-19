@@ -149,6 +149,13 @@ weight = 1
 tags = ["defence", "elemental", "resistance"]
 
 [[category.mod]]
+ids = ["explicit.stat_2923486259"]
+slug = "to_chaos_resistance"
+text = "#% to Chaos Resistance"
+weight = 2
+tags = ["chaos", "defence", "resistance"]
+
+[[category.mod]]
 ids = ["explicit.stat_4095671657"]
 slug = "to_maximum_fire_resistance"
 text = "#% to Maximum Fire Resistance"

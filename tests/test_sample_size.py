@@ -156,8 +156,12 @@ def test_widening_drops_the_worst_tier_mod_first():
     assert kept[0] == lightning.ids[0], "the tier 1 mod must survive"
 
 
-def test_only_cohering_mods_are_searched():
-    """Non-cohering mods are dropped, not used to pad the query."""
+def test_cohering_mods_are_searched_first_but_others_are_not_dropped():
+    """Every allowlisted mod belongs in the search; coherence sets the order.
+
+    A chaos resistance roll adds value whether or not it serves the item's
+    main archetype, so it is only dropped when the ladder narrows.
+    """
     from sox.valuation.query import explain_selection
 
     item = itemtext.parse(
@@ -170,7 +174,12 @@ def test_only_cohering_mods_are_searched():
     )
     group, stats = explain_selection(item, MODS, NOTABLES, relax=0)
     assert group == "spell"
-    assert "#% increased Attack Speed" not in stats
+    assert stats.index("#% increased Cast Speed") < stats.index("#% increased Attack Speed"), \
+        "cohering mods come first"
+
+    # At the narrowest rung only the cohering mods survive.
+    _, narrow = explain_selection(item, MODS, NOTABLES, relax=3)
+    assert "#% increased Attack Speed" not in narrow
 
 
 def test_coherence_reports_but_does_not_gate_the_search():

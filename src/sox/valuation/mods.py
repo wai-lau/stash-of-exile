@@ -128,26 +128,19 @@ def select_synergistic(
     texts: dict[int, str] | None = None,
     rolls: dict[str, tuple[float, float, float]] | None = None,
 ) -> tuple[list[ModEntry], str]:
-    """Pick only the mods that cohere, best tier first.
+    """Order the mods for the query: cohering first, then the rest.
 
-    This is the judgement a price-check overlay leaves to the player: which
-    stats belong to one build. Mods outside the item's dominant archetype are
-    NOT used to pad the query — a query mixing +Melee Skills with +Spell
-    Skills describes a buyer who does not exist, and padding it with unrelated
-    stats only narrows the result set for no gain.
+    Every allowlisted mod belongs in the search — a chaos resistance roll adds
+    value whether or not it serves the item's main archetype. Coherence
+    decides the ORDER, not membership, so when the ladder widens the mods that
+    serve one buyer are the ones that survive.
 
-    Ordering is by the game's own mod tier where the item reports one (tier 1
-    is best), so that widening the search drops the weakest mod first.
+    Within each group, roll quality leads and mod tier breaks ties.
     """
     if not entries:
         return [], ""
 
     key, _ = dominant_archetype(entries)
-    if key is None:
-        cohering = sorted(entries, key=lambda e: -e.weight)[:limit]
-        return cohering, "top-weight"
-
-    cohering = [e for e in entries if key in coherence_keys(e)]
 
     def rank(entry: ModEntry) -> tuple[int, float, int]:
         text = (texts or {}).get(id(entry))
@@ -170,8 +163,15 @@ def select_synergistic(
         # without one.
         return (-percentile, tier, -entry.weight)
 
+    if key is None:
+        ordered = sorted(entries, key=rank)
+        return ordered[:limit], "top-weight"
+
+    cohering = [e for e in entries if key in coherence_keys(e)]
+    others = [e for e in entries if key not in coherence_keys(e)]
     cohering.sort(key=rank)
-    return cohering[:limit], key
+    others.sort(key=rank)
+    return (cohering + others)[:limit], key
 
 
 def coherence_bonus(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[int, str]:

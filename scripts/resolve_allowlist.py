@@ -71,6 +71,9 @@ ALLOWLIST = OrderedDict(
                 (1, "#% to Cold Resistance", None),
                 (1, "#% to Lightning Resistance", None),
                 (1, "#% to all Elemental Resistances", None),
+                # Chaos resistance is scarcer than elemental and was missing
+                # entirely; only the maximum-res version was listed.
+                (2, "#% to Chaos Resistance", None),
                 (3, "#% to Maximum Fire Resistance", "max-res is rare and pricey"),
                 (3, "#% to Maximum Cold Resistance", None),
                 (3, "#% to Maximum Lightning Resistance", None),
