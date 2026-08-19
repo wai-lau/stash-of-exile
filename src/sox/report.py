@@ -122,12 +122,10 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                 lines.append("             the index price is a floor across all "
                              "copies; yours is better than most")
 
-    if priced.searched_stats:
-        head = f"  searched   as {priced.searched_group}" if priced.searched_group \
-            else "  searched   on"
-        lines.append(head)
-        for stat in priced.searched_stats:
-            lines.append(f"             - {stat}")
+    if priced.searched_stats and priced.searched_group:
+        # The mods themselves are highlighted in the score breakdown, so
+        # listing them again here would say the same thing twice.
+        lines.append(f"  searched   as {priced.searched_group}")
     if priced.breakdown:
         lines.append(f"  score      {priced.score}")
         width = max((len(str(t)) for t, _, _ in priced.breakdown), default=0)

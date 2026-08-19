@@ -184,13 +184,22 @@ def run_watch(args, cfg, cache, scout, league) -> int:
             searching = wants_search(verdict, entry_, item,
                                      force=getattr(cfg, "force", False)) \
                 and trade is not None
+
+            # Most items resolve in one search and print immediately, so
+            # announcing "searching…" up front is noise. It earns its place
+            # only when the wait is real — a rate-limit block or a walk down
+            # the widening ladder — so a timer prints it and is cancelled if
+            # the result arrives first.
+            announced = threading.Event()
+
+            def announce_slow(item_name: str = name) -> None:
+                announced.set()
+                print(watch_ui.detected(item_name, "searching…"), flush=True)
+
+            timer = threading.Timer(SLOW_SEARCH_SECONDS, announce_slow)
+            timer.daemon = True
             if searching:
-                note = "searching…"
-            elif entry_ is not None:
-                note = "index"
-            else:
-                note = "junk"
-            print(watch_ui.detected(name, note), flush=True)
+                timer.start()
 
             try:
                 priced = _price_item(item, index, rates, mod_index, base_rules,
