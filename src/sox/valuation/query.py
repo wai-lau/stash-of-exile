@@ -37,36 +37,57 @@ RELAX_STEPS = (4, 3, 2, 1)
 # damage, aps, crit and rune_sockets are deliberately absent: a weapon's
 # damage is dominated by its base and quality, so constraining it excludes
 # comparable items for no gain.
+# property -> (filter id, flat-mod pattern, percent-mod pattern)
 DEFENCE_PROPERTIES = {
-    "Energy Shield": ("es", re.compile(r"to maximum Energy Shield$", re.I)),
-    "Armour": ("ar", re.compile(r"to Armour$", re.I)),
-    "Evasion Rating": ("ev", re.compile(r"to Evasion Rating$", re.I)),
-    "Evasion": ("ev", re.compile(r"to Evasion Rating$", re.I)),
-    "Runic Ward": ("ward", re.compile(r"to maximum Runic Ward$", re.I)),
-    "Spirit": ("spirit", re.compile(r"to Spirit$", re.I)),
-    "Block chance": ("block", re.compile(r"increased Block chance$", re.I)),
+    "Energy Shield": ("es", re.compile(r"to maximum Energy Shield$", re.I),
+                      re.compile(r"increased .*Energy Shield$", re.I)),
+    "Armour": ("ar", re.compile(r"to Armour$", re.I),
+               re.compile(r"increased Armour\b.*$", re.I)),
+    "Evasion Rating": ("ev", re.compile(r"to Evasion Rating$", re.I),
+                       re.compile(r"increased (Evasion Rating|.*and Evasion)$", re.I)),
+    "Evasion": ("ev", re.compile(r"to Evasion Rating$", re.I),
+                re.compile(r"increased (Evasion Rating|.*and Evasion)$", re.I)),
+    "Runic Ward": ("ward", re.compile(r"to maximum Runic Ward$", re.I),
+                   re.compile(r"increased maximum Runic Ward$", re.I)),
+    "Spirit": ("spirit", re.compile(r"to Spirit$", re.I),
+               re.compile(r"increased Spirit$", re.I)),
+    "Block chance": ("block", re.compile(r"(?!)", re.I),
+                     re.compile(r"increased Block chance$", re.I)),
 }
 
 
-def equipment_minimum(item: dict, property_name: str, pattern) -> int | None:
-    """The item's total for this defence, normalised to its worst roll.
+def equipment_minimum(item: dict, property_name: str, flat, percent) -> int | None:
+    """The item's total for this defence, normalised to its worst rolls.
 
     An item showing 485 Evasion whose "+145 to Evasion Rating" could have
     rolled as low as 117 is really a 457-Evasion item that got lucky. Asking
-    for 485 would exclude the identical item with a worse roll, which is a
-    comparable, so the minimum is:
+    for 485 would exclude the identical item with a worse roll, which is
+    exactly a comparable.
 
-        total - what the mod actually rolled + the least it could have rolled
+    Flat mods subtract directly; percent mods are multiplicative on the base,
+    so the base is recovered first and rebuilt at the minimum rolls:
+
+        base      = total / (1 + pct_actual) - flat_actual
+        minimum   = (base + flat_min) * (1 + pct_min)
     """
     total = _property(item, property_name)
     if total is None:
         return None
 
-    adjustment = 0.0
-    for text, (actual, low, _high) in (item.get("modRanges") or {}).items():
-        if pattern.search(text):
-            adjustment += low - actual
-    return max(int(round(total + adjustment)), 1)
+    ranges = item.get("modRanges") or {}
+    flat_actual = flat_min = 0.0
+    pct_actual = pct_min = 0.0
+    for text, (actual, low, _high) in ranges.items():
+        if flat.search(text):
+            flat_actual += actual
+            flat_min += low
+        elif percent.search(text):
+            pct_actual += actual
+            pct_min += low
+
+    base = total / (1 + pct_actual / 100) - flat_actual
+    minimum = (base + flat_min) * (1 + pct_min / 100)
+    return max(int(round(minimum)), 1)
 
 # Item Class -> trade category. Item Class comes straight from the clipboard.
 ITEM_CLASS_CATEGORIES = {
@@ -169,8 +190,8 @@ def build_query(
         type_filters["ilvl"] = {"min": int(ilvl * scale)}
 
     equipment: dict = {}
-    for prop_name, (filter_id, pattern) in DEFENCE_PROPERTIES.items():
-        value = equipment_minimum(item, prop_name, pattern)
+    for prop_name, (filter_id, flat, percent) in DEFENCE_PROPERTIES.items():
+        value = equipment_minimum(item, prop_name, flat, percent)
         if value:
             equipment[filter_id] = {"min": value}
 
@@ -188,8 +209,16 @@ def build_query(
     # often unlisted, while "a Megalomaniac with this one notable" usually is,
     # and that single notable is what the item is really worth.
     NOTABLE_WEIGHT = 99
+    # A mod already covered by an equipment filter must not also be a stat
+    # filter: the item's total includes it, so constraining both asks for it
+    # twice. Spirit is the case that matters — local on a sceptre, where the
+    # filter covers it, but global on an amulet, where it must stay a stat.
+    covered = set(defence_mod_texts(item))
+
     scored: list[tuple[int, str, object]] = []
     for text in all_mods:
+        if text in covered:
+            continue
         if text.startswith("Allocates "):
             stat_id = notables.get(text[len("Allocates "):].strip())
             if stat_id:
@@ -305,7 +334,7 @@ def defence_mod_texts(item: dict) -> list[str]:
     show them as ignored.
     """
     out = []
-    for prop_name, (_id, pattern) in DEFENCE_PROPERTIES.items():
+    for prop_name, (_id, flat, percent) in DEFENCE_PROPERTIES.items():
         if _property(item, prop_name) is None:
             continue
         for text in (
@@ -313,7 +342,7 @@ def defence_mod_texts(item: dict) -> list[str]:
             + list(item.get("fracturedMods") or [])
             + list(item.get("runeMods") or [])
         ):
-            if pattern.search(text) and text not in out:
+            if (flat.search(text) or percent.search(text)) and text not in out:
                 out.append(text)
     return out
 

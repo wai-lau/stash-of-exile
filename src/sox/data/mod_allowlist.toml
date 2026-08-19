@@ -76,29 +76,6 @@ text = "#% of Armour also applies to Chaos Damage"
 weight = 3
 tags = ["armour", "chaos", "defence"]
 
-[[category.mod]]
-ids = ["explicit.stat_4147897060"]
-slug = "increased_block_chance"
-text = "#% increased Block chance"
-weight = 2
-local_ids = ["explicit.stat_2481353198"]
-tags = ["defence"]
-
-[[category.mod]]
-ids = ["explicit.stat_774059442", "explicit.stat_3336230913"]
-slug = "to_maximum_runic_ward"
-text = "# to maximum Runic Ward"
-weight = 2
-tags = ["defence"]
-ambiguous = true  # matched by OR across these ids
-
-[[category.mod]]
-ids = ["explicit.stat_4273473110"]
-slug = "increased_maximum_runic_ward"
-text = "#% increased maximum Runic Ward"
-weight = 1
-tags = ["defence"]
-
 [[category]]
 name = "spirit"
 
@@ -1171,13 +1148,6 @@ slug = "bow_attacks_fire_additional_arrows"
 text = "Bow Attacks fire # additional Arrows"
 weight = 3
 tags = ["elemental"]
-
-[[category.mod]]
-ids = ["explicit.stat_1702195217"]
-slug = "to_block_chance"
-text = "#% to Block chance"
-weight = 2
-tags = ["defence"]
 
 [[category.mod]]
 ids = ["explicit.stat_1453197917"]

@@ -46,9 +46,8 @@ ALLOWLIST = OrderedDict(
             [
                 (3, "#% of Armour also applies to Elemental Damage", "armour-stacker enabler"),
                 (3, "#% of Armour also applies to Chaos Damage", None),
-                (2, "#% increased Block chance", None),
-                (2, "# to maximum Runic Ward", None),
-                (1, "#% increased maximum Runic Ward", None),
+                # Block and Runic Ward are local too: the item shows a total
+                # that already includes them, searched via equipment_filters.
             ],
         ),
         (
@@ -473,7 +472,6 @@ PATTERN_RULES = [
     (r"^#% increased Presence Area of Effect$", 2, None),
     (r"^Herald Skills deal #% increased Damage$", 2, None),
     (r"^#% increased Buff Effect .*$", 2, None),
-    (r"^#% to Block chance$", 2, None),
     (r"^# Life Regeneration per second$", 1, None),
     (r"^#% of maximum Life Regenerated per second$", 1, None),
     (r"^# to Stun Threshold$", 1, None),

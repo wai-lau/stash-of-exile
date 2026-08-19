@@ -227,21 +227,21 @@ def test_equipment_minimum_normalises_to_the_worst_roll():
     """
     from sox.valuation.query import DEFENCE_PROPERTIES, equipment_minimum
 
-    filter_id, pattern = DEFENCE_PROPERTIES["Evasion Rating"]
+    filter_id, flat, percent = DEFENCE_PROPERTIES["Evasion Rating"]
     assert filter_id == "ev"
     item = itemtext.parse(
         "Item Class: Helmets\nRarity: Rare\nX\nFreebooter Cap\n"
         "--------\nEvasion Rating: 485\n--------\nItem Level: 81\n--------\n"
         "{ Prefix Modifier }\n+145(117-150) to Evasion Rating\n"
     )
-    assert equipment_minimum(item, "Evasion Rating", pattern) == 485 - 145 + 117
+    assert equipment_minimum(item, "Evasion Rating", flat, percent) == 485 - 145 + 117
 
     # With no roll range reported, the total stands as-is.
     plain = itemtext.parse(
         "Item Class: Helmets\nRarity: Rare\nX\nFreebooter Cap\n"
         "--------\nEvasion Rating: 485\n--------\nItem Level: 81\n"
     )
-    assert equipment_minimum(plain, "Evasion Rating", pattern) == 485
+    assert equipment_minimum(plain, "Evasion Rating", flat, percent) == 485
 
 
 def test_weapon_damage_is_left_out_of_equipment_filters():
@@ -249,7 +249,7 @@ def test_weapon_damage_is_left_out_of_equipment_filters():
     from sox.valuation.query import DEFENCE_PROPERTIES, build_query, category_for
 
     assert not {"damage", "aps", "crit", "rune_sockets"} & {
-        fid for fid, _ in DEFENCE_PROPERTIES.values()
+        fid for fid, _, _ in DEFENCE_PROPERTIES.values()
     }
     staff = itemtext.parse(
         "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
@@ -315,3 +315,55 @@ def test_a_cached_price_does_not_claim_a_search(tmp_path):
     assert second.searches == 0, "must not hit the API again"
     assert result.from_cache is True
     assert result.searches_used == 0
+
+
+def test_percent_defence_mods_are_normalised_multiplicatively():
+    """A percent roll scales the base, so it cannot be subtracted.
+
+    A sceptre showing 152 Spirit from a 52%(51-55) roll has a base of 100, so
+    at the worst roll it would show 151.
+    """
+    from sox.valuation.query import DEFENCE_PROPERTIES, equipment_minimum
+
+    _, flat, percent = DEFENCE_PROPERTIES["Spirit"]
+    item = itemtext.parse(
+        "Item Class: Sceptres\nRarity: Rare\nX\nRattling Sceptre\n"
+        "--------\nSpirit: 152\n--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n52(51-55)% increased Spirit\n"
+    )
+    assert equipment_minimum(item, "Spirit", flat, percent) == 151
+
+
+def test_block_and_ward_are_equipment_filters_not_stats():
+    from sox.valuation.mods import normalize_mod
+
+    for text in ("#% increased Block chance", "# to maximum Runic Ward",
+                 "#% increased maximum Runic Ward"):
+        assert normalize_mod(text) not in MODS, f"{text} must not be a stat"
+
+
+def test_a_local_mod_is_never_constrained_twice():
+    """Spirit is local on a sceptre and global on an amulet.
+
+    On the sceptre the equipment filter covers it, so it must not also appear
+    as a stat filter; on the amulet there is no such property, so it must.
+    """
+    from sox.valuation.query import build_query, category_for
+
+    sceptre = itemtext.parse(
+        "Item Class: Sceptres\nRarity: Rare\nX\nRattling Sceptre\n"
+        "--------\nSpirit: 152\n--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n52(51-55)% increased Spirit\n"
+    )
+    query = build_query(sceptre, category_for(sceptre), MODS, NOTABLES)
+    assert query["query"]["filters"]["equipment_filters"]["filters"]["spirit"]
+    assert query["query"]["stats"][0]["filters"] == [], "already covered by the filter"
+
+    amulet = itemtext.parse(
+        "Item Class: Amulets\nRarity: Rare\nX\nLapis Amulet\n"
+        "--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n+30 to Spirit\n"
+    )
+    query = build_query(amulet, category_for(amulet), MODS, NOTABLES)
+    assert "equipment_filters" not in query["query"]["filters"]
+    assert query["query"]["stats"][0]["filters"], "must stay a stat filter here"
