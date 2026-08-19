@@ -16,7 +16,7 @@ import re
 from functools import lru_cache
 
 from sox.valuation.allowlists import ModEntry, load_skills
-from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
+from sox.valuation.classify import ItemClass, classify, rarity_of
 from sox.valuation.mods import match_mod, select_synergistic
 from sox.valuation.rolls import parse_values
 
@@ -535,16 +535,13 @@ def build_query(
     if classify(item) is ItemClass.UNIQUE:
         # A unique is identified by name; its base alone would match rares.
         type_filters["rarity"] = {"option": "unique"}
-    elif rarity in (Rarity.RARE, Rarity.NORMAL):
-        # Search the rarity itself, not "nonunique". A rare and a normal of the
-        # same base are different goods — the normal is bought as a craft base
-        # and priced on its ilvl, the rare on its mods — so lumping them
-        # together prices each against the other's market. Magic stays
-        # nonunique: a rare with the same two mods is a strictly better copy
-        # and belongs in its comparables.
-        type_filters["rarity"] = {"option": rarity.value}
     elif rarity is not None:
-        type_filters["rarity"] = {"option": "nonunique"}
+        # The rarity itself, not "nonunique", which spans all three at once.
+        # A rare, a magic and a normal of the same base are different goods:
+        # the normal is bought as a craft base and priced on its ilvl, the
+        # magic on its two mods and the room to regal it, the rare on its
+        # mods. Lumping them together priced each against the others' market.
+        type_filters["rarity"] = {"option": rarity.value}
 
     ilvl = int(item.get("ilvl") or 0)
     if ilvl:
