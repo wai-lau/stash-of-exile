@@ -13,6 +13,8 @@ from sox.valuation.classify import ItemClass, display_name
 # Mods that made it into the query are highlighted, so the score breakdown
 # shows at a glance which mods the price actually rests on.
 SEARCHED = "\033[36m"
+# The market row is the answer; everything else on screen explains it.
+MARKET = "\033[1;33m"
 RESET = "\033[0m"
 
 
@@ -93,7 +95,7 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
             market += f"  ·  25th {fmt_price(priced.p25_ex, divine_ratio)}"
         if priced.median_ex is not None:
             market += f"  ·  median {fmt_price(priced.median_ex, divine_ratio)}"
-        lines.append(f"  market     {market}")
+        lines.append(f"  market     {MARKET}{market}{RESET}")
         lines.append(f"             {priced.listings} listings, {priced.tag}")
         if priced.relax_used:
             lines.append("             found only after widening, so these comparables "
