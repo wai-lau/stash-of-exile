@@ -199,3 +199,38 @@ def test_never_searched_on_an_unrevealed_mod():
     query = build_query(item, category_for(item), MODS, NOTABLES)
     dumped = str(query)
     assert "Unrevealed" not in dumped
+
+
+def test_unique_absent_from_index_is_searched_not_abandoned():
+    """We know its name, so a search can price it.
+
+    Leaving it unpriced would be giving up with a usable option in hand.
+    """
+    from sox.valuation.candidates import should_search_unique
+
+    item = itemtext.parse(
+        "Item Class: Shields\nRarity: Unique\nSomeNewUnique\nTower Shield\n"
+        "--------\nItem Level: 81\n"
+    )
+    assert should_search_unique(item, None, UNIQUES) == "not-indexed"
+
+
+def test_roll_score_from_advanced_descriptions_needs_no_index():
+    """PoE2 inlines actual(min-max), so roll quality is free to compute."""
+    from sox.valuation.rolls import roll_score_from_item
+
+    item = itemtext.parse(
+        "Item Class: Shields\nRarity: Unique\nDoomgate\nBraced Tower Shield\n"
+        "--------\nItem Level: 81\n--------\n"
+        "{ Unique Modifier }\n100(80-100)% increased Block chance\n"
+        "{ Unique Modifier }\n150(100-150)% increased Armour\n"
+    )
+    assert roll_score_from_item(item) == 1.0
+
+    floor = itemtext.parse(
+        "Item Class: Shields\nRarity: Unique\nDoomgate\nBraced Tower Shield\n"
+        "--------\nItem Level: 81\n--------\n"
+        "{ Unique Modifier }\n80(80-100)% increased Block chance\n"
+        "{ Unique Modifier }\n100(100-150)% increased Armour\n"
+    )
+    assert roll_score_from_item(floor) == 0.0

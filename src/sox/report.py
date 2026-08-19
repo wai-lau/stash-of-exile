@@ -25,6 +25,7 @@ class PricedItem:
     quantity: int = 0
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
+    roll_pct: float | None = None
 
 
 def fmt_price(ex: float | None, divine_ratio: float) -> str:
@@ -62,6 +63,14 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                      + (f"   ({priced.quantity:,} listed)" if priced.quantity else ""))
         if priced.quantity and priced.quantity < 20:
             lines.append("             thin market — index price is weak evidence")
+        if priced.roll_pct is not None:
+            band = ("well rolled" if priced.roll_pct >= 0.75
+                    else "poorly rolled" if priced.roll_pct <= 0.25 else "average roll")
+            lines.append(f"  rolls      {priced.roll_pct * 100:.0f}th percentile "
+                         f"({band})")
+            if priced.roll_pct >= 0.75:
+                lines.append("             the index price is a floor across all "
+                             "copies; yours is better than most")
 
     if priced.searched_stats:
         head = f"  searched   as {priced.searched_group}" if priced.searched_group \

@@ -14,6 +14,7 @@ import httpx
 from sox.cache import TTL, Cache
 
 BASE = "https://api.poe2scout.com/poe2"
+PER_PAGE = 100
 
 CURRENCY_CATEGORIES = (
     "currency", "fragments", "runes", "essences", "ultimatum", "expedition",
@@ -90,11 +91,9 @@ class ScoutClient:
             ("Uniques", UNIQUE_CATEGORIES),
         ):
             for category in categories:
-                payload = self._get(
-                    f"/Leagues/{league}/{kind}/ByCategory",
-                    params={"category": category, "perPage": 100},
-                )
-                for item in payload.get("Items", []):
+                for item in self._all_pages(
+                    f"/Leagues/{league}/{kind}/ByCategory", category
+                ):
                     price = item.get("CurrentPrice")
                     text, short = item.get("Text"), item.get("Name")
                     if price is None or not (text or short):
@@ -120,6 +119,26 @@ class ScoutClient:
             ttl=TTL["index_price"],
         )
         return merged
+
+    def _all_pages(self, path: str, category: str) -> list[dict]:
+        """Every page of a category, not just the first.
+
+        Categories are larger than one page: armour alone holds 227 uniques
+        across 3 pages, so fetching only page 1 silently loses more than half
+        of them and prices those items as "no index".
+        """
+        items: list[dict] = []
+        page = 1
+        while True:
+            payload = self._get(
+                path, params={"category": category, "perPage": PER_PAGE, "page": page}
+            )
+            batch = payload.get("Items") or []
+            items.extend(batch)
+            total_pages = int(payload.get("Pages") or 1)
+            if page >= total_pages or not batch:
+                return items
+            page += 1
 
     def currency_rates(self, index: dict[str, IndexEntry]) -> dict[str, float]:
         """Trade currency id -> value in exalted."""

@@ -25,6 +25,7 @@ from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_
 from sox.valuation.classify import ItemClass, classify, display_name
 from sox.valuation.index_pricer import index_price_for
 from sox.valuation.mods import build_index
+from sox.valuation.rolls import roll_score, roll_score_from_item
 from sox.valuation.query import category_for, explain_selection
 from sox.valuation.trade_pricer import price_by_search
 
@@ -193,9 +194,15 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             )
 
     if entry is not None:
+        # Free to compute from the item's own advanced descriptions, and it is
+        # what tells you whether the index's single number describes YOUR copy.
+        roll_pct = roll_score_from_item(item)
+        if roll_pct is None:
+            roll_pct = roll_score(candidates.item_mods(item), entry.metadata)
         return report.PricedItem(
             name=display_name(item), item_class=item_class, price_ex=entry.price_ex,
             source="index", tag=None, reason=verdict.reason, quantity=entry.quantity,
+            roll_pct=roll_pct,
         )
 
     tag = "unpriced:unknown-class" if item_class is ItemClass.UNKNOWN else "unpriced:no-index"

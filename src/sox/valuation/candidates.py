@@ -156,7 +156,10 @@ def should_search_unique(item: dict, entry: IndexEntry | None, rules: UniqueRule
     if item.get("corrupted"):
         return "corrupted"
     if entry is None:
-        return None
+        # Not in the index at all. We know its name, so a search can still
+        # price it — leaving it unpriced would be giving up with a usable
+        # option in hand.
+        return "not-indexed"
 
     # If the index has no mods for this unique but our copy does, the index is
     # not describing our item and its price is not evidence about it.
