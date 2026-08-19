@@ -355,9 +355,13 @@ def test_a_local_mod_is_never_constrained_twice():
         "--------\nSpirit: 152\n--------\nItem Level: 81\n--------\n"
         "{ Prefix Modifier }\n52(51-55)% increased Spirit\n"
     )
+    def all_stats(query):
+        # An ambiguous mod lands in its own OR group, not the "and" group.
+        return [f for group in query["query"]["stats"] for f in group["filters"]]
+
     query = build_query(sceptre, category_for(sceptre), MODS, NOTABLES)
     assert query["query"]["filters"]["equipment_filters"]["filters"]["spirit"]
-    assert query["query"]["stats"][0]["filters"] == [], "already covered by the filter"
+    assert all_stats(query) == [], "already covered by the equipment filter"
 
     amulet = itemtext.parse(
         "Item Class: Amulets\nRarity: Rare\nX\nLapis Amulet\n"
@@ -366,4 +370,4 @@ def test_a_local_mod_is_never_constrained_twice():
     )
     query = build_query(amulet, category_for(amulet), MODS, NOTABLES)
     assert "equipment_filters" not in query["query"]["filters"]
-    assert query["query"]["stats"][0]["filters"], "must stay a stat filter here"
+    assert all_stats(query), "must stay a stat filter here"
