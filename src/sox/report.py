@@ -10,6 +10,11 @@ from dataclasses import dataclass
 
 from sox.valuation.classify import ItemClass, display_name
 
+# Mods that made it into the query are highlighted, so the score breakdown
+# shows at a glance which mods the price actually rests on.
+SEARCHED = "\033[36m"
+RESET = "\033[0m"
+
 
 @dataclass(frozen=True)
 class PricedItem:
@@ -36,6 +41,7 @@ class PricedItem:
     quantity: int = 0
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
+    searched_texts: tuple[str, ...] = ()   # the ITEM's wording, for highlighting
     roll_pct: float | None = None
 
 
@@ -134,7 +140,10 @@ def render(item: dict, priced: PricedItem, divine_ratio: float) -> str:
                 mark, note = "·", "(minor-mod cap reached)"
             else:
                 mark, note = f"+{weight}", f"({tag})" if tag else ""
-            lines.append(f"             {mark:<3} {str(text):<{width}}  {note}".rstrip())
+            row = f"{mark:<3} {str(text):<{width}}  {note}".rstrip()
+            if text in priced.searched_texts:
+                row = f"{SEARCHED}{row}{RESET}"
+            lines.append(f"             {row}")
         if priced.coherence_group and priced.coherence_count > 1:
             gain = f"  +{priced.coherence_bonus}" if priced.coherence_bonus else ""
             lines.append(f"  coherence  {priced.coherence_count} mods cluster on "

@@ -28,7 +28,11 @@ from sox.valuation.classify import ItemClass, classify, display_name
 from sox.valuation.index_pricer import index_price_for
 from sox.valuation.mods import build_index, explain_score
 from sox.valuation.rolls import roll_score, roll_score_from_item
-from sox.valuation.query import category_for, explain_selection
+from sox.valuation.query import (
+    category_for,
+    explain_selection,
+    searched_item_texts,
+)
 from sox.valuation.trade_pricer import price_by_search
 
 ITEM_SEPARATOR = "\n\n"
@@ -245,6 +249,8 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             # Explain the rung that actually produced the price, not rung 0.
             group, stats = explain_selection(item, mod_index, notables,
                                              relax=result.relax_used)
+            highlighted = searched_item_texts(item, mod_index, notables,
+                                              relax=result.relax_used)
             return report.PricedItem(
                 name=display_name(item), item_class=item_class,
                 price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",
@@ -258,6 +264,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 suggested_ask_ex=result.suggested_ask_ex,
                 searches_used=result.searches_used, from_cache=result.from_cache,
                 searched_group=group, searched_stats=stats,
+                searched_texts=tuple(highlighted),
             )
 
     if entry is not None:

@@ -314,3 +314,27 @@ def test_mods_carry_the_archetype_they_serve():
     rows = {text: tag for text, _, tag in score_rows(item, MODS, load_bases())}
     assert rows["Adds 121 to 183 Cold Damage"] == "elemental"
     assert rows["+21 to Intelligence"] == "", "not part of the dominant group"
+
+
+def test_searched_mods_are_reported_in_the_items_own_wording():
+    """The breakdown lists the item's text; the query lists the allowlist's.
+
+    Highlighting needs them matched up, or nothing would ever be marked.
+    """
+    from sox.valuation.allowlists import load_notables
+    from sox.valuation.query import explain_selection, searched_item_texts
+
+    item = itemtext.parse(
+        "Item Class: Quarterstaves\nRarity: Rare\nX\nBolting Quarterstaff\n"
+        "--------\nItem Level: 81\n--------\n"
+        "Adds 121 to 183 Cold Damage\nAdds 6 to 102 Lightning Damage\n"
+        "+21 to Intelligence\n"
+    )
+    notables = load_notables()
+    _, canonical = explain_selection(item, MODS, notables)
+    actual = searched_item_texts(item, MODS, notables)
+
+    assert "# to Intelligence" not in canonical, "not part of the dominant group"
+    assert "Adds 121 to 183 Cold Damage" in actual, "item wording, not the template"
+    assert "+21 to Intelligence" not in actual
+    assert len(actual) == len(canonical)

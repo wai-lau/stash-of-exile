@@ -265,3 +265,25 @@ def explain_selection(
         entries, max_stats, tiers=item.get("modTiers") or {}, texts=texts
     )
     return (group or None), [e.text for e in chosen]
+
+
+def searched_item_texts(item: dict, index, notables, relax: int = 0) -> list[str]:
+    """The item's OWN wording for the mods that went into the query.
+
+    explain_selection returns the allowlist's canonical text ("# to
+    Dexterity"); highlighting the breakdown needs the item's ("+31 to
+    Dexterity").
+    """
+    from sox.valuation.mods import normalize_mod
+
+    _, canonical = explain_selection(item, index, notables, relax=relax)
+    wanted = {normalize_mod(text) for text in canonical}
+    out = []
+    for text in (
+        list(item.get("explicitMods") or [])
+        + list(item.get("fracturedMods") or [])
+        + list(item.get("runeMods") or [])
+    ):
+        if normalize_mod(text) in wanted:
+            out.append(text)
+    return out
