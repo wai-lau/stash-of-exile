@@ -48,8 +48,9 @@ total 1,803 ex (4.7 div)  ·  1 priced  ·  2 searches
 On WSL the Windows clipboard is read through a single long-lived
 powershell.exe, because starting one per poll costs about half a second.
 Native Linux (wl-paste, xclip, xsel) and macOS (pbpaste) are polled directly.
-Non-item text is ignored, and whatever was on the clipboard before startup is
-skipped.
+Non-item text is ignored, whatever was on the clipboard before startup is
+skipped, and one copy is priced once — a clipboard that reads the same twice
+is the same copy, not a second one.
 
 ## What makes it different from an overlay
 

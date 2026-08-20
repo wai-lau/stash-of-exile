@@ -24,15 +24,25 @@ from collections.abc import Iterator
 # complete when the NEXT delimiter arrives, so every item would lag one copy
 # behind. One self-contained line per change has no such lag, and base64 also
 # removes any chance of item text colliding with a delimiter.
-
+#
 # Write-Output block-buffers when stdout is a pipe, so writing goes through
 # [Console]::Out with an explicit Flush to make every change arrive at once.
+#
+# `Get-Clipboard -Raw` intermittently comes back EMPTY while the clipboard is
+# held open by another process — the game does it constantly — and
+# SilentlyContinue turns that failed read into "" rather than an error. An
+# empty string is not $null, so the old guard let it through: it was emitted
+# as new content and became $last, which made the real item new again on the
+# next poll. Item, empty, item, empty, forever. Measured against a clipboard
+# nobody touched for six seconds: six emissions, two distinct values, one of
+# them blank — and the watch feed repriced the same gloves five times and
+# counted each into the session total.
 _PS_WATCHER = """
 $ErrorActionPreference = 'SilentlyContinue'
 $last = ''
 while ($true) {
     $current = Get-Clipboard -Raw
-    if ($current -ne $null -and $current -ne $last) {
+    if (-not [string]::IsNullOrWhiteSpace($current) -and $current -ne $last) {
         $last = $current
         $bytes = [Text.Encoding]::UTF8.GetBytes($current)
         [Console]::Out.WriteLine([Convert]::ToBase64String($bytes))
@@ -128,9 +138,20 @@ def watch(poll_ms: int = 400, skip_existing: bool = True) -> Iterator[str]:
             )
         stream = _watch_polling(backend, poll_ms)
 
-    for n, text in enumerate(stream):
-        if n == 0 and skip_existing:
+    # Deduplicated HERE and not only in each backend. Both of them already
+    # tracked the previous value, and the Windows one was still able to yield
+    # the same item over and over, so the guarantee this function's docstring
+    # makes was resting on a shell script keeping its own promise.
+    last = None
+    first = True
+    for text in stream:
+        if text == last:
             continue
+        last = text
+        if first:
+            first = False
+            if skip_existing:
+                continue
         yield text
 
 
