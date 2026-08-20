@@ -1,0 +1,17 @@
+Item Class: Talismans
+Rarity: Rare
+Gloom Fetish
+Alpha Talisman
+--------
+Requires: Level 62
+--------
+Item Level: 82
+--------
+{ Prefix Modifier "Frigid" (Tier: 2) }
+Adds 50(45-55) to 72(66-80) Cold Damage
+{ Prefix Modifier "Electrocuting" (Tier: 1) }
+90(80-95)% increased Elemental Damage with Attacks
+{ Suffix Modifier "of Damage Draining" (Tier: 3) }
+Leeches 7.78(6-8)% of Physical Damage as Mana
+{ Suffix Modifier "of Stunning" (Tier: 5) }
+20(18-24)% increased Stun Duration

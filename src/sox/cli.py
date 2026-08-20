@@ -401,6 +401,12 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
 
     if item_class is ItemClass.UNKNOWN:
         tag = "unpriced:unknown-class"
+    elif category_for(item) is None:
+        # Said plainly, because it is fixable and nothing else here is. The
+        # item is priceable, the search simply has no category to ask under —
+        # and "no-index" read as a fact about the market rather than a gap in
+        # a table in this repo.
+        tag = f"unpriced:no-category:{item.get('itemClass') or item_class}"
     elif not verdict.should_search:
         # Scored too low to be worth one of a limited number of searches.
         # Called junk rather than unpriced: "unpriced" reads as a failure,

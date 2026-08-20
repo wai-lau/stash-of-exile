@@ -1090,3 +1090,42 @@ def test_a_rare_is_not_pinned_to_its_base():
         item = load(name)
         query = build_query(item, category_for(item), MODS, NOTABLES)["query"]
         assert "type" not in query, name
+
+
+def test_every_melee_family_the_trade_filters_carry_has_a_class():
+    """An unmapped item class cannot be searched at all.
+
+    A rare Alpha Talisman scoring 10 came back unpriced, and the only tell was
+    the type row reading "Talismans" with no category after it. A talisman is
+    filed under WEAPONS, not accessories.
+    """
+    from sox.valuation.query import ITEM_CLASS_CATEGORIES
+
+    talisman = load("RareTalisman")
+    assert category_for(talisman) == "weapon.talisman"
+    for one_handed, two_handed in (("mace", "mace"), ("sword", "sword"),
+                                   ("axe", "axe")):
+        assert ITEM_CLASS_CATEGORIES[f"one hand {one_handed}s"] == f"weapon.one{one_handed}"
+        assert ITEM_CLASS_CATEGORIES[f"two hand {two_handed}s"] == f"weapon.two{two_handed}"
+
+
+def test_an_unmapped_class_says_so_rather_than_blaming_the_index(tmp_path):
+    """"no-index" reads as a fact about the market. This is a gap in a table
+    in this repo, and the item is priceable the moment it is filled."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+
+    rod = itemtext.parse(
+        "Item Class: Fishing Rods\nRarity: Rare\nX\nY\n"
+        "--------\nItem Level: 80\n--------\n"
+        "{ Prefix Modifier }\n+96(90-100) to maximum Life\n"
+    )
+    assert category_for(rod) is None
+    priced = _price_item(
+        rod, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, None,
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+    )
+    assert priced.tag == "unpriced:no-category:Fishing Rods"

@@ -200,6 +200,17 @@ ITEM_CLASS_CATEGORIES = {
     "spears": "weapon.spear", "one hand maces": "weapon.onemace",
     "two hand maces": "weapon.twomace", "flails": "weapon.flail",
     "daggers": "weapon.dagger", "claws": "weapon.claw",
+    # A talisman is filed under WEAPONS, not accessories. An unmapped class
+    # cannot be searched at all: a rare Alpha Talisman scoring 10 came back
+    # unpriced, and the row above it said only "Talismans" with no category
+    # after it, which is the whole tell.
+    "talismans": "weapon.talisman",
+    # The rest of the melee families the trade filters carry. Named from the
+    # convention the maces above already set: no PoE2 sword or axe has been
+    # seen on the clipboard here, and a key that never matches costs nothing,
+    # while a missing one costs the whole price.
+    "one hand swords": "weapon.onesword", "two hand swords": "weapon.twosword",
+    "one hand axes": "weapon.oneaxe", "two hand axes": "weapon.twoaxe",
     "jewels": "jewel",
     "waystones": "map.waystone", "tablet": "map.tablet",
     "relics": "sanctum.relic", "charms": "flask.charm",
