@@ -1047,3 +1047,46 @@ def test_a_notable_is_looked_up_without_the_games_tag():
     ids = [f["id"] for g in filters for f in g["filters"]]
     assert NOTABLES["The Soul Meridian"] in ids
     assert NOTABLES["The Soul Meridian"].startswith("enchant.stat_")
+
+
+def test_a_normal_or_magic_or_unique_item_is_searched_as_its_base():
+    """Without the base pinned the query describes a CATEGORY.
+
+    Measured live on this belt: 5,595 belts matched and the cheapest were a
+    Double Belt, a Mail Belt and a Wide Belt at 1 exalted apiece, none of them
+    the item in hand. Pinned, the same search matched 4,896 Heavy Belts and
+    the cheapest was 14.
+    """
+    belt = load("NormalHeavyBelt")
+    query = build_query(belt, category_for(belt), MODS, NOTABLES)["query"]
+    assert query["type"] == "Heavy Belt"
+
+
+def test_the_base_is_read_out_of_whatever_the_clipboard_calls_it():
+    """A magic item wraps its base in affixes and a normal one with quality
+    prefixes "Superior", so the longest known base on the line is the base."""
+    from sox.valuation.query import base_type
+
+    assert base_type({"baseType": "Crackling Temple Maul of the Brute"}) == "Temple Maul"
+    assert base_type({"baseType": "Superior Divine Crown"}) == "Divine Crown"
+    assert base_type({"baseType": "Heavy Belt"}) == "Heavy Belt"
+    # Nothing recognised leaves the search on its category rather than pinning
+    # a base that was guessed at.
+    assert base_type({"baseType": "Sword of Not A Real Thing"}) is None
+    assert base_type({}) is None
+
+
+def test_a_unique_pins_its_base_beside_its_name():
+    item = load("UniqueTabletForest")
+    query = build_query(item, category_for(item), MODS, NOTABLES)["query"]
+    assert (query["name"], query["type"]) == ("Mastered Domain", "Irradiated Tablet")
+
+
+def test_a_rare_is_not_pinned_to_its_base():
+    """A rare is bought on the mods it rolled, and its base is already bounded
+    by the requirements, which are searched as a cap — that is what separates
+    a Bandit Mace from every one-hander."""
+    for name in ("RareItem", "SpiritLifeChest", "MinionRing"):
+        item = load(name)
+        query = build_query(item, category_for(item), MODS, NOTABLES)["query"]
+        assert "type" not in query, name

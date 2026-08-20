@@ -1,0 +1,10 @@
+Item Class: Belts
+Rarity: Normal
+Heavy Belt
+--------
+Requires: Level 50
+--------
+Item Level: 81
+--------
+24% increased Stun Threshold (implicit)
+Has 2 Charm Slots (implicit)

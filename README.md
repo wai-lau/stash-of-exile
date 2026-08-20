@@ -38,10 +38,10 @@ copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
                        +0  Allocates Barbaric Strength
                        +0  Allocates Kite Runner
             coherence  none — the mods serve different builds
-            market     low 4.72 div  ·  25th 4.72 div  ·  median 8.97 div
-                       cheapest 10 of 759 listings, relaxed:3
+            market     low 5 div  ·  25th 5 div  ·  median 5 div
+                       cheapest 10 of 768 listings, relaxed:3
 ────────────────────────────────────────────────────────────────
-total 1,803 ex (4.7 div)  ·  1 priced  ·  2 searches
+total 1,910 ex (5.0 div)  ·  1 priced  ·  2 searches
 ────────────────────────────────────────────────────────────────
 ```
 
@@ -106,7 +106,8 @@ session, so sox holds no credentials at all.
 |---|---|
 | Currency, runes, essences, omens, fragments, gems | bulk exchange book, priced from both sides |
 | Most uniques | poe2scout index — free, no API call |
-| Rares, bases, jewels | trade search for "the cheapest item at least as good as yours" |
+| Rares, jewels | trade search for "the cheapest item at least as good as yours" |
+| Normal and magic bases | the same search, pinned to the base and its exact item level |
 | Waystones, tablets, relics, charms | trade search; no index covers them |
 | Anything allocating a notable | searched by the exact notable — a Megalomaniac, or an amulet carrying an enhancement |
 
@@ -124,8 +125,8 @@ Megalomaniac  [Diamond]
   score      0
              +0  Allocates Barbaric Strength
              +0  Allocates Kite Runner
-  market     low 5 div  ·  25th 5 div  ·  median 9.5 div
-             cheapest 10 of 759 listings, relaxed:3
+  market     low 5 div  ·  25th 5 div  ·  median 5 div
+             cheapest 10 of 768 listings, relaxed:3
 ```
 
 ## Data files
@@ -138,6 +139,7 @@ Megalomaniac  [Diamond]
 | `notables.toml` | Notable → stat id, for notable-granting jewels |
 | `skills.toml` | Granted skill → stat ids, for `Grants Skill: Level N X` |
 | `flag_mods.toml` | Value-less mod text → stat id, for mods with no roll to search at |
+| `item_bases.toml` | Every base name, for pinning what a normal, magic or unique item IS |
 | `base_allowlist.toml` | ilvl tiers, equipment slots, named crafting bases |
 | `unique_allowlist.toml` | Build-relevant uniques with escalation thresholds |
 
@@ -149,6 +151,8 @@ python3 scripts/resolve_allowlist.py stats.json > src/sox/data/mod_allowlist.tom
 python3 scripts/resolve_notables.py stats.json > src/sox/data/notables.toml
 python3 scripts/resolve_skills.py stats.json > src/sox/data/skills.toml
 python3 scripts/resolve_flag_mods.py stats.json > src/sox/data/flag_mods.toml
+curl -A 'sox' https://www.pathofexile.com/api/trade2/data/items -o items.json
+python3 scripts/resolve_bases.py items.json > src/sox/data/item_bases.toml
 ```
 
 The generators fail loudly rather than dropping an entry they cannot resolve,

@@ -109,6 +109,16 @@ def load_flags() -> dict[str, dict[str, str]]:
             for group, entries in _read("flag_mods.toml").items()}
 
 
+def load_base_types() -> list[str]:
+    """Every item base name, longest first.
+
+    A search that does not pin the base asks the market for a CATEGORY. An
+    ilvl 81 Heavy Belt matched 5,595 belts whose cheapest were a Double Belt
+    and a Mail Belt at 1 exalted; pinned, 4,896 Heavy Belts from 14.
+    """
+    return sorted(_read("item_bases.toml").get("types", []), key=len, reverse=True)
+
+
 def load_skills() -> dict[str, list[str]]:
     """Granted skill name -> trade2 stat ids, for `Grants Skill: Level N X`.
 

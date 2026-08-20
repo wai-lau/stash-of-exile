@@ -15,7 +15,12 @@ import re
 
 from functools import lru_cache
 
-from sox.valuation.allowlists import ModEntry, load_flags, load_skills
+from sox.valuation.allowlists import (
+    ModEntry,
+    load_base_types,
+    load_flags,
+    load_skills,
+)
 from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
 from sox.valuation.mods import match_mod, select_synergistic
 from sox.valuation.rolls import parse_values
@@ -746,6 +751,34 @@ def _skill_ids() -> dict[str, tuple[str, ...]]:
 
 
 @lru_cache(maxsize=1)
+def _base_types() -> tuple[str, ...]:
+    return tuple(load_base_types())
+
+
+def base_type(item: dict) -> str | None:
+    """The base a normal, magic or unique item is bought as.
+
+    The clipboard does not always give it cleanly. A magic item wraps its
+    base in affixes and a normal one with quality prefixes "Superior", so the
+    longest known base the line contains is the base:
+
+        Crackling Temple Maul of the Brute   ->  Temple Maul
+        Superior Divine Crown                ->  Divine Crown
+
+    None when nothing matches, and then the search stays on its category
+    rather than pinning a base that was guessed at.
+    """
+    line = " ".join((item.get("baseType") or item.get("typeLine") or "").split())
+    if not line:
+        return None
+    padded = f" {line} "
+    for base in _base_types():
+        if f" {base} " in padded:
+            return base
+    return None
+
+
+@lru_cache(maxsize=1)
 def _flag_ids() -> dict[str, dict[str, str]]:
     from sox.valuation.mods import normalize_mod
 
@@ -1144,6 +1177,20 @@ def _build(
     # unique tablet in the game, priced at whichever was cheapest.
     if item.get("name") and rarity is Rarity.UNIQUE:
         query["query"]["name"] = item["name"]
+
+    # A normal, magic or unique item is bought as a BASE, so the base is what
+    # the search asks for. Without it the query describes a CATEGORY: an
+    # ilvl 81 Heavy Belt matched 5,595 belts and the cheapest were a Double
+    # Belt, a Mail Belt and a Wide Belt at 1 exalted, none of them the item in
+    # hand. Pinned, the same search matched 4,896 Heavy Belts from 14.
+    #
+    # A RARE is deliberately left out. It is bought on the mods it rolled, and
+    # its base is already bounded by the requirements, which are searched as a
+    # cap — that is what separates a Bandit Mace from every one-hander.
+    if rarity in (Rarity.NORMAL, Rarity.MAGIC, Rarity.UNIQUE):
+        base = base_type(item)
+        if base:
+            query["query"]["type"] = base
     return query, group, searched
 
 
