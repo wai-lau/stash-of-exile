@@ -12,6 +12,7 @@ from sox.valuation.query import (
     RELAX_STEPS,
     build_query,
     category_for,
+    explain_selection,
     query_hash,
 )
 
@@ -1022,3 +1023,27 @@ def test_a_skill_count_group_is_a_stat_group_of_its_own():
         groups = [g for g in stats[1:]
                   if any(f["id"].startswith("skill.") for f in g["filters"])]
         assert len(groups) == 1, f"rung {step}"
+
+
+def test_a_notable_is_looked_up_without_the_games_tag():
+    """The amulet says "Allocates The Soul Meridian — Unscalable Value".
+
+    The tag is the game's annotation, not part of the notable's name, and the
+    table holds "The Soul Meridian". Left on, the lookup missed: the line
+    scored nothing, went into no query, and the amulet was priced as though
+    its enchant were not there. Searched for it, rung 0 matches one listing
+    and rung 2 matches sixty-one.
+    """
+    from sox.valuation.mods import strip_annotation
+
+    assert strip_annotation("The Soul Meridian — Unscalable Value") == "The Soul Meridian"
+
+    item = load("EnhancementAmulet")
+    group, stats = explain_selection(item, MODS, NOTABLES)
+    assert group == "notable"
+    assert "Allocates The Soul Meridian — Unscalable Value" in stats
+
+    filters = build_query(item, category_for(item), MODS, NOTABLES)["query"]["stats"]
+    ids = [f["id"] for g in filters for f in g["filters"]]
+    assert NOTABLES["The Soul Meridian"] in ids
+    assert NOTABLES["The Soul Meridian"].startswith("enchant.stat_")

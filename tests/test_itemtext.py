@@ -160,3 +160,21 @@ def test_roll_ranges_are_captured_outside_modifier_blocks():
     )
     assert item["modRanges"]["98% increased Cold Damage"] == (98.0, 78.0, 118.0)
     assert "98% increased Cold Damage" in item["desecratedMods"]
+
+
+def test_a_bare_enhancement_heads_a_block_like_any_other():
+    """An enhancement can head its block with nothing else at all.
+
+    "{ Enhancement }" over "Allocates The Soul Meridian" was not recognised as
+    a header, so the brace line itself parsed as a modifier: it printed in the
+    score breakdown as a mod and counted as an affix the item does not spend.
+
+    It lands in enchantMods for the same reason a Corruption Enhancement
+    does — no prefix or suffix slot, and the enchant group is where the trade
+    API keeps it.
+    """
+    item = load("EnhancementAmulet")
+    assert not any("{" in text for text in item["explicitMods"])
+    assert item["enchantMods"] == [
+        "Allocates The Soul Meridian — Unscalable Value"]
+    assert len(item["explicitMods"]) == 5, "the five real affixes, and no brace"

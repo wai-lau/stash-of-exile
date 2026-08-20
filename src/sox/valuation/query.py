@@ -966,7 +966,14 @@ def _build(
         if text in covered:
             continue
         if text.startswith("Allocates "):
-            stat_id = notables.get(text[len("Allocates "):].strip())
+            # Through the annotation: the amulet says "Allocates The Soul
+            # Meridian — Unscalable Value", and the tag is not part of the
+            # notable's name. Left on, the lookup missed and the item's most
+            # valuable line was neither scored nor searched.
+            from sox.valuation.mods import strip_annotation
+
+            stat_id = notables.get(
+                strip_annotation(text[len("Allocates "):]).strip())
             if stat_id:
                 scored.append((NOTABLE_WEIGHT, text, _Notable(stat_id)))
             continue

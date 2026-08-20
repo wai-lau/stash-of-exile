@@ -18,7 +18,7 @@ _NUMBER = re.compile(r"[+-]?\d+(?:\.\d+)?")
 # map mods that nothing a player owns can scale. It is an annotation on the
 # line, not part of the mod: the trade stats table carries the text without
 # it, so a mod wearing one matched nothing at all.
-_ANNOTATION = re.compile(r"\s*[—–-]\s*unscalable value\s*$")
+_ANNOTATION = re.compile(r"\s*[—–-]\s*unscalable value\s*$", re.I)
 
 # Most a pile of weight-1 mods may contribute in total. Community pricing
 # guidance is explicit that 4+ low-tier mods make an item worth LESS: they
@@ -31,6 +31,16 @@ MAX_COHERENCE_BONUS = 3
 # Companions ARE minions and share their buyers, so a companion mod counts
 # toward both. Universal minion mods count toward every subtype.
 MINION_SUBTYPES = ("attack", "caster", "companion")
+
+
+def strip_annotation(text: str) -> str:
+    """The mod without the game's "Unscalable Value" tag, case intact.
+
+    Needed where the WORDING is the key and not just a normalised form: a
+    notable is looked up by name, and "The Soul Meridian — Unscalable Value"
+    is not in the table while "The Soul Meridian" is.
+    """
+    return _ANNOTATION.sub("", text)
 
 
 def normalize_mod(text: str) -> str:

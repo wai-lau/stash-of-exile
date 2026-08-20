@@ -42,8 +42,14 @@ SEPARATOR = re.compile(r"^-{3,}$")
 # block as "{ Corruption Enhancement — Damage }", with no "Modifier" anywhere,
 # so the header went unrecognised and its stat line fell through as an
 # ordinary explicit mod.
+#
+# The kind is OPTIONAL, because an enhancement can head its block with nothing
+# else at all: "{ Enhancement }" over an "Allocates The Soul Meridian" line.
+# Requiring a word before it left the brace line itself parsed as a modifier,
+# printed as one in the score breakdown, and counted as an affix the item does
+# not actually spend.
 MOD_HEADER = re.compile(
-    r"^\{\s*(?P<kind>\w+)(?:\s+\w+)*?\s+(?:Modifier|Enhancement)"
+    r"^\{\s*(?:(?P<kind>\w+)(?:\s+\w+)*?\s+)?(?P<block>Modifier|Enhancement)"
     r'(?:\s+"(?P<name>[^"]*)")?'
     r"(?:\s*\(Tier:\s*(?P<tier>\d+)\))?"
     r".*\}$"
@@ -335,6 +341,9 @@ _KIND_TO_FIELD = {
     # suffix slot — and the trade API files it under the enchant group, the
     # same place the notables turned out to live.
     "corruption": "enchantMods",
+    # A bare "{ Enhancement }" for the same reason: no kind, no affix slot,
+    # and the enchant group is where the trade API keeps it.
+    "enhancement": "enchantMods",
     "crafted": "explicitMods",
 }
 
@@ -347,7 +356,7 @@ def _parse_mod_section(section: list[str], item: dict) -> None:
     for line in section:
         header = MOD_HEADER.match(line.strip())
         if header:
-            kind = (header.group("kind") or "").lower()
+            kind = (header.group("kind") or header.group("block")).lower()
             field = _KIND_TO_FIELD.get(kind, "explicitMods")
             tier = int(header.group("tier")) if header.group("tier") else None
             continue
