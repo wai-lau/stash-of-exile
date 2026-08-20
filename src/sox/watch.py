@@ -10,6 +10,9 @@ from __future__ import annotations
 import shutil
 from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
+
+from sox import __version__
 
 DIM = "\033[2m"
 BOLD = "\033[1m"
@@ -59,10 +62,30 @@ def rule(char: str = "─") -> str:
     return DIM + char * width() + RESET
 
 
+def revision() -> str | None:
+    """The checked-out commit, read from .git without invoking git.
+
+    A version string is bumped at releases and so cannot say whether a given
+    fix is in the process you are looking at. One session repriced the same
+    amulet 1,473 times against a bug that was already fixed and pushed, and
+    nothing on screen could tell whether that build was the one running.
+    """
+    root = Path(__file__).resolve().parent.parent.parent
+    try:
+        ref = (root / ".git" / "HEAD").read_text().strip()
+        if ref.startswith("ref: "):
+            ref = (root / ".git" / ref[5:]).read_text().strip()
+    except OSError:
+        return None
+    return ref[:7] or None
+
+
 def banner(league: str, divine_ex: float, backend: str) -> str:
+    build = f"{__version__}" + (f"+{rev}" if (rev := revision()) else "")
     return "\n".join([
         rule("═"),
-        f"{BOLD}sox watch{RESET}  ·  {league}  ·  1 div = {divine_ex:,.0f} ex",
+        f"{BOLD}sox watch{RESET} {DIM}{build}{RESET}"
+        f"  ·  {league}  ·  1 div = {divine_ex:,.0f} ex",
         f"{DIM}clipboard: {backend}{RESET}",
         f"{DIM}copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop{RESET}",
         rule("═"),

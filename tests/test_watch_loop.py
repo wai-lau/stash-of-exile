@@ -94,3 +94,31 @@ def test_without_a_tty_ctrl_c_still_exits(monkeypatch, capsys):
 
     assert _run(monkeypatch, feed, tty=False) == 0
     assert "press Ctrl-D to stop" not in capsys.readouterr().out
+
+
+def test_the_banner_names_the_build_it_is_running():
+    """A running feed cannot pick up a fix: the module is imported once and
+    the PowerShell watcher is a child process started with it.
+
+    One session repriced the same amulet 1,473 times against a bug that had
+    already been fixed and pushed, and nothing on screen could say whether
+    that build was the one running.
+    """
+    import subprocess
+
+    from sox import __version__, watch
+
+    head = subprocess.run(["git", "rev-parse", "--short=7", "HEAD"],
+                          capture_output=True, text=True).stdout.strip()
+    assert watch.revision() == head
+    assert f"{__version__}+{head}" in watch.banner("Runes of Aldur", 382.0, "test")
+
+
+def test_the_banner_survives_a_checkout_without_git(monkeypatch, tmp_path):
+    """Installed from a wheel there is no .git to read, and the version alone
+    is what there is to say."""
+    from sox import __version__, watch
+
+    monkeypatch.setattr(watch, "__file__", str(tmp_path / "sox" / "watch.py"))
+    assert watch.revision() is None
+    assert __version__ in watch.banner("Runes of Aldur", 382.0, "test")

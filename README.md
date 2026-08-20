@@ -27,7 +27,7 @@ game with Ctrl+C and its price appears, with a running session total:
 
 ```
 ════════════════════════════════════════════════════════════════
-sox watch  ·  Runes of Aldur  ·  1 div = 382 ex
+sox watch 0.1.0+425bb6d  ·  Runes of Aldur  ·  1 div = 382 ex
 clipboard: powershell.exe
 copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
 ════════════════════════════════════════════════════════════════
@@ -51,6 +51,10 @@ Native Linux (wl-paste, xclip, xsel) and macOS (pbpaste) are polled directly.
 Non-item text is ignored, whatever was on the clipboard before startup is
 skipped, and one copy is priced once — a clipboard that reads the same twice
 is the same copy, not a second one.
+
+The banner names the commit it is running. A feed cannot pick up a fix while
+it is up: the module is imported once and the PowerShell watcher is a child
+process started with it, so a change to either needs the session restarted.
 
 ## What makes it different from an overlay
 
