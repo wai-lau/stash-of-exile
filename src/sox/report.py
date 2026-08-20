@@ -144,15 +144,19 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
                          "treat the number as a rough bound")
         low, p25, median = fmt_row(
             [priced.price_ex, priced.p25_ex, priced.median_ex], rates)
-        market = f"low {low}"
-        if priced.p25_ex is not None:
-            market += f"  ·  25th {p25}"
-        if priced.median_ex is not None:
-            market += f"  ·  median {median}"
+        # Only the amounts are lit. "low", "25th" and "median" are labels, and
+        # a row lit end to end makes them compete with the numbers they name —
+        # the answer is three prices, and the words are how to read them.
+        #
         # fmt_row quotes the whole row in one unit, chosen from the low, so
         # the low is what says which unit this price is in.
         colour = MARKET_DIV if low.endswith(" div") else MARKET
-        out.append(f"  market     {colour}{market}{RESET}")
+        market = f"low {colour}{low}{RESET}"
+        if priced.p25_ex is not None:
+            market += f"  ·  25th {colour}{p25}{RESET}"
+        if priced.median_ex is not None:
+            market += f"  ·  median {colour}{median}{RESET}"
+        out.append(f"  market     {market}")
         # `listings` is only ever the cheapest handful — one fetch call is
         # enough to find the low end, so it reads 10 for anything with a real
         # market. The match count is the number that says whether the price is

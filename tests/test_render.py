@@ -121,3 +121,21 @@ def test_a_divine_market_row_wears_the_colour_inside_out():
         tag="exact", listings=10, median_ex=20.0), rates)
     assert report.MARKET_DIV in div and "2 div" in div
     assert report.MARKET_DIV not in ex and report.MARKET in ex
+
+
+def test_only_the_amounts_are_lit():
+    """"low", "25th" and "median" are labels. A row lit end to end makes them
+    compete with the numbers they name."""
+    from sox import report
+
+    row = next(line for line in report.render({"typeLine": "Mace"}, PricedItem(
+        name="Mace", item_class=ItemClass.GEAR, price_ex=12.0, source="trade",
+        tag="exact", listings=10, p25_ex=18.0, median_ex=20.0,
+    ), {"exalted": 1.0, "divine": 358.0}).splitlines() if "market" in line)
+
+    for label in ("low", "25th", "median", "·"):
+        assert f"{report.RESET}{label}" not in row, label
+    assert row.count(f"{report.MARKET}12 ex{report.RESET}") == 1
+    assert f"{report.MARKET}18 ex{report.RESET}" in row
+    assert f"{report.MARKET}20 ex{report.RESET}" in row
+    assert "  market     low " in row, "the labels carry no escape of their own"
