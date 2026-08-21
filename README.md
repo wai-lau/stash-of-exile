@@ -48,9 +48,13 @@ total 1,910 ex (5.0 div)  ·  1 priced  ·  2 searches
 On WSL the Windows clipboard is read through a single long-lived
 powershell.exe, because starting one per poll costs about half a second.
 Native Linux (wl-paste, xclip, xsel) and macOS (pbpaste) are polled directly.
-Non-item text is ignored, whatever was on the clipboard before startup is
-skipped, and one copy is priced once — a clipboard that reads the same twice
-is the same copy, not a second one.
+Non-item text is ignored, and whatever was on the clipboard before startup is
+skipped — the watcher reports what that was, so the first item you copy is
+never mistaken for it. One copy is one price: on Windows a copy is a write to
+the clipboard, so copying the same item again re-prices it, while a clipboard
+that merely reads the same twice does not. The Linux and macOS backends have
+no such signal and compare text, so there a re-copy of an unchanged clipboard
+goes unnoticed.
 
 The banner names the commit it is running. A feed cannot pick up a fix while
 it is up: the module is imported once and the PowerShell watcher is a child
