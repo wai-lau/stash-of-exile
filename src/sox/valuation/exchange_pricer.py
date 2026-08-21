@@ -42,6 +42,17 @@ def stock_weighted_quantile(offers: list[Offer], quantile: float) -> float | Non
 # whatever it returns is noise.
 UNIT = "exalted"
 
+# The other currency a book can be quoted in. Anything dear enough is traded
+# against divine and hardly at all against exalted: Khatal's Rejuvenation held
+# 8 offers and 9 units in exalted, priced at 10 ex, while the game's own
+# exchange quoted it 1:2.67 against divine — 908 ex. The exalted side was not
+# the market, it was the stragglers.
+DIVINE = "divine"
+
+# Below this many units a book cannot support a price, which is the same
+# depth the report already calls a thin book.
+THIN_STOCK = 20
+
 
 @dataclass(frozen=True)
 class BulkPrice:
@@ -50,40 +61,27 @@ class BulkPrice:
     stock: int               # how many units they hold, which is depth
     ask_ex: float | None = None   # what one costs to buy
     bid_ex: float | None = None   # what someone will pay for one
+    quoted: str = UNIT            # the currency the book was read in
 
 
-def price_by_exchange(name: str, exchange) -> BulkPrice | None:
-    """What one unit of `name` is worth, read from both sides of its book.
+def _read_book(exchange, item_id: str, unit: str, unit_ex: float) -> BulkPrice | None:
+    """Both sides of one book, converted into exalted.
 
-    Neither side alone is a price. Measured live, divine asked 420 and bid
-    301 while every other source said 358; the midpoint said 360.5. The ask
-    is what it costs to buy and runs high, the bid is what someone will pay
-    and runs low.
-
-    Most cheap currency has no bid side at all — 1303 sellers of one omen and
-    not a single buyer — and there the ask is the only evidence there is.
-
-    None is the signal to fall back to the index: uniques, gear and jewels
-    have no exchange book, neither do items nobody is offering, and neither
-    does a book whose two sides cross.
+    `unit_ex` is what one of `unit` costs, so a book quoted in divine comes
+    back in the same currency as one quoted in exalted and the two are
+    comparable.
     """
-    item_id = exchange.ids().get(name)
-    if item_id is None:
-        return None
-    if item_id == UNIT:
-        return BulkPrice(price_ex=1.0, offers=0, stock=0, ask_ex=1.0, bid_ex=1.0)
-
-    asks = exchange.book(item_id)
+    asks = exchange.book(item_id, have=unit)
     ask = stock_weighted_quantile(asks.offers, QUANTILE)
     if ask is None:
         return None
 
-    # The bid book is the same market read the other way round: sellers of
-    # exalted who want this item. Its ratio is units-per-exalted, so it
-    # inverts into exalted-per-unit.
-    bids = exchange.book(UNIT, have=item_id)
-    per_exalted = stock_weighted_quantile(bids.offers, QUANTILE)
-    bid = 1 / per_exalted if per_exalted else None
+    # The bid book is the same market read the other way round: sellers of the
+    # unit who want this item. Its ratio is units-per-unit-of-account, so it
+    # inverts into unit-of-account-per-item.
+    bids = exchange.book(unit, have=item_id)
+    per_unit = stock_weighted_quantile(bids.offers, QUANTILE)
+    bid = 1 / per_unit if per_unit else None
 
     # A book that crosses is not a market. Depth only steps over the bait at
     # the bottom of a book if the page it reads reaches past it, and for
@@ -100,12 +98,55 @@ def price_by_exchange(name: str, exchange) -> BulkPrice | None:
         return None
 
     return BulkPrice(
-        price_ex=(ask + bid) / 2 if bid else ask,
+        price_ex=((ask + bid) / 2 if bid else ask) * unit_ex,
         offers=asks.total,
         stock=sum(o.stock for o in asks.offers),
-        ask_ex=ask,
-        bid_ex=bid,
+        ask_ex=ask * unit_ex,
+        bid_ex=bid * unit_ex if bid is not None else None,
+        quoted=unit,
     )
+
+
+def price_by_exchange(name: str, exchange, divine_ex: float | None = None) -> BulkPrice | None:
+    """What one unit of `name` is worth, read from both sides of its book.
+
+    Neither side alone is a price. Measured live, divine asked 420 and bid
+    301 while every other source said 358; the midpoint said 360.5. The ask
+    is what it costs to buy and runs high, the bid is what someone will pay
+    and runs low.
+
+    Most cheap currency has no bid side at all — 1303 sellers of one omen and
+    not a single buyer — and there the ask is the only evidence there is.
+
+    A book too thin to price is read AGAIN against divine, because the unit an
+    item trades in is a fact about the item: the dear ones are quoted in
+    divine and their exalted book is whoever happened to list one. The deeper
+    of the two answers, so a thin exalted book is a reason to look rather than
+    a reason to switch.
+
+    None is the signal to fall back to the index: uniques, gear and jewels
+    have no exchange book, neither do items nobody is offering, and neither
+    does a book whose two sides cross.
+    """
+    item_id = exchange.ids().get(name)
+    if item_id is None:
+        return None
+    if item_id == UNIT:
+        return BulkPrice(price_ex=1.0, offers=0, stock=0, ask_ex=1.0, bid_ex=1.0)
+
+    priced = _read_book(exchange, item_id, UNIT, 1.0)
+    if priced is not None and priced.stock >= THIN_STOCK:
+        return priced
+    # Divine against itself is the same meaningless query exalted against
+    # itself is, and without a rate there is nothing to convert the book with.
+    if item_id == DIVINE or not divine_ex:
+        return priced
+    deeper = _read_book(exchange, item_id, DIVINE, divine_ex)
+    if deeper is None:
+        return priced
+    if priced is None or deeper.stock > priced.stock:
+        return deeper
+    return priced
 
 
 # Only the currencies listings are actually quoted in. Every trade price is
@@ -126,7 +167,9 @@ def exchange_rates(exchange, index_rates: dict[str, float]) -> dict[str, float]:
     rates = dict(index_rates)
     names = {"divine": "Divine Orb", "chaos": "Chaos Orb"}
     for code in RATE_CURRENCIES:
-        bulk = price_by_exchange(names[code], exchange)
+        # Divine is priced first and against exalted, so by the time anything
+        # else is read there is a rate to quote a divine book in.
+        bulk = price_by_exchange(names[code], exchange, rates.get("divine"))
         if bulk is not None:
             rates[code] = bulk.price_ex
     return rates

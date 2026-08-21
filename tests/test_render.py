@@ -165,3 +165,24 @@ def test_a_dump_listing_is_flagged_as_one():
 def test_an_ordinary_sample_is_not_flagged():
     text = render(ITEM, _traded(median_ex=3.0, skewed=False), RATES)
     assert "SKEWED" not in text
+
+
+def test_a_book_read_against_divine_says_so():
+    """A price in exalted read off a divine book is not the same measurement
+    as one read off an exalted book, and the row has to say which it is —
+    the exalted book for this one held nine units and priced it at 10 ex."""
+    priced = PricedItem(
+        name="Khatal's Rejuvenation", item_class=ItemClass.GEM, price_ex=908.0,
+        source="exchange", tag=None, offers=12, stock=340, ask_ex=908.0,
+        quoted="divine", item_class_name="gem",
+    )
+    text = render(ITEM, priced, RATES)
+    assert "divine" in text.split("exchange", 1)[1]
+
+
+def test_an_exalted_book_needs_no_note():
+    priced = PricedItem(
+        name="Omen", item_class=ItemClass.GEM, price_ex=1.0, source="exchange",
+        tag=None, offers=1303, stock=6654, ask_ex=1.0, quoted="exalted",
+    )
+    assert "against divine" not in render(ITEM, priced, RATES)

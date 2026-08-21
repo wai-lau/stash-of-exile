@@ -51,6 +51,7 @@ class PricedItem:
     stock: int = 0         # exchange: units they hold
     ask_ex: float | None = None   # exchange: what one costs to buy
     bid_ex: float | None = None   # exchange: what someone will pay
+    quoted: str = ""              # exchange: the currency the book was read in
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
     searched_texts: tuple[str, ...] = ()   # the ITEM's wording, for highlighting
@@ -200,7 +201,14 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
             out.append(f"             bid {bid}  ·  ask {ask}")
         elif priced.ask_ex is not None and priced.offers:
             out.append("             ask only — nobody is bidding for these")
-        if priced.stock and priced.stock < 20:
+        # An item dear enough is traded against divine and hardly at all
+        # against exalted, and the row must say which book the number came
+        # off: Khatal's Rejuvenation showed 8 offers and 9 units in exalted at
+        # 10 ex while the divine book quoted it at 1:2.67, which is 908.
+        if priced.quoted and priced.quoted != "exalted":
+            out.append(f"             priced against {priced.quoted} — the "
+                         "exalted book was too thin to price")
+        elif priced.stock and priced.stock < 20:
             out.append("             thin book — few units are actually offered")
 
     else:

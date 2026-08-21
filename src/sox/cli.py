@@ -377,13 +377,13 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
     # everything else. Currency never reaches the trade search, which is how
     # the index drifted to 26.5 ex on an omen the exchange sold at 1.
     if exchange is not None:
-        bulk = price_by_exchange(index_key(item), exchange)
+        bulk = price_by_exchange(index_key(item), exchange, rates.get("divine"))
         if bulk is not None:
             return report.PricedItem(
                 name=display_name(item), item_class=item_class,
                 price_ex=bulk.price_ex, source="exchange", tag=None,
                 reason=verdict.reason, offers=bulk.offers, stock=bulk.stock,
-                ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
+                ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex, quoted=bulk.quoted,
             )
 
     if entry is not None:

@@ -212,3 +212,82 @@ def test_a_bid_under_the_ask_is_an_ordinary_spread(tmp_path):
     client = two_sided(tmp_path, ask_pairs=[(40, 1, 6654)],
                        bid_pairs=[(1, 25, 57980)])
     assert price_by_exchange("Divine Orb", client).price_ex == pytest.approx(32.5)
+
+
+def four_sided(tmp_path, books):
+    """A handler answering each (have, want) pair from its own book.
+
+    `books` maps (have, want) -> pairs of (paid, received, stock). Anything
+    not listed is an empty book.
+    """
+    import json
+
+    def handler(request):
+        if "/data/static" in str(request.url):
+            return httpx.Response(200, json=STATIC)
+        query = json.loads(request.content.decode())["query"]
+        key = (query["have"][0], query["want"][0])
+        return httpx.Response(200, json=offers(books.get(key, [])))
+
+    session = GGGSession(
+        RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
+        httpx.Client(transport=httpx.MockTransport(handler)),
+        user_agent="sox-test",
+    )
+    return ExchangeClient(session, Cache(tmp_path / "c.sqlite"), "Runes of Aldur")
+
+
+def test_a_thin_exalted_book_is_read_against_divine_instead(tmp_path):
+    """Khatal's Rejuvenation: 8 offers, 9 units, priced at 10 ex — while the
+    game's own currency exchange quoted it at 1:2.67 against divine, which at
+    340 ex a divine is 908. Nobody trades this in exalted; the exalted book is
+    a handful of stragglers, and the market is on the divine side.
+    """
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "omen-of-the-sovereign"): [(10, 1, 9)],
+        ("divine", "omen-of-the-sovereign"): [(2.67, 1, 340)],
+    })
+    priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0)
+    assert priced.price_ex == pytest.approx(2.67 * 340)
+    assert (priced.stock, priced.quoted) == (340, "divine")
+
+
+def test_a_deep_exalted_book_is_left_alone(tmp_path):
+    """The second pair of calls is only worth making when the first book
+    cannot support a price."""
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "omen-of-the-sovereign"): [(10, 1, 6654)],
+        ("divine", "omen-of-the-sovereign"): [(2.67, 1, 340)],
+    })
+    priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0)
+    assert priced.price_ex == 10.0
+    assert priced.quoted == "exalted"
+
+
+def test_the_deeper_of_the_two_books_wins(tmp_path):
+    """A thin exalted book is a reason to look, not a reason to switch: the
+    divine side can be thinner still."""
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "omen-of-the-sovereign"): [(10, 1, 9)],
+        ("divine", "omen-of-the-sovereign"): [(2.67, 1, 2)],
+    })
+    priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0)
+    assert (priced.price_ex, priced.quoted) == (10.0, "exalted")
+
+
+def test_divine_is_never_priced_against_itself(tmp_path):
+    """Its own book is 1:1 and says nothing, exactly as exalted's does."""
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "divine"): [(340, 1, 9)],
+        ("divine", "divine"): [(1, 1, 90000)],
+    })
+    priced = price_by_exchange("Divine Orb", client, divine_ex=340.0)
+    assert (priced.price_ex, priced.quoted) == (340.0, "exalted")
