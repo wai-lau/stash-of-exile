@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from dataclasses import replace
 
 from functools import lru_cache
 
@@ -865,28 +866,30 @@ def granted_skill_filter(item: dict) -> dict | None:
     return None
 
 
-def cohering_pseudo_totals(
+def ordered_pseudo_totals(
     item: dict, index: dict[str, ModEntry]
-) -> list[tuple[str, int, list[str]]]:
-    """The pseudo totals the query will actually send.
+) -> tuple[list[tuple[str, int, list[str]]], list[tuple[str, int, list[str]]]]:
+    """Every pseudo total, split into the ones that cohere and the rest.
 
-    Pseudo totals obey the same rule as mods: only what coheres. An
-    Intelligence total on an elemental weapon constrains the search to items
-    carrying Intelligence, which most comparables do not — that alone moved a
-    3ex quarterstaff to a 50ex median.
+    A stat GGG totals for us is searched as that total, always: two filters
+    ANDed are STRICTER than the sum they add up to, so dropping a total and
+    searching its mods individually narrows the search the pseudo exists to
+    widen. +23% cold and +16% to all elemental is 71 total resistance and any
+    distribution of it is a comparable; cold >= 23 AND all-elemental >= 16
+    demands that exact pair.
     """
     from sox.valuation.mods import coherence_keys, dominant_archetype, matched
 
     dominant, _count = dominant_archetype(matched(searchable_mods(item), index),
                                           seed=defence_seed(item))
-    out = []
+    cohering, other = [], []
     for pseudo_id, value, used in pseudo_totals(item, index):
-        if dominant is not None:
-            entries = [e for t in used if (e := match_mod(t, index)) is not None]
-            if not any(dominant in coherence_keys(e) for e in entries):
-                continue
-        out.append((pseudo_id, value, used))
-    return out
+        entries = [e for t in used if (e := match_mod(t, index)) is not None]
+        if dominant is None or any(dominant in coherence_keys(e) for e in entries):
+            cohering.append((pseudo_id, value, used))
+        else:
+            other.append((pseudo_id, value, used))
+    return cohering, other
 
 
 def pseudo_mod_texts(item: dict, index: dict[str, ModEntry]) -> list[str]:
@@ -896,8 +899,8 @@ def pseudo_mod_texts(item: dict, index: dict[str, ModEntry]) -> list[str]:
     and the breakdown has to say so or the row reads as a stat filter that is
     not in the query.
     """
-    return [text for _id, _value, used in cohering_pseudo_totals(item, index)
-            for text in used]
+    cohering, other = ordered_pseudo_totals(item, index)
+    return [text for _id, _value, used in cohering + other for text in used]
 
 
 def searchable_implicits(item: dict, index) -> list[str]:
@@ -1009,12 +1012,15 @@ def _build(
 
     # Stats with a pseudo total are searched as that total instead, so their
     # mods must not also appear individually.
-    # Pseudo totals obey the same rule as mods: only what coheres. An
-    # Intelligence total on an elemental weapon constrains the search to items
-    # carrying Intelligence, which most comparables do not — that alone moved
-    # a 3ex quarterstaff to a 50ex median.
-    totals = cohering_pseudo_totals(item, index)
-    for _pseudo_id, _value, used in totals:
+    #
+    # A total that does not serve the item's archetype is still searched — the
+    # resistances on an attack ring are worth something — but it goes in
+    # BEHIND the mods that do, so widening drops it first. Ahead of them, an
+    # Intelligence total on an elemental weapon constrained the search to
+    # items carrying Intelligence, which most comparables do not: that alone
+    # moved a 3ex quarterstaff to a 50ex median.
+    totals, off_archetype = ordered_pseudo_totals(item, index)
+    for _pseudo_id, _value, used in totals + off_archetype:
         covered.update(used)
 
     scored: list[tuple[int, str, object]] = []
@@ -1045,7 +1051,15 @@ def _build(
             continue  # never guess a stat id
         if not parse_values(text):
             continue
-        scored.append((entry.weight, text, entry))
+        # A COPY per occurrence, because the allowlist hands back one shared
+        # entry per wording and an item can carry that wording twice: an Iron
+        # Ring's implicit and its Flaring prefix are both "Adds # to #
+        # Physical Damage to Attacks". The maps below are keyed on entry
+        # identity, so one shared object made the two mods one — the Tier-1
+        # prefix, 12 to 31, was asked for as the implicit's floor of 2.5,
+        # twice, and never as itself. The search then described any Iron Ring
+        # with the base implicit, and priced a 1-divine ring at 1 exalted.
+        scored.append((entry.weight, text, replace(entry)))
 
     # Choose stats that SYNERGIZE, not merely the heaviest ones. Selecting by
     # weight alone can mix archetypes and describe a buyer who does not exist.
@@ -1131,6 +1145,13 @@ def _build(
             }, [entry.text]))
         else:
             ranked.append(({"id": ids[0], "value": {"min": minimum}}, [entry.text]))
+
+    # Last in the ladder, so the first thing widening gives up: this total is
+    # not what a buyer of THIS item is shopping for, and it constrains the
+    # comparables the item is priced against.
+    for pseudo_id, value, used in off_archetype:
+        labels = [e.text if (e := match_mod(t, index)) else t for t in used]
+        ranked.append(({"id": pseudo_id, "value": {"min": value}}, labels))
 
     # The granted skill is exempt from the widening cap. Dropping it would not
     # widen the search, it would change what is being searched for: a Level 20

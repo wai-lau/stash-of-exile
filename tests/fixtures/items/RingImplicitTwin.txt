@@ -1,0 +1,22 @@
+Item Class: Rings
+Rarity: Rare
+Behemoth Finger
+Iron Ring
+--------
+Requires: Level 60
+--------
+Item Level: 82
+--------
+{ Implicit Modifier — Damage, Physical, Attack }
+Adds 1 to 4 Physical Damage to Attacks
+--------
+{ Prefix Modifier "Flaring" (Tier: 1) — Damage, Physical, Attack }
+Adds 12(12-19) to 31(22-32) Physical Damage to Attacks
+{ Prefix Modifier "Steady" (Tier: 3) — Attack }
++170(168-236) to Accuracy Rating
+{ Suffix Modifier "of the Yeti" (Tier: 5) — Elemental, Cold, Resistance }
++23(21-25)% to Cold Resistance
+{ Suffix Modifier "of the Gorilla" (Tier: 4) — Attribute }
++21(21-24) to Strength
+{ Suffix Modifier "of the Rainbow" (Tier: 1) — Elemental, Fire, Cold, Lightning, Resistance }
++16(15-16)% to all Elemental Resistances

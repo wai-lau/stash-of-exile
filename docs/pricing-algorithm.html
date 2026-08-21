@@ -829,9 +829,10 @@
               <tr><td>Defences (ar, ev, es, ward, block, spirit)</td><td class="mono">min</td><td>The displayed total, runes removed. On a rare, rebuilt at the mods' floor rolls; on a unique, kept at the actual roll — the roll is all that separates copies.</td></tr>
               <tr><td>DPS</td><td class="mono">min</td><td>Total only, <strong>runes removed</strong>, the same as the defences. Not pdps/edps: splitting it pins the damage source.</td></tr>
               <tr><td>Granted skill</td><td class="mono">min</td><td>At its own level. Exempt from the widening ladder.</td></tr>
-              <tr><td>Pseudo totals</td><td class="mono">min</td><td>Summed at each contributor's <em>floor</em>. A buyer filters total resistance, not its sources.</td></tr>
+              <tr><td>Pseudo totals</td><td class="mono">min</td><td>Summed at each contributor's <em>floor</em>. A buyer filters total resistance, not its sources. A stat GGG totals is <strong>always</strong> searched as that total and never as its mods: two filters ANDed are stricter than the sum they make, so searching them apart narrows what the total exists to widen. A total that serves no buyer of this item — resistances on an attack ring — is still searched, but placed last so widening drops it first.</td></tr>
               <tr><td>Explicit mods</td><td class="mono">min</td><td>Our actual roll. Added-damage mods filter on the average of the two numbers.</td></tr>
               <tr><td>Implicits</td><td class="mono">min</td><td>At the <em>floor</em> of the range — the implicit comes with the base, and the buyer wants the base.</td></tr>
+              <tr><td>A wording the item carries twice</td><td class="mono">min</td><td>An Iron Ring's implicit and its Flaring prefix are both "Adds # to # Physical Damage to Attacks". With no pseudo to total them — the trade table has none for damage — each is searched under its own group id at its own bound: the prefix at our roll, the implicit at its floor.</td></tr>
               <tr><td>Corrupted, sanctified</td><td class="mono">= No</td><td>Only when ours is neither. Once touched, the whole market is comparable again.</td></tr>
               <tr><td>Attacks/sec, crit, sockets</td><td class="mono">—</td><td>Traded off against damage rather than added to it.</td></tr>
             </tbody>

@@ -324,7 +324,10 @@ def test_mods_carry_the_archetype_they_serve():
     )
     rows = {text: tag for text, _, tag in score_rows(item, MODS, load_bases())}
     assert rows["Adds 121 to 183 Cold Damage"] == "elemental"
-    assert rows["+21 to Intelligence"] == "", "not part of the dominant group"
+    # No archetype of its own — it serves no elemental buyer — but it is
+    # still searched, as the Intelligence total, last in the ladder and first
+    # to go when the search widens.
+    assert rows["+21 to Intelligence"] == "pseudo"
 
 
 def test_searched_mods_are_reported_in_the_items_own_wording():
