@@ -139,3 +139,29 @@ def test_only_the_amounts_are_lit():
     assert f"{report.MARKET}18 ex{report.RESET}" in row
     assert f"{report.MARKET}20 ex{report.RESET}" in row
     assert "  market     low " in row, "the labels carry no escape of their own"
+
+
+def _traded(**kwargs):
+    fields = dict(
+        name="Behemoth Finger", item_class=ItemClass.GEAR, price_ex=1.0,
+        source="trade", tag="exact", listings=9, matches=9,
+        median_ex=45.0, p25_ex=20.0, confidence="firm",
+        item_class_name="Rings", category="accessory.ring",
+    )
+    return PricedItem(**{**fields, **kwargs})
+
+
+def test_a_dump_listing_is_flagged_as_one():
+    """1 ex against a 45 ex median is somebody dumping, not the market.
+
+    The row led with that 1 ex and the session total counted it, while the
+    sample it came from said the item was worth forty-five times more.
+    """
+    text = render(ITEM, _traded(skewed=True), RATES)
+    assert "SKEWED" in text
+    assert "45x" in text.replace("×", "x"), "say how far under it sits"
+
+
+def test_an_ordinary_sample_is_not_flagged():
+    text = render(ITEM, _traded(median_ex=3.0, skewed=False), RATES)
+    assert "SKEWED" not in text

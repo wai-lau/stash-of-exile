@@ -142,6 +142,15 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         elif priced.confidence == "thin":
             out.append(f"  !! THIN    only {priced.listings} comparable listings — "
                          "treat the number as a rough bound")
+        # A low this far under the body of the market is one seller dumping,
+        # and it is the number the row leads with and the session total counts.
+        # Live: a ring whose comparables ran 1 / 20 / 45 ex was reported as a
+        # 1 ex item, and four items priced that way totalled 4 ex.
+        if priced.skewed and priced.price_ex and priced.median_ex:
+            times = priced.median_ex / priced.price_ex
+            out.append(f"  !! SKEWED  the low is {times:,.0f}x under the median — "
+                         "one seller dumping, not the market")
+            out.append("             read the 25th as the price")
         low, p25, median = fmt_row(
             [priced.price_ex, priced.p25_ex, priced.median_ex], rates)
         # Only the amounts are lit. "low", "25th" and "median" are labels, and
