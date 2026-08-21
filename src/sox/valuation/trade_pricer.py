@@ -81,15 +81,28 @@ def price_by_search(
     rates: dict[str, float],
     status: str = "any",
     min_results: int = 1,
-    max_searches: int = 5,
+    max_searches: int = 6,
 ) -> TradeResult:
     searches = 0
     best: TradeResult | None = None
-    rungs = min(len(RELAX_STEPS), max_searches)
+    seen: set[str] = set()
 
-    for step in range(rungs):
+    # The budget is spent on SEARCHES, not on rungs. A rung answered from the
+    # cache, or one that repeats the rung above it, costs no API call and must
+    # not eat a rung the ladder still needs — counting iterations instead
+    # stopped a replay short of the answer already on disk.
+    for step in range(len(RELAX_STEPS)):
+        if searches >= max_searches:
+            break
         query = build_query(item, category, index, notables, status=status, relax=step)
         key = query_hash(query)
+
+        # The first rung asks for the whole item, so on an item with fewer
+        # stats than the second rung's cap the two rungs are the same search.
+        # Re-running it cannot answer differently — widen instead.
+        if key in seen:
+            continue
+        seen.add(key)
 
         # EVERY rung is cached, not only the winning one. Storing the winner
         # alone meant a second copy of the same item re-ran every rung before

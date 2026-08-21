@@ -938,13 +938,17 @@ def test_the_report_names_the_stats_the_query_asked_for():
 def test_every_rung_of_the_ladder_widens_the_query():
     """An or-group kept outside the cap could not be widened away.
 
-    Rungs 0 and 1 built the identical query, so a search was spent replaying
+    Rungs 1 and 2 built the identical query, so a search was spent replaying
     the previous one and the ladder arrived a rung late.
+
+    The whole-item rung is exempt: on an item carrying no more stats than the
+    next rung's cap it IS that rung, and the pricer skips the repeat rather
+    than paying for it.
     """
     item = load("SpiritLifeChest")
     seen = [query_hash(build_query(item, category_for(item), MODS, NOTABLES,
                                    relax=step))
-            for step in range(len(RELAX_STEPS))]
+            for step in range(1, len(RELAX_STEPS))]
     assert len(set(seen)) == len(seen), "each rung must be a different search"
 
 

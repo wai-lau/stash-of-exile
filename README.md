@@ -64,9 +64,12 @@ the checkboxes and relevant filters for the item yourself. Choose stats that
 synergize well, this knowledge only comes from playing different build
 archetypes."
 
-sox encodes that. It picks the stats to search on by finding the item's
-dominant archetype rather than its heaviest mods, prints what it chose, and
-marks every mod the price actually rests on:
+sox encodes that. The first search asks for the WHOLE item — every mod it
+can search, at your own roll — because that is the only search that describes
+the item you are holding. When nothing is listed that good, it widens, and
+what survives the widening is chosen by the item's dominant archetype rather
+than by its heaviest mods. It prints what it chose and marks every mod the
+price actually rests on:
 
 ```
 Corruption Hold  [Amethyst Ring]
@@ -85,7 +88,8 @@ Corruption Hold  [Amethyst Ring]
              cheapest 10 of 175 listings, relaxed:1
 ```
 
-Picking by weight alone would have kept that chaos resistance roll and
+The exact search found too thin a market, so it widened one rung. Picking
+what survived by weight alone would have kept that chaos resistance roll and
 dropped the minion crit and the minion attack speed, describing a buyer who
 does not exist. It priced the ring at 65 ex.
 

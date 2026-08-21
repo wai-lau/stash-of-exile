@@ -468,8 +468,9 @@
         Anything not sent to the trade search is offered to the bulk
         exchange first, and falls back to the index only when there is no book
         for it. The ladder is a loop: a rung that finds nothing, or finds too
-        few listings to mean anything, widens and searches again. Five rungs
-        maximum, one API search each.
+        few listings to mean anything, widens and searches again. The first
+        rung asks for the whole item; six rungs maximum, one API search each,
+        and a rung that repeats the one above it costs none.
       </figcaption>
     </figure>
   </section>
@@ -861,11 +862,12 @@
           <table>
             <thead><tr><th class="mono">Rung</th><th class="mono">Stats kept</th><th>What remains</th></tr></thead>
             <tbody>
-              <tr><td class="mono">0</td><td class="num mono">4</td><td>Tagged <code>exact</code>.</td></tr>
-              <tr><td class="mono">1</td><td class="num mono">3</td><td rowspan="2">The weakest cohering mods fall away first.</td></tr>
-              <tr><td class="mono">2</td><td class="num mono">2</td></tr>
-              <tr><td class="mono">3</td><td class="num mono">1</td><td>One stat left.</td></tr>
-              <tr><td class="mono">4</td><td class="num mono">0</td><td>Category, rarity, requirements and the equipment totals — plus the pinned item level when the item is a craft base. On a weapon that is DPS plus requirements, which is how you would search by hand. Notable jewels still keep one notable.</td></tr>
+              <tr><td class="mono">0</td><td class="num mono">all</td><td>The whole item, every searchable mod at your own roll. Tagged <code>exact</code> — the only rung that describes the item you are holding. On an item carrying four stats or fewer this IS rung 1, and the repeat is skipped rather than searched.</td></tr>
+              <tr><td class="mono">1</td><td class="num mono">4</td><td rowspan="3">The weakest cohering mods fall away first.</td></tr>
+              <tr><td class="mono">2</td><td class="num mono">3</td></tr>
+              <tr><td class="mono">3</td><td class="num mono">2</td></tr>
+              <tr><td class="mono">4</td><td class="num mono">1</td><td>One stat left.</td></tr>
+              <tr><td class="mono">5</td><td class="num mono">0</td><td>Category, rarity, requirements and the equipment totals — plus the pinned item level when the item is a craft base. On a weapon that is DPS plus requirements, which is how you would search by hand. Notable jewels still keep one notable.</td></tr>
             </tbody>
           </table>
         </div>

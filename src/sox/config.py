@@ -33,7 +33,7 @@ class Config:
     # online sellers cut one search from 918 listings to 1, which then priced
     # a 3ex item in the hundreds.
     status: str = "securable"
-    max_searches: int = 5          # per item; one per relaxation rung
+    max_searches: int = 6          # API searches per item; one per rung
     cache_path: Path = DEFAULT_CACHE_PATH
     user_agent: str = USER_AGENT
     force: bool = False            # search even low-scoring items
@@ -55,7 +55,7 @@ def load_config(path: Path | None = None) -> Config:
     cfg = Config(
         league=raw.get("league"),
         status=raw.get("status", "securable"),
-        max_searches=int(raw.get("max_searches", 4)),
+        max_searches=int(raw.get("max_searches", 6)),
         hardcore=bool(raw.get("hardcore", False)),
     )
     if cfg.status not in VALID_STATUS:

@@ -39,7 +39,19 @@ from sox.valuation.rolls import parse_values
 # requirements alone is exactly how you would search for one by hand. Without
 # this rung a weapon whose exact mods nobody else rolled came back unpriced
 # while comparable maces were listed at 10 divine.
-RELAX_STEPS = (4, 3, 2, 1, 0)
+#
+# No item carries this many searchable stats, so the first rung's cap is never
+# reached: it asks for the WHOLE item.
+ALL_STATS = 99
+
+# The ladder starts from the whole item and only then begins trimming. The
+# first search is the only one that describes the item exactly, and when it
+# does return a firm sample it is the truest ceiling there is — a five-mod
+# rare priced on its best four was priced as a different, lesser item while
+# the real one was listed. Starting wide costs nothing when it is too narrow:
+# a rung with too few matches is kept as a fallback and the ladder widens, so
+# the exact search is at worst one extra API call and at best the answer.
+RELAX_STEPS = (ALL_STATS, 4, 3, 2, 1, 0)
 
 # Clipboard property name -> (equipment_filters id, regex matching the flat
 # mods that feed it). Verified against /api/trade2/data/filters.

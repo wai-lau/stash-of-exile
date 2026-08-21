@@ -108,8 +108,8 @@ def test_ask_follows_the_low_when_the_market_is_tight(tmp_path):
 def test_result_records_which_rung_priced_it(tmp_path):
     """The explanation must describe the search that actually ran.
 
-    On an item whose every rung is a different query — ITEM's first four are
-    the same one, so they are searched once between them.
+    On an item whose trimming rungs are each a different query — ITEM's are
+    the same one four times over, so they are searched once between them.
     """
     chest = itemtext.parse((FIXTURES / "SpiritLifeChest.txt").read_text())
     trade = ScriptedTrade([
@@ -118,23 +118,24 @@ def test_result_records_which_rung_priced_it(tmp_path):
         (12, [5.0, 6.0, 7.0]),
     ])
     result = price(trade, tmp_path, item=chest)
-    assert result.relax_used == 2
-    assert result.tag == "relaxed:2"
+    assert result.relax_used == 3
+    assert result.tag == "relaxed:3"
 
 
 def test_a_rung_that_repeats_the_query_is_not_searched_again(tmp_path):
     """Widening only widens when it changes the query.
 
-    An item with one searchable mod keeps that mod at rungs 0 through 3 — the
-    cap is 4, 3, 2, 1 — so four of its five rungs are the same search, and
-    they were all issued. That is what "searching…" looked like on a loop.
+    An item with one searchable mod keeps that mod at every rung above the
+    bare one — the whole item, then caps of 4, 3, 2, 1 — so five of its six
+    rungs are the same search, and they were all issued. That is what
+    "searching…" looked like on a loop.
     """
     from sox.valuation.query import query_hash
 
     rungs = [query_hash(build_query(ITEM, category_for(ITEM), MODS, NOTABLES,
                                     relax=step))
              for step in range(len(RELAX_STEPS))]
-    assert len(set(rungs)) == 2, "four rungs, one query, and then the bare one"
+    assert len(set(rungs)) == 2, "five rungs, one query, and then the bare one"
 
     trade = ScriptedTrade([(0, [])])
     price(trade, tmp_path)
@@ -161,7 +162,7 @@ def test_a_replay_of_the_whole_ladder_costs_nothing(tmp_path):
 
 
 def test_explanation_matches_the_rung_used():
-    """Rung 2 keeps 2 stats, so the display must not show 3."""
+    """The display must not show more stats than the rung kept."""
     from sox.valuation.query import RELAX_STEPS, explain_selection
 
     at_rung_2 = RELAX_STEPS[2]
@@ -186,6 +187,25 @@ def test_minimums_are_never_lowered():
             assert value == strict[stat_id], f"rung {rung} lowered {stat_id}"
 
 
+def test_the_first_search_asks_for_the_whole_item():
+    """The exact rung describes the item mod for mod; trimming starts after it.
+
+    Opening at a cap of four priced the minion ring as a lesser ring than the
+    one in hand: the chaos resistance roll a buyer is also paying for never
+    reached the first search, so even a firm sample answered about a
+    different item.
+    """
+    from sox.valuation.query import explain_selection
+
+    ring = itemtext.parse((FIXTURES / "MinionRing.txt").read_text())
+    _, whole = explain_selection(ring, MODS, NOTABLES, relax=0)
+    _, trimmed = explain_selection(ring, MODS, NOTABLES, relax=1)
+
+    assert len(whole) == 6, "every searchable mod on the ring"
+    assert len(trimmed) == RELAX_STEPS[1], "the second rung is the first cap"
+    assert set(trimmed) <= set(whole), "widening only ever drops"
+
+
 def test_widening_drops_the_worst_tier_mod_first():
     """Tier 1 is the best roll, so the highest tier number goes first."""
     from sox.valuation.query import build_query, category_for
@@ -196,7 +216,7 @@ def test_widening_drops_the_worst_tier_mod_first():
         '{ Prefix Modifier "Best" (Tier: 1) }\nAdds 5(1-5) to 82(62-89) Lightning Damage\n'
         '{ Prefix Modifier "Worst" (Tier: 9) }\nAdds 9(6-9) to 13(10-15) Cold Damage\n'
     )
-    narrow = build_query(item, category_for(item), MODS, NOTABLES, relax=3)
+    narrow = build_query(item, category_for(item), MODS, NOTABLES, relax=4)
     kept = [f["id"] for f in narrow["query"]["stats"][0]["filters"]]
     assert len(kept) == 1
     lightning = MODS[__import__("sox.valuation.mods", fromlist=["x"]).normalize_mod(
@@ -615,7 +635,7 @@ def test_a_weak_roll_is_dropped_before_a_strong_one():
         "{ Prefix Modifier (Tier: 1) }\nAdds 6(4-40) to 102(95-190) Lightning Damage\n"
         "--------\n98(78-118)% increased Cold Damage (desecrated)\n"
     )
-    _, kept = explain_selection(item, MODS, NOTABLES, relax=2)   # rung keeps 2
+    _, kept = explain_selection(item, MODS, NOTABLES, relax=3)   # rung keeps 2
     assert "Adds # to # Cold Damage" in kept
     assert "#% increased Cold Damage" in kept
     assert "Adds # to # Lightning Damage" not in kept, "the 7th-percentile roll goes first"
@@ -658,7 +678,7 @@ def test_weight_leads_the_ranking():
         "{ Suffix Modifier }\n+28(20-28) to maximum Mana\n"   # near-max roll, w2
         "--------\n+21(20-30)% of Armour also applies to Elemental Damage (desecrated)\n"
     )  # w3, near-floor roll
-    _, stats = explain_selection(item, MODS, NOTABLES, relax=3)   # keeps 1
+    _, stats = explain_selection(item, MODS, NOTABLES, relax=4)   # keeps 1
     assert stats == ["#% of Armour also applies to Elemental Damage"]
 
 
