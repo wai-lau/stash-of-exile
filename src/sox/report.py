@@ -19,6 +19,10 @@ MARKET = "\033[1;33m"
 # one worth spotting while a watch session scrolls past, and inverting the row
 # reads from across the room where a second hue would just be another colour.
 MARKET_DIV = "\033[1;33;7m"
+# The dump listing at the bottom of a skewed book. Lit like the other two it
+# reads as a price; dimmed, it reads as what it is — the number the row has to
+# carry because the session total counts it, and the one not to trade on.
+DIM = "\033[2m"
 RESET = "\033[0m"
 
 
@@ -143,15 +147,6 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         elif priced.confidence == "thin":
             out.append(f"  !! THIN    only {priced.listings} comparable listings — "
                          "treat the number as a rough bound")
-        # A low this far under the body of the market is one seller dumping,
-        # and it is the number the row leads with and the session total counts.
-        # Live: a ring whose comparables ran 1 / 20 / 45 ex was reported as a
-        # 1 ex item, and four items priced that way totalled 4 ex.
-        if priced.skewed and priced.price_ex and priced.median_ex:
-            times = priced.median_ex / priced.price_ex
-            out.append(f"  !! SKEWED  the low is {times:,.0f}x under the median — "
-                         "one seller dumping, not the market")
-            out.append("             read the 25th as the price")
         low, p25, median = fmt_row(
             [priced.price_ex, priced.p25_ex, priced.median_ex], rates)
         # Only the amounts are lit. "low", "25th" and "median" are labels, and
@@ -161,7 +156,12 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         # fmt_row quotes the whole row in one unit, chosen from the low, so
         # the low is what says which unit this price is in.
         colour = MARKET_DIV if low.endswith(" div") else MARKET
-        market = f"low {colour}{low}{RESET}"
+        # A low more than ten times under the median is one seller dumping.
+        # The row still leads with it — it is the number the session total
+        # counts — but marked, so the row itself says which of its three
+        # prices to read rather than leaving that to a line above it.
+        market = (f"low {DIM}{low} (dump){RESET}" if priced.skewed
+                  else f"low {colour}{low}{RESET}")
         if priced.p25_ex is not None:
             market += f"  ·  25th {colour}{p25}{RESET}"
         if priced.median_ex is not None:
@@ -187,6 +187,14 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         if priced.relax_used:
             out.append("             found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")
+        # Last, with the other caveats: the numbers are the answer, and this
+        # says how to read them. Live, a ring whose comparables ran 1 / 20 /
+        # 45 ex was reported as a 1 ex item, and four items priced that way
+        # totalled 4 ex for the session.
+        if priced.skewed and priced.price_ex and priced.median_ex:
+            times = priced.median_ex / priced.price_ex
+            out.append(f"             the low is {times:,.0f}x under the median — "
+                         "read the 25th as the price")
 
     elif priced.source == "exchange":
         # The deep book. Depth is the evidence here, not listing count: the

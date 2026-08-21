@@ -151,20 +151,30 @@ def _traded(**kwargs):
     return PricedItem(**{**fields, **kwargs})
 
 
-def test_a_dump_listing_is_flagged_as_one():
+def test_a_dump_listing_is_marked_in_the_row_it_sits_in():
     """1 ex against a 45 ex median is somebody dumping, not the market.
 
-    The row led with that 1 ex and the session total counted it, while the
-    sample it came from said the item was worth forty-five times more.
+    The row leads with that 1 ex and the session total counts it, so the row
+    itself has to say which of its three numbers to read.
     """
     text = render(ITEM, _traded(skewed=True), RATES)
-    assert "SKEWED" in text
+    market = next(line for line in text.splitlines() if "market" in line)
+    assert "(dump)" in market
     assert "45x" in text.replace("×", "x"), "say how far under it sits"
+
+
+def test_the_dump_note_comes_after_the_market_row():
+    """Above the row it separated the reader from the prices; the numbers are
+    the answer and the note is how to read them."""
+    lines = render(ITEM, _traded(skewed=True), RATES).splitlines()
+    row = next(i for i, l in enumerate(lines) if l.startswith("  market "))
+    note = next(i for i, l in enumerate(lines) if "read the 25th" in l)
+    assert note > row
 
 
 def test_an_ordinary_sample_is_not_flagged():
     text = render(ITEM, _traded(median_ex=3.0, skewed=False), RATES)
-    assert "SKEWED" not in text
+    assert "dump" not in text and "read the 25th" not in text
 
 
 def test_a_book_read_against_divine_says_so():
