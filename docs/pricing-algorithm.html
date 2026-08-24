@@ -837,6 +837,7 @@
               <tr><td>Explicit mods</td><td class="mono">min</td><td>Our actual roll. Added-damage mods filter on the average of the two numbers.</td></tr>
               <tr><td>Implicits</td><td class="mono">min</td><td>At the <em>floor</em> of the range — the implicit comes with the base, and the buyer wants the base.</td></tr>
               <tr><td>A wording the item carries twice</td><td class="mono">min</td><td>An Iron Ring's implicit and its Flaring prefix are both "Adds # to # Physical Damage to Attacks". With no pseudo to total them — the trade table has none for damage — each is searched under its own group id at its own bound: the prefix at our roll, the implicit at its floor.</td></tr>
+              <tr><td>Waystone tier, item rarity</td><td class="mono">min</td><td>A waystone is bought on the totals at the top of the item, never its mods — and only the two a buyer pays for. Measured live one stat at a time: item rarity alone moved a T16 floor from 1 ex to 10, while drop chance, monster rarity and pack size each filtered nothing on their own — high rolls of those are table stakes on any listed T16. Like a defence total, these survive every rung of the ladder.</td></tr>
               <tr><td>Corrupted, sanctified</td><td class="mono">= No</td><td>Only when ours is neither. Once touched, the whole market is comparable again.</td></tr>
               <tr><td>Attacks/sec, crit, sockets</td><td class="mono">—</td><td>Traded off against damage rather than added to it.</td></tr>
             </tbody>
@@ -1096,8 +1097,10 @@
         <p>
           Mod weights come from reading build guides, not from regression
           against realised prices. Coherence tags likewise. They order the
-          search sensibly; they are not calibrated. The endgame item classes
-          have never been price-verified live at all.
+          search sensibly; they are not calibrated. Of the endgame item
+          classes only waystones have been price-verified live — the
+          tier-and-item-rarity rule was measured against the market — and the
+          rest never have been.
         </p>
       </div>
 

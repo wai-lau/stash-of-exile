@@ -912,6 +912,86 @@ def test_a_rare_map_flag_is_left_alone():
     assert all(f.get("value") != {} for f in query["query"]["stats"][0]["filters"])
 
 
+def test_a_waystone_is_searched_on_tier_and_item_rarity_only():
+    """Only the stats a buyer pays for. Measured live on T16 rares, one stat
+    at a time: item rarity 57+ alone moved the floor from 1 ex to 10 ex,
+    while drop chance 95+, monster rarity 41+ and pack size 30+ each left a
+    1 ex floor on 10,000 listings — table stakes on any listed T16.
+    Constraining them anyway priced the stone against scarcity instead of
+    against what buyers actually filter for.
+
+    Filter ids verified against /api/trade2/data/filters -> map_filters."""
+    item = load("RareMapFakeAllProps")
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    filters = query["query"]["filters"]["map_filters"]["filters"]
+    assert filters == {"map_tier": {"min": 16}, "map_iir": {"min": 17}}
+
+
+def test_a_waystone_tier_is_a_floor_not_a_pin():
+    """The tier comes from the base name, and it is a minimum like every
+    other constraint: a higher tier is at least as good, and there is no
+    maximum anywhere in the search. RareMap carries revives, pack size,
+    monster rarity and drop chance — none of them may reach the query."""
+    item = load("RareMap")
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    filters = query["query"]["filters"]["map_filters"]["filters"]
+    assert filters == {"map_tier": {"min": 14}}
+
+
+def test_waystone_stats_survive_every_widening_rung():
+    """Like a defence total, a waystone stat is the honest measure of the
+    item, so widening trims mods around it and never the stat itself."""
+    item = load("RareMapFakeAllProps")
+    for step in range(len(RELAX_STEPS)):
+        query = build_query(item, category_for(item), MODS, NOTABLES, relax=step)
+        filters = query["query"]["filters"]["map_filters"]["filters"]
+        assert filters["map_iir"] == {"min": 17}, f"rung {step} dropped the stat"
+
+
+def test_gear_carries_no_map_filters():
+    item = load("RareItem")
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    assert "map_filters" not in query["query"]["filters"]
+
+
+def test_the_report_words_the_waystone_stats_off_the_query():
+    """Same discipline as the stat ladder: the wording the report shows is
+    derived from the filters the query sends, so the two cannot drift."""
+    from sox.valuation.query import waystone_stat_texts
+
+    item = load("RareMapFakeAllProps")
+    assert waystone_stat_texts(item, category_for(item)) == [
+        "tier 16+", "item rarity 17%+",
+    ]
+
+
+def test_a_priced_waystone_reports_its_stats(tmp_path):
+    """The wiring end to end: a waystone priced by search hands the report
+    the stats the price rested on."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.trade import Listing
+
+    class OneRung:
+        def search(self, query):
+            return "q1", [f"h{i}" for i in range(12)], 12
+
+        def fetch(self, query_id, hashes):
+            return [Listing(amount=2.0, currency="exalted", account="a")
+                    for _ in hashes]
+
+    item = load("RareMap")
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, OneRung(),
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+    )
+    assert priced.source == "trade"
+    assert "tier 14+" in priced.map_stats
+
+
 def _stat_ids(query):
     """Every stat id the query asks for, and-filters and or-groups alike."""
     out = []

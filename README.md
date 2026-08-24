@@ -116,7 +116,8 @@ session, so sox holds no credentials at all.
 | Most uniques | poe2scout index — free, no API call |
 | Rares, jewels | trade search for "the cheapest item at least as good as yours" |
 | Normal and magic bases | the same search, pinned to the base and its exact item level |
-| Waystones, tablets, relics, charms | trade search; no index covers them |
+| Waystones | trade search on tier and item rarity — measured as the only stats buyers pay for; drop chance, monster rarity and pack size are table stakes on any listed high tier |
+| Tablets, relics, charms | trade search; no index covers them |
 | Anything allocating a notable | searched by the exact notable — a Megalomaniac, or an amulet carrying an enhancement |
 
 The market row is a **ceiling**, not a comp: every listing returned is at

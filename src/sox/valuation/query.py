@@ -763,6 +763,68 @@ def _property(item: dict, name: str) -> int | None:
     return None
 
 
+# Clipboard property name -> map_filters id. Verified against
+# /api/trade2/data/filters -> map_filters ("Endgame Filters").
+#
+# A waystone is bought on the totals at the top of the item, not on the mods
+# that produced them — and of those totals, ONLY the ones a buyer pays for.
+# Measured live on T16 rares, one stat at a time: item rarity 57+ alone moved
+# the floor from 1 ex to 10 ex, while drop chance 95+, monster rarity 41+ and
+# pack size 30+ each left a 1 ex floor on 10,000 listings. High rolls of
+# those are table stakes on any listed T16, so constraining them shrinks the
+# comparables without describing anything a buyer shops by — the same reason
+# an off-archetype total goes to the back of the ladder.
+WAYSTONE_PROPERTIES = {
+    "Item Rarity": "map_iir",
+}
+
+# The tier lives in the base name — "Waystone (Tier 14)" — not in the
+# property block.
+_WAYSTONE_TIER = re.compile(r"\(Tier (\d+)\)")
+
+
+def waystone_filters(item: dict, category: str) -> dict:
+    """The endgame totals the item is bought on, as trade minimums.
+
+    Like a defence total, these are the honest measure of the item — the
+    displayed number already includes every mod that feeds it — so they sit
+    beside the stat ladder rather than in it and survive every rung. The tier
+    is a floor like everything else: a higher tier is at least as good, and
+    the search has no maximums. Zero constrains nothing and is not sent.
+    """
+    if not category.startswith("map."):
+        return {}
+    out: dict = {}
+    tier = _WAYSTONE_TIER.search(item.get("baseType") or "")
+    if tier:
+        out["map_tier"] = {"min": int(tier.group(1))}
+    for prop_name, filter_id in WAYSTONE_PROPERTIES.items():
+        value = _property(item, prop_name)
+        if value is not None and value > 0:
+            out[filter_id] = {"min": value}
+    return out
+
+
+# How the report words each filter. The tier is a count and carries no unit.
+_MAP_FILTER_TEXT = {
+    "map_tier": ("tier", ""),
+    "map_iir": ("item rarity", "%"),
+}
+
+
+def waystone_stat_texts(item: dict, category: str) -> list[str]:
+    """The endgame minimums as the report words them.
+
+    Read off the same filters the query sends, so the two cannot drift —
+    every mod on a waystone scores +0, and without this the market row reads
+    as resting on nothing at all.
+    """
+    return [
+        f"{_MAP_FILTER_TEXT[fid][0]} {value['min']}{_MAP_FILTER_TEXT[fid][1]}+"
+        for fid, value in waystone_filters(item, category).items()
+    ]
+
+
 # `Grants Skill: Level 20 Chaos Bolt`. The level is a rolled value and a real
 # search axis — a buyer filtering for the skill will not take a lower level of
 # it — so it is always searched at our level as the minimum.
@@ -1196,6 +1258,9 @@ def _build(
         query["query"]["filters"]["equipment_filters"] = {"filters": equipment}
     if requirements:
         query["query"]["filters"]["req_filters"] = {"filters": requirements}
+    endgame = waystone_filters(item, category)
+    if endgame:
+        query["query"]["filters"]["map_filters"] = {"filters": endgame}
 
     # A corrupted or sanctified listing is not "at least as good" as an
     # untouched copy — corruption closes off every further craft, and a

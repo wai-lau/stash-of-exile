@@ -70,6 +70,18 @@ def test_the_market_block_is_the_last_thing_rendered():
     assert {"score", "coherence", "searched"} <= set(labels[:-1])
 
 
+def test_a_waystone_names_the_stats_the_search_rested_on():
+    """Every mod on a waystone scores +0, so without this line the report
+    shows a market row resting on nothing at all."""
+    priced = PricedItem(
+        name="Terror Panorama", item_class=ItemClass.ENDGAME, price_ex=12.5,
+        source="trade", tag="exact", listings=9, median_ex=12.5, p25_ex=12.5,
+        map_stats=("tier 14+", "drop chance 75%+"),
+    )
+    text = render(ITEM, priced, RATES)
+    assert "searched   tier 14+  ·  drop chance 75%+" in text
+
+
 def test_a_price_is_quoted_in_one_currency():
     """"1,600 ex (5.0 div)" made you convert in your head to compare against a
     market that quotes divine. In PoE2 chaos sits BETWEEN exalted and divine,

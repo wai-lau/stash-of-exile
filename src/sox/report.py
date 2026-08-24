@@ -59,6 +59,7 @@ class PricedItem:
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
     searched_texts: tuple[str, ...] = ()   # the ITEM's wording, for highlighting
+    map_stats: tuple[str, ...] = ()        # waystone minimums the search sent
     item_class_name: str = ""              # the game's own label, e.g. "Quarterstaves"
     category: str | None = None            # the trade category searched
     roll_pct: float | None = None
@@ -259,6 +260,11 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
         # The mods themselves are highlighted in the score breakdown, so
         # listing them again here would say the same thing twice.
         lines.append(f"  searched   as {priced.searched_group}")
+    if priced.map_stats:
+        # Spelled out in full, unlike the mods above: a waystone's stats are
+        # properties, not mods, so they appear nowhere in the breakdown and
+        # this line is their only mention.
+        lines.append("  searched   " + "  ·  ".join(priced.map_stats))
     if priced.breakdown:
         lines.append(f"  score      {priced.score}")
         width = max((len(str(t)) for t, _, _ in priced.breakdown), default=0)

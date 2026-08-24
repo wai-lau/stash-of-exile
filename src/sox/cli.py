@@ -43,6 +43,7 @@ from sox.valuation.query import (
     granted_skill_text,
     searchable_implicits,
     searched_item_texts,
+    waystone_stat_texts,
 )
 from sox.valuation.trade_pricer import price_by_search
 
@@ -369,6 +370,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 searches_used=result.searches_used, from_cache=result.from_cache,
                 searched_group=group, searched_stats=stats,
                 searched_texts=tuple(highlighted),
+                map_stats=tuple(waystone_stat_texts(item, category)),
             )
 
     # The exchange is the deeper book and it answers first. It carries only
