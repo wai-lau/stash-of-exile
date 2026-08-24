@@ -768,12 +768,14 @@ def _property(item: dict, name: str) -> int | None:
 #
 # A waystone is bought on the totals at the top of the item, not on the mods
 # that produced them — and of those totals, ONLY the ones a buyer pays for.
-# Measured live on T16 rares, one stat at a time: item rarity 57+ alone moved
-# the floor from 1 ex to 10 ex, while drop chance 95+, monster rarity 41+ and
-# pack size 30+ each left a 1 ex floor on 10,000 listings. High rolls of
-# those are table stakes on any listed T16, so constraining them shrinks the
-# comparables without describing anything a buyer shops by — the same reason
-# an off-archetype total goes to the back of the ladder.
+# Measured live on securable T16 rares, one stat at a time: item rarity 57+
+# alone moved the floor from 95 ex to 280, while drop chance 95+ and monster
+# rarity 41+ left it standing. High rolls of those are table stakes on any
+# listed T16, so constraining them shrinks the comparables without describing
+# anything a buyer shops by — the same reason an off-archetype total goes to
+# the back of the ladder. (Measured against SECURABLE listings; at status
+# "any" the offline ghosts put every one of these floors at 1 ex and the
+# differences vanish into the junk.)
 WAYSTONE_PROPERTIES = {
     "Item Rarity": "map_iir",
 }

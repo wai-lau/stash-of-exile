@@ -913,12 +913,12 @@ def test_a_rare_map_flag_is_left_alone():
 
 
 def test_a_waystone_is_searched_on_tier_and_item_rarity_only():
-    """Only the stats a buyer pays for. Measured live on T16 rares, one stat
-    at a time: item rarity 57+ alone moved the floor from 1 ex to 10 ex,
-    while drop chance 95+, monster rarity 41+ and pack size 30+ each left a
-    1 ex floor on 10,000 listings — table stakes on any listed T16.
-    Constraining them anyway priced the stone against scarcity instead of
-    against what buyers actually filter for.
+    """Only the stats a buyer pays for. Measured live on securable T16
+    rares, one stat at a time: item rarity 57+ alone moved the floor from
+    95 ex to 280, while drop chance 95+ and monster rarity 41+ left it
+    standing — table stakes on any listed T16. Constraining them anyway
+    priced the stone against scarcity instead of against what buyers
+    actually filter for.
 
     Filter ids verified against /api/trade2/data/filters -> map_filters."""
     item = load("RareMapFakeAllProps")
