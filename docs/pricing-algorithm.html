@@ -542,19 +542,29 @@
       <div class="stage-body">
         <h3>Price it in bulk, from both sides of the book</h3>
         <p>
-          Currency never reaches the item search, so nothing cross-checked the
-          index and it drifted unchallenged in both directions. Omen of the
-          Sovereign was indexed at <strong>26.5 ex</strong> against a book
-          holding 1,303 offers at one exalted; Chaos Orb was indexed at
-          <strong>17.6</strong> against a book that says 32.5. The exchange is
-          the deeper market and now answers first — the index prices only what
-          the exchange has no book for.
+          Currency never reaches the item search, so nothing cross-checks the
+          index but the exchange: Chaos Orb sat indexed at <strong>17.6</strong>
+          against a market that says 32.5. The exchange answers first — the
+          index prices only what the exchange cannot.
         </p>
         <p>
-          The book is read at status <code>any</code>, not <code>online</code>:
-          that omen is 1,303 offers deep at <code>any</code> and 5 at
-          <code>online</code>. PoE2 trade is asynchronous, exactly as the item
-          search already assumes.
+          <strong>The game's own fills come first.</strong> poe2scout snapshots
+          the in-game Currency Exchange hourly, and a fill cannot be faked: an
+          offer nobody takes never appears there. Masterwork Rune's trade-site
+          book was 748 one-unit “1&nbsp;Exalted for 1” bait listings while
+          38,000&nbsp;ex of the rune actually changed hands near 260 — and
+          every fill on that exchange is an instant trade. Below
+          5,000&nbsp;ex of turnover the figure is pair noise (281&nbsp;ex of
+          one omen “traded at 36”), and the trade-site books answer instead.
+        </p>
+        <p>
+          Those books are read from <strong>sellers online in league</strong>
+          (<code>onlineleague</code>) — measured against the alternatives.
+          <code>any</code> is where bait lives: the omen showed 8,417 listings
+          at <code>any</code>, a wall of offline 1-ex ghosts over a ~6&nbsp;ex
+          online market. <code>securable</code> (instant buyout) empties the
+          core books outright — the divine ask book held zero offers there. An
+          offer from a seller who is present is one you can actually take.
         </p>
 
         <figure class="diagram" style="margin: 0.3rem 0 0;">
@@ -625,8 +635,8 @@
                 <td>If the bid comes back <em>above</em> the ask, one of the two sides is bait and the book does not say which. On Preserved Cranium every one of the 100 offers on the cheapest page read “1 Exalted for 1 Cranium”, so the ask returned 1 against a real 500 ex bid and the midpoint printed 250 for an item the index prices at 3,449. Buy at the ask and sell at the bid forever — no market survives that, so the exchange declines rather than guessing.</td>
               </tr>
               <tr>
-                <td>The divine book</td><td class="mono">read every time, deeper answers</td>
-                <td>The unit an item trades in is a fact about the item: the dear ones are quoted in divine and their exalted book is stragglers — Khatal's Rejuvenation held 9 units at 10 ex while the divine side quoted 908 — or bait: Masterwork Rune's exalted book was 745 offers, every one on the cheapest page “1 Exalted for 1”, one unit each, and at 184 visible units it passed a thin-stock gate and priced a ~1 divine rune at 1 ex. Depth in a bait book is still bait, so no reading of one book alone is trusted: both books are read, converted at the divine rate, and the <em>deeper</em> answers. Divine itself is exempt: against itself the query says nothing, exactly as exalted's does.</td>
+                <td>A thin book</td><td class="mono">read again in divine, broader answers</td>
+                <td>Under 20 units an exalted book cannot support a price, and for a dear item that is because nobody trades it in exalted: Khatal's Rejuvenation held 9 units at 10 ex while the divine side said 908. The broader book — more sellers quoting the item in that currency — answers, never the fatter page: the divine side of every cheap item is a wall of lazy one-divine asks, and comparing any size to it handed a ~6 ex omen to the wrong book at 362. The gate is sound only because of what sits in front of it — fills catch the deep-bait class, online status keeps ghosts out of the depth it measures. Divine itself is exempt: against itself the query says nothing, exactly as exalted's does.</td>
               </tr>
               <tr>
                 <td>Sub-exalted prices</td><td class="mono">bundles divide out</td>
@@ -675,6 +685,8 @@
               <tr><td class="mono">bid 301 · ask 420</td><td>Both sides exist. The spread is the honest width of the answer.</td></tr>
               <tr><td class="mono">ask only — nobody is bidding for these</td><td>The book has offers but no bids.</td></tr>
               <tr><td class="mono">thin book — few units are actually offered</td><td>Under 20 units in stock.</td></tr>
+              <tr><td class="mono">the game's own exchange — 84,602 ex of it traded in the last snapshot</td><td>The price rests on completed in-game trades, not listings — the one measurement bait cannot touch.</td></tr>
+              <tr><td class="mono">the item search capped at 10,000 and reads a sample — this is the bulk book instead</td><td>Past 10,000 matches the trade engine sorts only a kept sample — measured live, tier 15+ floored at 3 ex while its own subsets floored at 1 ex and at 1 transmute — so a capped search has described a commodity and its bulk book answers instead. A capped search with no book keeps the trade answer, branded <span class="mono">every search past the cap reads a sample</span>.</td></tr>
             </tbody>
           </table>
         </div>

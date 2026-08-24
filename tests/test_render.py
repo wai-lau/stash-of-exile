@@ -82,6 +82,30 @@ def test_a_waystone_names_the_stats_the_search_rested_on():
     assert "searched   tier 14+  ·  drop chance 75%+" in text
 
 
+def test_a_bulk_priced_commodity_says_why_the_search_was_dropped():
+    """A waystone rerouted to the bulk book must say what happened to its
+    search, or the exchange row reads as if the item were never searchable."""
+    priced = PricedItem(
+        name="Rotting Navigation", item_class=ItemClass.ENDGAME, price_ex=5.0,
+        source="exchange", tag="capped-search", offers=39, stock=5150,
+        ask_ex=5.0, item_class_name="Waystones",
+    )
+    text = render(ITEM, priced, RATES)
+    assert "capped" in text and "bulk" in text
+
+
+def test_a_fills_price_names_the_game_exchange():
+    """A price read off the game's own exchange rests on trades, not
+    listings, and the row has to say which measurement it is."""
+    priced = PricedItem(
+        name="Masterwork Rune", item_class=ItemClass.GEM, price_ex=260.0,
+        source="exchange", tag=None, quoted="fills", traded_ex=38_000.0,
+    )
+    text = render(ITEM, priced, RATES)
+    assert "game's own exchange" in text
+    assert "38,000" in text
+
+
 def test_a_capped_search_says_its_low_is_a_sample():
     """Measured live: tier 15+ alone floored at 3 ex while the strictly
     narrower tier 15+, rarity 24+ floored at 1 — impossible in one market.

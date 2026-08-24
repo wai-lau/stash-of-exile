@@ -965,6 +965,80 @@ def test_the_report_words_the_waystone_stats_off_the_query():
     ]
 
 
+def test_a_capped_search_is_priced_off_the_bulk_book(tmp_path):
+    """Past 10,000 matches the trade engine sorts only a kept sample, so the
+    low is noise — measured live, tier 15+ alone floored at 3 ex while its
+    own subsets floored at 1 ex and at 1 transmute. A stone whose search
+    caps is a commodity, and the exchange carries that commodity by tier:
+    Waystone (Tier 15) held 6,957 online units against the sample's ten."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.exchange import Book, Offer
+    from sox.ggg.trade import Listing
+
+    class CappedRung:
+        def search(self, query):
+            return "q1", [f"h{i}" for i in range(100)], 10_000
+
+        def fetch(self, query_id, hashes):
+            return [Listing(amount=1.0, currency="exalted", account="a")
+                    for _ in hashes]
+
+    class BulkBook:
+        def ids(self):
+            return {"Waystone (Tier 14)": "waystone-14"}
+
+        def book(self, item_id, have="exalted"):
+            if item_id == "waystone-14" and have == "exalted":
+                return Book([Offer(ratio=24.0, stock=500)], 2501)
+            return Book([], 0)
+
+    item = load("RareMap")
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES,
+        CappedRung(), Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+        exchange=BulkBook(),
+    )
+    assert priced.source == "exchange"
+    assert priced.tag == "capped-search"
+    assert priced.price_ex == 24.0
+
+
+def test_a_capped_search_with_no_book_keeps_the_sample_and_its_note(tmp_path):
+    """Gear has no bulk book, so a capped gear search keeps the trade answer
+    — the render already brands it a sample."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.trade import Listing
+
+    class CappedRung:
+        def search(self, query):
+            return "q1", [f"h{i}" for i in range(100)], 10_000
+
+        def fetch(self, query_id, hashes):
+            return [Listing(amount=1.0, currency="exalted", account="a")
+                    for _ in hashes]
+
+    class EmptyExchange:
+        def ids(self):
+            return {}
+
+    item = load("RareMap")
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES,
+        CappedRung(), Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+        exchange=EmptyExchange(),
+    )
+    assert priced.source == "trade"
+    assert priced.matches == 10_000
+
+
 def test_a_priced_waystone_reports_its_stats(tmp_path):
     """The wiring end to end: a waystone priced by search hands the report
     the stats the price rested on."""

@@ -56,6 +56,7 @@ class PricedItem:
     ask_ex: float | None = None   # exchange: what one costs to buy
     bid_ex: float | None = None   # exchange: what someone will pay
     quoted: str = ""              # exchange: the currency the book was read in
+    traded_ex: float = 0.0        # exchange fills: exalted actually exchanged
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
     searched_texts: tuple[str, ...] = ()   # the ITEM's wording, for highlighting
@@ -233,6 +234,18 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
             out.append("             ask only — nobody is bidding for these")
         if priced.stock and priced.stock < 20:
             out.append("             thin book — few units are actually offered")
+        # A fills price rests on completed trades, not listings — the one
+        # measurement bait cannot touch — and the row says which it is.
+        if priced.quoted == "fills":
+            out.append(f"             the game's own exchange — "
+                         f"{priced.traded_ex:,.0f} ex of it traded in the "
+                         "last snapshot")
+        # Rerouted here from a search that hit the 10,000 cap, where the sort
+        # reads only a kept sample. Said out loud, or the exchange row makes
+        # the item look like it was never searchable at all.
+        if priced.tag == "capped-search":
+            out.append("             the item search capped at 10,000 and reads "
+                         "a sample — this is the bulk book instead")
 
     else:
         out.append(f"  index      {fmt_price(priced.price_ex, rates)}"

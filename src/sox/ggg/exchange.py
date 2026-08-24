@@ -1,10 +1,12 @@
-"""Bulk currency exchange — the deep book the index never checks.
+"""Bulk currency exchange — the book the index never checks.
 
-Currency never reaches the item search, so nothing cross-checked the index
-and it drifted unchallenged: Omen of the Sovereign was indexed at 26.5 ex off
-31 listings while the exchange held 1303 offers at one exalted each. This is
-the same trade2 host as the item search, so it goes through GGGSession and
-pays the same rate discipline.
+Currency never reaches the item search, so nothing cross-checks the index
+but this: chaos was indexed at 17.6 ex against a book that says 32.5. The
+book has liars of its own — the omen's "1,303 offers at one exalted" was a
+wall of offline ghosts over a ~6 ex online market — which is why it is read
+from sellers who are present, and why the game's own fills outrank it in
+exchange_pricer. Same trade2 host as the item search, so it goes through
+GGGSession and pays the same rate discipline.
 """
 
 from __future__ import annotations
@@ -16,10 +18,16 @@ from sox.ggg.session import GGGSession
 
 BASE = "https://www.pathofexile.com/api/trade2"
 
-# NOT "online". The book for Omen of the Sovereign is 1303 offers deep at
-# "any" and 5 at "online": PoE2 trade is asynchronous and most of the market
-# is offline at any moment, exactly as it is for the item search.
-STATUS = "any"
+# Sellers who are present, measured against the alternatives. "any" is where
+# bait lives: the omen showed 8,417 listings at "any" — a wall of offline
+# 1-ex ghosts — against 161 online floored at 2 ex, and Masterwork Rune's
+# "any" book was 748 one-unit "1 Exalted for 1" traps. "securable" (instant
+# buyout) empties the core books outright: the divine ask book held zero
+# offers there. At "onlineleague" every book measured was sane — an offer
+# from a seller who is present is one you can actually take. Instant-buyout
+# truth comes from the game's own fills (exchange_pricer); this book is the
+# fallback behind it.
+STATUS = "onlineleague"
 
 
 @dataclass(frozen=True)
@@ -67,7 +75,11 @@ class ExchangeClient:
         and it is read cheapest-first, so pagination keeps the end that
         matters and drops the 11,000-exalted tail nobody trades at.
         """
-        cached = self._cache.get("exchange_book", f"{self._league}/{have}/{item_id}")
+        # The status is part of the key: a book read at "any" answers a
+        # different question, and a cached "any" book serving a securable
+        # read would hand the bait right back.
+        key = f"{self._league}/{STATUS}/{have}/{item_id}"
+        cached = self._cache.get("exchange_book", key)
         if cached is not None:
             return Book([Offer(**o) for o in cached["offers"]], cached["total"])
 
@@ -99,7 +111,7 @@ class ExchangeClient:
         # the price, but the count must not pretend the book is 100 deep.
         book = Book(offers, int(payload.get("total") or len(offers)))
         self._cache.put(
-            "exchange_book", f"{self._league}/{have}/{item_id}",
+            "exchange_book", key,
             {"offers": [o.__dict__ for o in offers], "total": book.total},
             ttl=TTL["exchange_book"],
         )

@@ -125,13 +125,17 @@ def main(argv: list[str] | None = None) -> int:
             trade = TradeClient(session, cache, cfg.league or league.value)
             exchange = ExchangeClient(_exchange_session(cfg, announce), cache,
                                       cfg.league or league.value)
-            rates = exchange_rates(exchange, rates)
+            fills = scout.exchange_fills(league.short)
+            rates = exchange_rates(exchange, rates, fills=fills)
+        else:
+            fills = {}
 
         for n, block in enumerate(blocks):
             if n:
                 print()
             print(price_one(block, index, rates, mod_index, base_rules,
-                            unique_rules, notables, trade, cache, cfg, exchange))
+                            unique_rules, notables, trade, cache, cfg, exchange,
+                            fills))
         return 0
     except (GGGError, httpx.HTTPError) as exc:
         print(f"error: {exc}", file=sys.stderr)
@@ -229,7 +233,10 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         trade = TradeClient(session, cache, cfg.league or league.value)
         exchange = ExchangeClient(_exchange_session(cfg, announce), cache,
                                   cfg.league or league.value)
-        rates = exchange_rates(exchange, rates)
+        fills = scout.exchange_fills(league.short)
+        rates = exchange_rates(exchange, rates, fills=fills)
+    else:
+        fills = {}
 
     divine_ex = rates.get("divine") or league.divine_price_ex
     print(watch_ui.banner(league.value, divine_ex,
@@ -286,7 +293,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                 try:
                     priced = _price_item(item, index, rates, mod_index, base_rules,
                                          unique_rules, notables, trade, cache, cfg,
-                                         exchange)
+                                         exchange, fills)
                 except (GGGError, httpx.HTTPError) as exc:
                     # One bad lookup must not end the session; the next copy retries.
                     timer.cancel()
@@ -326,15 +333,17 @@ def run_watch(args, cfg, cache, scout, league) -> int:
 
 
 def price_one(block, index, rates, mod_index, base_rules, unique_rules,
-              notables, trade, cache, cfg, exchange=None) -> str:
+              notables, trade, cache, cfg, exchange=None, fills=None) -> str:
     item = itemtext.parse(block)
     priced = _price_item(item, index, rates, mod_index, base_rules,
-                         unique_rules, notables, trade, cache, cfg, exchange)
+                         unique_rules, notables, trade, cache, cfg, exchange,
+                         fills)
     return report.render(item, priced, rates)
 
 
 def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
-                notables, trade, cache, cfg, exchange=None) -> report.PricedItem:
+                notables, trade, cache, cfg, exchange=None,
+                fills=None) -> report.PricedItem:
     item_class = classify(item)
     entry = index_price_for(item, index)
 
@@ -348,6 +357,26 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 item, category, mod_index, notables, trade, cache, rates,
                 status=cfg.status, max_searches=cfg.max_searches,
             )
+            # Past the cap the engine sorts only a kept sample — measured
+            # live, tier 15+ alone floored at 3 ex while its own subsets
+            # floored at 1 ex and at 1 transmute — so the low is noise. A
+            # search that caps has described a commodity, and a commodity's
+            # market is its bulk book: Waystone (Tier 15) held 6,957 online
+            # units against the sample's ten. Gear never has a book, so this
+            # reroutes nothing else.
+            if (result.matches >= report.SEARCH_CAP and exchange is not None
+                    and item.get("baseType")):
+                bulk = price_by_exchange(item["baseType"], exchange,
+                                         rates.get("divine"), fills=fills)
+                if bulk is not None:
+                    return report.PricedItem(
+                        name=display_name(item), item_class=item_class,
+                        price_ex=bulk.price_ex, source="exchange",
+                        tag="capped-search", reason=verdict.reason,
+                        offers=bulk.offers, stock=bulk.stock,
+                        ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
+                        quoted=bulk.quoted, traded_ex=bulk.traded_ex,
+                    )
             # Explain the rung that actually produced the price, not rung 0.
             group, stats = explain_selection(item, mod_index, notables,
                                              relax=result.relax_used)
@@ -373,19 +402,23 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 map_stats=tuple(waystone_stat_texts(item, category)),
             )
 
-    # The exchange is the deeper book and it answers first. It carries only
-    # what trades in bulk — currency, runes, essences, omens, fragments, gems,
-    # waystones — and returns nothing for gear, so the index still prices
-    # everything else. Currency never reaches the trade search, which is how
-    # the index drifted to 26.5 ex on an omen the exchange sold at 1.
+    # The exchange answers first: the game's own fills when the item traded
+    # enough, the online books behind them. It carries only what trades in
+    # bulk — currency, runes, essences, omens, fragments, gems, waystones —
+    # and returns nothing for gear, so the index still prices everything
+    # else. Currency never reaches the trade search, so this is the only
+    # cross-check the index gets: chaos sat indexed at 17.6 ex against a
+    # book that says 32.5.
     if exchange is not None:
-        bulk = price_by_exchange(index_key(item), exchange, rates.get("divine"))
+        bulk = price_by_exchange(index_key(item), exchange, rates.get("divine"),
+                                 fills=fills)
         if bulk is not None:
             return report.PricedItem(
                 name=display_name(item), item_class=item_class,
                 price_ex=bulk.price_ex, source="exchange", tag=None,
                 reason=verdict.reason, offers=bulk.offers, stock=bulk.stock,
                 ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex, quoted=bulk.quoted,
+                traded_ex=bulk.traded_ex,
             )
 
     if entry is not None:

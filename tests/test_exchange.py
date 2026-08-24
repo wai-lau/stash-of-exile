@@ -1,11 +1,13 @@
 """Bulk exchange pricing: what a currency actually costs to buy.
 
-The index priced Omen of the Sovereign at 26.5 ex off 31 listings while the
-exchange held 1303 offers at 1:1 — 26x high, and nothing cross-checked it
-because currency never reaches the trade search. The exchange is the deeper
-book, so it prices anything it carries.
+Currency never reaches the trade search, so nothing cross-checks the index
+except this book — chaos was indexed at 17.6 ex against a book that says
+32.5. The book has its own liars: the omen's celebrated "1,303 offers at
+1 ex" turned out to be a wall of offline ghosts (161 sellers online, floored
+at 2 ex), which is why the book is read from sellers who are present and the
+game's own fills outrank it entirely.
 
-Both ends of that book are junk. Divine's cheapest ask is one exalted for one
+Both ends of any book are junk. Divine's cheapest ask is one exalted for one
 divine, a trap; its dearest is 11,000. Only depth saves you: those 1-exalted
 offers hold 59 units of 18,520, so a stock-weighted low quantile steps over
 them and lands on the supported price.
@@ -108,8 +110,13 @@ def test_an_item_the_exchange_does_not_carry_has_no_id(tmp_path):
     assert client.ids().get("Mageblood") is None
 
 
-def test_the_book_is_read_with_status_any(tmp_path):
-    """`online` returned 5 offers of 1303: PoE2 trade is asynchronous."""
+def test_the_book_is_read_from_sellers_who_are_present(tmp_path):
+    """Measured across all three statuses. "any" is where bait lives: the
+    omen showed 8,417 listings at "any" — a wall of offline 1-ex ghosts —
+    and 161 online, floored at 2 ex. "securable" empties the core books
+    outright (the divine ask book held zero offers at instant buyout). At
+    "onlineleague" every measured book was sane: an offer from a seller who
+    is present is one you can actually take."""
     seen = {}
 
     def handler(request):
@@ -124,7 +131,21 @@ def test_the_book_is_read_with_status_any(tmp_path):
         user_agent="sox-test",
     )
     ExchangeClient(session, Cache(tmp_path / "c.sqlite"), "Runes of Aldur").book("divine")
-    assert '"any"' in seen["body"]
+    assert '"onlineleague"' in seen["body"]
+
+
+def test_the_book_cache_is_keyed_on_the_status_it_was_read_at(tmp_path):
+    """A book cached at "any" must not answer for another status — the "any"
+    masterwork book was 748 offers of bait and the online one 9 real ones."""
+    from sox.ggg import exchange as exchange_module
+
+    client = build({"/data/static": STATIC,
+                    "/exchange/": offers([(1, 1, 1)])}, tmp_path)
+    client.book("divine")
+    cached_keys = [row[0] for row in client._cache._conn.execute(
+        "SELECT key FROM entries WHERE tbl = 'exchange_book'")]
+    assert cached_keys, "expected the book to be cached"
+    assert all(exchange_module.STATUS in key for key in cached_keys)
 
 
 def two_sided(tmp_path, ask_pairs, bid_pairs):
@@ -250,7 +271,7 @@ def test_a_thin_exalted_book_is_read_against_divine_instead(tmp_path):
 
     client = four_sided(tmp_path, {
         ("exalted", "omen-of-the-sovereign"): [(10, 1, 9)],
-        ("divine", "omen-of-the-sovereign"): [(2.67, 1, 340)],
+        ("divine", "omen-of-the-sovereign"): [(2.67, 1, 170), (2.67, 1, 170)],
     })
     priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0)
     assert priced.price_ex == pytest.approx(2.67 * 340)
@@ -271,21 +292,22 @@ def test_a_deep_exalted_book_still_answers(tmp_path):
     assert priced.quoted == "exalted"
 
 
-def test_a_deep_looking_bait_book_loses_to_the_divine_side(tmp_path):
-    """Masterwork Rune: 745 exalted offers, every one on the cheapest page
-    "1 Exalted for 1", one unit each — and the whole page never reached past
-    5 ex. That book passed the thin-stock gate at 184 units and priced a
-    ~1 divine rune at 1 ex. Depth in a bait book is still bait, so the divine
-    side is read every time and the deeper book answers."""
+def test_a_deep_online_book_stands_without_a_divine_read(tmp_path):
+    """The divine side of every cheap item is a wall of lazy one-divine asks
+    — the omen's held 14 online offers against 12 real exalted ones, and any
+    size comparison hands a ~6 ex omen to the wrong book at 362. A deep
+    exalted book supports its own price, so the divine side is not even
+    asked. (The bait class this gate once missed — Masterwork Rune's 745
+    "1 Exalted for 1" ghosts — is priced by its fills before any book is
+    opened, and the ghosts themselves are gone at online status.)"""
     from sox.valuation.exchange_pricer import price_by_exchange
 
     client = four_sided(tmp_path, {
-        ("exalted", "masterwork-rune"): [(1, 1, 184)],
-        ("divine", "masterwork-rune"): [(1, 1, 360)],
+        ("exalted", "omen-of-the-sovereign"): [(6, 1, 20), (6, 1, 14)],
+        ("divine", "omen-of-the-sovereign"): [(1, 1, 200), (1, 1, 200), (1, 1, 200)],
     })
-    priced = price_by_exchange("Masterwork Rune", client, divine_ex=340.0)
-    assert priced.price_ex == pytest.approx(340.0)
-    assert (priced.stock, priced.quoted) == (360, "divine")
+    priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0)
+    assert (priced.price_ex, priced.quoted) == (6.0, "exalted")
 
 
 def test_the_deeper_of_the_two_books_wins(tmp_path):
@@ -294,11 +316,58 @@ def test_the_deeper_of_the_two_books_wins(tmp_path):
     from sox.valuation.exchange_pricer import price_by_exchange
 
     client = four_sided(tmp_path, {
-        ("exalted", "omen-of-the-sovereign"): [(10, 1, 9)],
+        ("exalted", "omen-of-the-sovereign"): [(10, 1, 5), (10, 1, 4)],
         ("divine", "omen-of-the-sovereign"): [(2.67, 1, 2)],
     })
     priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0)
     assert (priced.price_ex, priced.quoted) == (10.0, "exalted")
+
+
+def test_a_broad_book_beats_a_fat_paged_one(tmp_path):
+    """The omen, live: an exalted book 1,304 offers wide whose cheapest page
+    held 274 units, against a divine book 1,123 wide whose page held 425
+    units of 1-divine asks. Comparing page stock handed the omen to the
+    divine book at 362 ex. Breadth — how many sellers quote the item in a
+    currency — is what says which currency it trades in, and a page's stock
+    is exactly what bait inflates most cheaply."""
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "omen-of-the-sovereign"): [(6, 1, 10), (6, 1, 12), (7, 1, 12)],
+        ("divine", "omen-of-the-sovereign"): [(1, 1, 425)],
+    })
+    priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0)
+    assert (priced.price_ex, priced.quoted) == (6.0, "exalted")
+
+
+def test_fills_outrank_every_book(tmp_path):
+    """The game's own exchange is the instant market and its fills cannot be
+    faked: Masterwork Rune's trade-site book was 748 one-unit bait listings
+    at 1 ex while 38,000 ex of it actually changed hands near 260."""
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "masterwork-rune"): [(1, 1, 184)],
+    })
+    priced = price_by_exchange("Masterwork Rune", client, divine_ex=340.0,
+                               fills={"Masterwork Rune": (260.0, 38_000.0)})
+    assert priced.price_ex == pytest.approx(260.0)
+    assert priced.quoted == "fills"
+    assert priced.traded_ex == pytest.approx(38_000.0)
+
+
+def test_thin_fills_fall_through_to_the_book(tmp_path):
+    """281 ex of an omen traded against a book 1,303 offers deep at 1 ex:
+    the snapshot's 36 ex figure is pair noise, not a price."""
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "omen-of-the-sovereign"): [(1, 1, 6654)],
+    })
+    priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0,
+                               fills={"Omen of the Sovereign": (36.0, 281.0)})
+    assert priced.price_ex == pytest.approx(1.0)
+    assert priced.quoted == "exalted"
 
 
 def test_divine_is_never_priced_against_itself(tmp_path):

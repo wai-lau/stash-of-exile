@@ -165,6 +165,57 @@ class ScoutClient:
                 return items
             page += 1
 
+    def exchange_fills(self, league_short: str) -> dict[str, tuple[float, float]]:
+        """Display name -> (price in exalted, exalted traded), read off the
+        game's own Currency Exchange.
+
+        poe2scout snapshots the in-game exchange hourly. The endpoint is
+        undocumented — read out of their frontend bundle and confirmed live —
+        so an empty answer here is survivable by design: everything falls
+        back to the trade-site books.
+
+        A fill cannot be faked: an offer nobody takes never appears here,
+        which is what separates Masterwork Rune's 38,000 ex of real trades
+        from the 748 one-unit bait listings on its trade-site book.
+
+        RelativePrice is quoted in a unit of the snapshot's own — Exalted Orb
+        itself reports ~0.91 — so every figure is normalised by exalted's
+        own, which lands divine at 361.8 ex right where the trade-site book
+        independently puts it. Each currency takes its figure from the pair
+        it traded the most value in.
+        """
+        cached = self._cache.get("exchange_fills", league_short)
+        if cached is not None:
+            return {k: (v[0], v[1]) for k, v in cached.items()}
+
+        best: dict[str, tuple[float, float]] = {}
+        try:
+            pairs = self._get(f"/Leagues/{league_short}/SnapshotPairs")
+        except (httpx.HTTPError, ValueError):
+            return {}
+        for pair in pairs or []:
+            for side in ("CurrencyOne", "CurrencyTwo"):
+                name = (pair.get(side) or {}).get("Text")
+                data = pair.get(f"{side}Data") or {}
+                price = data.get("RelativePrice")
+                traded = float(data.get("ValueTraded") or 0.0)
+                if not name or not price:
+                    continue
+                if name not in best or traded > best[name][1]:
+                    best[name] = (float(price), traded)
+
+        unit = best.get("Exalted Orb", (0.0, 0.0))[0]
+        if not unit:
+            return {}
+        fills = {name: (price / unit, traded / unit)
+                 for name, (price, traded) in best.items()}
+        self._cache.put(
+            "exchange_fills", league_short,
+            {k: list(v) for k, v in fills.items()},
+            ttl=TTL["exchange_fills"],
+        )
+        return fills
+
     def currency_rates(self, index: dict[str, IndexEntry]) -> dict[str, float]:
         """Trade currency id -> value in exalted."""
         rates = {"exalted": 1.0}

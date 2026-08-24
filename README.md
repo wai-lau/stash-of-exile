@@ -112,11 +112,11 @@ session, so sox holds no credentials at all.
 
 | Item | How it is priced |
 |---|---|
-| Currency, runes, essences, omens, fragments, gems | bulk exchange book, priced from both sides and read against both exalted and divine — the deeper book answers, because a bait-filled exalted book can look deep while the market sits on the divine side |
+| Currency, runes, essences, omens, fragments, gems | the game's own Currency Exchange first — fills cannot be faked by bait listings — then the bulk trade book, read from sellers who are online in league, against both exalted and divine, the broader book answering |
 | Most uniques | poe2scout index — free, no API call |
 | Rares, jewels | trade search for "the cheapest item at least as good as yours" |
 | Normal and magic bases | the same search, pinned to the base and its exact item level |
-| Waystones | trade search on tier and item rarity — measured as the only stats buyers pay for; drop chance, monster rarity and pack size are table stakes on any listed high tier |
+| Waystones | trade search on tier and item rarity — measured as the only stats buyers pay for; a stone whose search still caps at 10,000 matches is a commodity and is priced off its tier's bulk exchange book instead |
 | Tablets, relics, charms | trade search; no index covers them |
 | Anything allocating a notable | searched by the exact notable — a Megalomaniac, or an amulet carrying an enhancement |
 

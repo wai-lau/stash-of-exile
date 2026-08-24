@@ -16,6 +16,7 @@ TTL = {
     "trade_price": 12 * 3600,
     "exchange_static": 7 * 86400,
     "exchange_book": 6 * 3600,
+    "exchange_fills": 3600,  # the snapshot behind it is hourly
 }
 
 _SCHEMA = """

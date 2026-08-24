@@ -51,3 +51,39 @@ def test_a_league_with_no_current_softcore_entry_is_an_error(tmp_path):
     scout = build(only_hc, tmp_path / "c.sqlite")
     with pytest.raises(RuntimeError):
         scout.current_league()
+
+
+# Shape copied from a live SnapshotPairs response, one pair, trimmed to the
+# fields read. RelativePrice is quoted in a unit of the snapshot's own:
+# Exalted Orb itself reported 0.91, so divine's raw 329.21 is 361.77 ex.
+PAIRS = [
+    {
+        "CurrencyOne": {"Text": "Divine Orb"},
+        "CurrencyTwo": {"Text": "Exalted Orb"},
+        "CurrencyOneData": {"RelativePrice": 329.21, "ValueTraded": 17_314_115.0},
+        "CurrencyTwoData": {"RelativePrice": 0.91, "ValueTraded": 797_092.0},
+    },
+    {
+        "CurrencyOne": {"Text": "Divine Orb"},
+        "CurrencyTwo": {"Text": "Masterwork Rune"},
+        # A lower-volume divine figure: the best-traded pair's number wins.
+        "CurrencyOneData": {"RelativePrice": 999.0, "ValueTraded": 35_554.0},
+        "CurrencyTwoData": {"RelativePrice": 237.03, "ValueTraded": 34_940.0},
+    },
+]
+
+
+def test_fills_are_normalised_by_exalted_own_figure(tmp_path):
+    scout = build(PAIRS, tmp_path / "c.sqlite")
+    fills = scout.exchange_fills("runes")
+    price, traded = fills["Divine Orb"]
+    assert price == pytest.approx(329.21 / 0.91)
+    assert traded == pytest.approx(17_314_115.0 / 0.91)
+    assert fills["Masterwork Rune"][0] == pytest.approx(237.03 / 0.91)
+
+
+def test_a_snapshot_with_no_exalted_figure_prices_nothing(tmp_path):
+    """Without exalted's own figure there is no unit to normalise with, and
+    a raw RelativePrice quoted as a price would be ~10% off everything."""
+    scout = build([PAIRS[1]], tmp_path / "c.sqlite")
+    assert scout.exchange_fills("runes") == {}
