@@ -49,11 +49,6 @@ UNIT = "exalted"
 # the market, it was the stragglers.
 DIVINE = "divine"
 
-# Below this many units a book cannot support a price, which is the same
-# depth the report already calls a thin book.
-THIN_STOCK = 20
-
-
 @dataclass(frozen=True)
 class BulkPrice:
     price_ex: float
@@ -118,11 +113,14 @@ def price_by_exchange(name: str, exchange, divine_ex: float | None = None) -> Bu
     Most cheap currency has no bid side at all — 1303 sellers of one omen and
     not a single buyer — and there the ask is the only evidence there is.
 
-    A book too thin to price is read AGAIN against divine, because the unit an
-    item trades in is a fact about the item: the dear ones are quoted in
-    divine and their exalted book is whoever happened to list one. The deeper
-    of the two answers, so a thin exalted book is a reason to look rather than
-    a reason to switch.
+    The divine book is read EVERY time, not only when the exalted book is
+    thin, because the unit an item trades in is a fact about the item: the
+    dear ones are quoted in divine and their exalted book is whoever happened
+    to list one — or worse, bait. Masterwork Rune's exalted book was 745
+    offers and every one on the cheapest page was "1 Exalted for 1", one unit
+    each; at 184 visible units it passed a thin-stock gate and priced a
+    ~1 divine rune at 1 ex. Depth in a bait book is still bait, so no reading
+    of one book alone can be trusted — the deeper of the two answers.
 
     None is the signal to fall back to the index: uniques, gear and jewels
     have no exchange book, neither do items nobody is offering, and neither
@@ -135,8 +133,6 @@ def price_by_exchange(name: str, exchange, divine_ex: float | None = None) -> Bu
         return BulkPrice(price_ex=1.0, offers=0, stock=0, ask_ex=1.0, bid_ex=1.0)
 
     priced = _read_book(exchange, item_id, UNIT, 1.0)
-    if priced is not None and priced.stock >= THIN_STOCK:
-        return priced
     # Divine against itself is the same meaningless query exalted against
     # itself is, and without a rate there is nothing to convert the book with.
     if item_id == DIVINE or not divine_ex:

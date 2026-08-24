@@ -32,6 +32,9 @@ STATIC = {"result": [
     {"id": "Abyss", "label": "Abyss", "entries": [
         {"id": "preserved-cranium", "text": "Preserved Cranium"},
     ]},
+    {"id": "Runes", "label": "Runes", "entries": [
+        {"id": "masterwork-rune", "text": "Masterwork Rune"},
+    ]},
 ]}
 
 
@@ -254,9 +257,9 @@ def test_a_thin_exalted_book_is_read_against_divine_instead(tmp_path):
     assert (priced.stock, priced.quoted) == (340, "divine")
 
 
-def test_a_deep_exalted_book_is_left_alone(tmp_path):
-    """The second pair of calls is only worth making when the first book
-    cannot support a price."""
+def test_a_deep_exalted_book_still_answers(tmp_path):
+    """Reading the divine book is not switching to it: when the exalted side
+    is the real market, it is also the deeper one, and it keeps the answer."""
     from sox.valuation.exchange_pricer import price_by_exchange
 
     client = four_sided(tmp_path, {
@@ -266,6 +269,23 @@ def test_a_deep_exalted_book_is_left_alone(tmp_path):
     priced = price_by_exchange("Omen of the Sovereign", client, divine_ex=340.0)
     assert priced.price_ex == 10.0
     assert priced.quoted == "exalted"
+
+
+def test_a_deep_looking_bait_book_loses_to_the_divine_side(tmp_path):
+    """Masterwork Rune: 745 exalted offers, every one on the cheapest page
+    "1 Exalted for 1", one unit each — and the whole page never reached past
+    5 ex. That book passed the thin-stock gate at 184 units and priced a
+    ~1 divine rune at 1 ex. Depth in a bait book is still bait, so the divine
+    side is read every time and the deeper book answers."""
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "masterwork-rune"): [(1, 1, 184)],
+        ("divine", "masterwork-rune"): [(1, 1, 360)],
+    })
+    priced = price_by_exchange("Masterwork Rune", client, divine_ex=340.0)
+    assert priced.price_ex == pytest.approx(340.0)
+    assert (priced.stock, priced.quoted) == (360, "divine")
 
 
 def test_the_deeper_of_the_two_books_wins(tmp_path):

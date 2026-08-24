@@ -112,7 +112,7 @@ session, so sox holds no credentials at all.
 
 | Item | How it is priced |
 |---|---|
-| Currency, runes, essences, omens, fragments, gems | bulk exchange book, priced from both sides — and read again against divine when the exalted book is too thin to price |
+| Currency, runes, essences, omens, fragments, gems | bulk exchange book, priced from both sides and read against both exalted and divine — the deeper book answers, because a bait-filled exalted book can look deep while the market sits on the divine side |
 | Most uniques | poe2scout index — free, no API call |
 | Rares, jewels | trade search for "the cheapest item at least as good as yours" |
 | Normal and magic bases | the same search, pinned to the base and its exact item level |
