@@ -82,6 +82,28 @@ def test_a_waystone_names_the_stats_the_search_rested_on():
     assert "searched   tier 14+  ·  drop chance 75%+" in text
 
 
+def test_a_capped_search_says_its_low_is_a_sample():
+    """Measured live: tier 15+ alone floored at 3 ex while the strictly
+    narrower tier 15+, rarity 24+ floored at 1 — impossible in one market.
+    Past 10,000 matches the trade engine truncates BEFORE sorting, so the
+    cheapest of a capped search is the floor of a sample."""
+    priced = PricedItem(
+        name="Forgotten Intent", item_class=ItemClass.ENDGAME, price_ex=3.0,
+        source="trade", tag="exact", listings=10, matches=10_000,
+        median_ex=3.0, p25_ex=3.0,
+    )
+    assert "sample" in render(ITEM, priced, RATES)
+
+
+def test_an_uncapped_search_needs_no_sample_note():
+    priced = PricedItem(
+        name="Forgotten Intent", item_class=ItemClass.ENDGAME, price_ex=3.0,
+        source="trade", tag="exact", listings=10, matches=9_999,
+        median_ex=3.0, p25_ex=3.0,
+    )
+    assert "sample" not in render(ITEM, priced, RATES)
+
+
 def test_a_price_is_quoted_in_one_currency():
     """"1,600 ex (5.0 div)" made you convert in your head to compare against a
     market that quotes divine. In PoE2 chaos sits BETWEEN exalted and divine,

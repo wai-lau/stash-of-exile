@@ -66,6 +66,10 @@ class PricedItem:
     best_roll_pct: float | None = None
 
 
+# The trade engine never reports more matches than this, and past it the
+# match set is truncated before the price sort runs.
+SEARCH_CAP = 10_000
+
 # Exalted and divine only. Chaos does sit between them in PoE2 — about 33 ex
 # against divine's 340 — but nobody quotes an item in chaos, so pricing into
 # it is a conversion the reader has to undo.
@@ -182,6 +186,13 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         if priced.from_cache:
             found += ", cached"
         out.append(f"             {found}")
+        # Past the cap the trade engine truncates BEFORE sorting. Measured
+        # live: tier 15+ alone floored at 3 ex while the strictly narrower
+        # tier 15+, rarity 24+ floored at 1 — impossible in one market unless
+        # each "cheapest" is the cheapest of a different sample. It is.
+        if priced.matches >= SEARCH_CAP:
+            out.append("             every search past the cap reads a sample — "
+                         "the low is its floor, not the market's")
         if priced.rune_inflated:
             out.append(f"             {priced.rune_inflated} skipped — met your "
                          "numbers only with their runes")
