@@ -177,22 +177,30 @@ def test_an_ordinary_sample_is_not_flagged():
     assert "dump" not in text and "read the 25th" not in text
 
 
-def test_a_book_read_against_divine_says_so():
-    """A price in exalted read off a divine book is not the same measurement
-    as one read off an exalted book, and the row has to say which it is —
-    the exalted book for this one held nine units and priced it at 10 ex."""
+def test_a_divine_exchange_price_wears_the_unit_not_a_note():
+    """A price read off the divine book used to carry a "priced against
+    divine" line. The unit already says it — "2.67 div" IS that fact — so the
+    row is dressed like the market row instead: lit, and inverted on div."""
+    from sox import report
+
     priced = PricedItem(
         name="Khatal's Rejuvenation", item_class=ItemClass.GEM, price_ex=908.0,
         source="exchange", tag=None, offers=12, stock=340, ask_ex=908.0,
         quoted="divine", item_class_name="gem",
     )
     text = render(ITEM, priced, RATES)
-    assert "divine" in text.split("exchange", 1)[1]
+    assert "priced against" not in text
+    assert f"{report.MARKET_DIV}2.67 div{report.RESET}" in text
 
 
-def test_an_exalted_book_needs_no_note():
+def test_an_exalted_exchange_price_is_lit_like_the_market_row():
+    from sox import report
+
     priced = PricedItem(
         name="Omen", item_class=ItemClass.GEM, price_ex=1.0, source="exchange",
         tag=None, offers=1303, stock=6654, ask_ex=1.0, quoted="exalted",
     )
-    assert "against divine" not in render(ITEM, priced, RATES)
+    text = render(ITEM, priced, RATES)
+    assert "against divine" not in text
+    assert f"{report.MARKET}1 ex{report.RESET}" in text
+    assert report.MARKET_DIV not in text

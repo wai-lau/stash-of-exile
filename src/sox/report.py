@@ -199,24 +199,27 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
     elif priced.source == "exchange":
         # The deep book. Depth is the evidence here, not listing count: the
         # junk end of every book is thin, and stock is what steps over it.
-        out.append(f"  exchange   {fmt_price(priced.price_ex, rates)}"
+        #
+        # Dressed like the market row: the amount is lit, and a divine price
+        # wears the colour inside out. The unit alone also says which book the
+        # number came off — an item dear enough trades against divine and
+        # hardly at all against exalted, and a price reading "div" IS that
+        # fact, so it is not repeated in words below.
+        price = fmt_price(priced.price_ex, rates)
+        colour = MARKET_DIV if price.endswith(" div") else MARKET
+        out.append(f"  exchange   {colour}{price}{RESET}"
                      + (f"   ({priced.offers:,} offers, {priced.stock:,} in stock)"
                         if priced.offers else ""))
         # The spread is the honest width of the answer. A price quoted without
         # it reads as one number when the market is two.
         if priced.bid_ex is not None and priced.ask_ex is not None:
             bid, ask = fmt_row([priced.bid_ex, priced.ask_ex], rates)
-            out.append(f"             bid {bid}  ·  ask {ask}")
+            colour = MARKET_DIV if bid.endswith(" div") else MARKET
+            out.append(f"             bid {colour}{bid}{RESET}"
+                       f"  ·  ask {colour}{ask}{RESET}")
         elif priced.ask_ex is not None and priced.offers:
             out.append("             ask only — nobody is bidding for these")
-        # An item dear enough is traded against divine and hardly at all
-        # against exalted, and the row must say which book the number came
-        # off: Khatal's Rejuvenation showed 8 offers and 9 units in exalted at
-        # 10 ex while the divine book quoted it at 1:2.67, which is 908.
-        if priced.quoted and priced.quoted != "exalted":
-            out.append(f"             priced against {priced.quoted} — the "
-                         "exalted book was too thin to price")
-        elif priced.stock and priced.stock < 20:
+        if priced.stock and priced.stock < 20:
             out.append("             thin book — few units are actually offered")
 
     else:
