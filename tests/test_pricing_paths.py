@@ -1106,6 +1106,43 @@ def test_an_explicit_is_searched_at_its_roll_range_floor():
     assert mins["explicit.stat_2557965901"] == 7    # leech, rolled 7.81
 
 
+CORRUPTION_HOLD = """Item Class: Rings
+Rarity: Rare
+Corruption Hold
+Amethyst Ring
+--------
+Requirements:
+Level: 52
+--------
+Item Level: 80
+--------
++13(7-13)% to Chaos Resistance (implicit)
+--------
+{ Prefix Modifier "Ghastly" (Tier: 4) }
+Minions deal 22(20-24)% increased Damage
+{ Prefix Modifier "Sharp" (Tier: 5) }
+Adds 9(8-11) to 18(16-19) Physical Damage to Attacks
+{ Suffix Modifier "of the Order" (Tier: 3) }
+Minions have 37(35-38)% increased Critical Hit Chance
+{ Suffix Modifier "of Command" (Tier: 2) }
+Minions have 10(9-11)% increased Attack and Cast Speed
+{ Suffix Modifier "of the Bastion" (Tier: 6) }
++23(21-25)% to Chaos Resistance
+"""
+
+
+def test_the_archetype_survives_every_rung():
+    """The archetype orders the whole ladder, so the report names it at every
+    rung — read off the item's own mods, not off whichever filters a rung
+    kept. Derived per rung, the name vanished exactly where the reader needs
+    it most: a minion ring widened down to minion crit alone reported no
+    archetype at all."""
+    item = itemtext.parse(CORRUPTION_HOLD)
+    for step in range(len(RELAX_STEPS)):
+        group, _ = explain_selection(item, MODS, NOTABLES, relax=step)
+        assert group == "minion", f"rung {step} lost the archetype"
+
+
 def test_an_added_damage_mod_keeps_its_average_minimum():
     """The trade filter for "Adds # to #" compares the AVERAGE of the two
     numbers, and modRanges holds one roll's range — not the average's — so

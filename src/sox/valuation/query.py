@@ -1251,13 +1251,15 @@ def _build(
     or_groups = skill_groups + [f for f, _ in kept if "type" in f]
     searched = [text for _, labels in kept for text in labels]
 
-    # Named from what the query ENDED UP asking for, not from the item. A
-    # pseudo total is still a mod a buyer shops for — life and resistances
-    # are the whole of "defence" — and reading the group off the surviving
-    # filters keeps the name true at every rung of the ladder.
+    # Named from the ITEM's mods, not from what a rung kept. The archetype is
+    # the judge that ordered the whole ladder — cohering mods survive, the
+    # rest drop first — so the label and the judge must come from the same
+    # derivation. Read off the surviving filters instead, the name drifted or
+    # vanished exactly where the reader needs it most: a minion ring widened
+    # down to minion crit alone reported no archetype at all.
     from sox.valuation.mods import dominant_archetype, matched
 
-    group = dominant_archetype(matched(searched, index),
+    group = dominant_archetype(matched(all_mods, index),
                                seed=defence_seed(item))[0] or ""
     if notable_items:
         group = "notable"
