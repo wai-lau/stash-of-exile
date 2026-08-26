@@ -125,19 +125,6 @@ least as good as your item on every constrained axis, so the cheapest one
 bounds what you can ask. The lower quartile and the median come with it,
 because a single cheapest listing is as often a dump as a price.
 
-A Megalomaniac the index prices at 1 ex, priced by its notables instead:
-
-```
-Megalomaniac  [Diamond]
-  type       Jewels → jewel   ilvl 80
-  searched   as notable
-  score      0
-             +0  Allocates Barbaric Strength
-             +0  Allocates Kite Runner
-  market     low 5 div  ·  25th 5 div  ·  median 5 div
-             cheapest 10 of 768 listings, relaxed:3
-```
-
 ## Data files
 
 `src/sox/data/` is generated from GGG's live tables — never hand-edited:
@@ -166,11 +153,3 @@ python3 scripts/resolve_bases.py items.json > src/sox/data/item_bases.toml
 
 The generators fail loudly rather than dropping an entry they cannot resolve,
 and reuse previously resolved ids so a reworded mod cannot silently vanish.
-
-## Tests
-
-```
-uv run --with pytest python -m pytest -q
-```
-
-No network calls. Item fixtures are real clipboard captures.
