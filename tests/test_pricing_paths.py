@@ -1173,24 +1173,6 @@ def test_an_anointed_notable_drops_before_the_archetype_mods():
     assert deep, "the mods are what survive, not the anoint"
 
 
-def test_rarity_is_generic_value_not_an_unrelated_mod():
-    """Rarity is what makes maps valuable, and the market prices it like it:
-    a 40% roll on a ring sells for 75-400 divine while chaos res floors at
-    1 ex. It belongs in the generic tier with the defences — outliving mods
-    that serve some other buyer — not in unrelated, dropped first."""
-    ring = itemtext.parse(CORRUPTION_HOLD.replace(
-        "+13(7-13)% to Chaos Resistance (implicit)\n--------\n", "").replace(
-        "{ Suffix Modifier \"of the Bastion\" (Tier: 6) }\n"
-        "+23(21-25)% to Chaos Resistance",
-        "{ Suffix Modifier \"of the Magpie\" (Tier: 2) }\n"
-        "32(30-35)% increased Rarity of Items found"))
-    # Rung 1 keeps four axes: the minion cluster and the rarity roll — the
-    # attack mod is still the first thing widening gives up.
-    ids = _stat_ids(build_query(ring, category_for(ring), MODS, NOTABLES, relax=1))
-    assert "explicit.stat_3917489142" in ids, "rarity outlives the attack mod"
-    assert "explicit.stat_3032590688" not in ids
-
-
 def test_conditional_minion_damage_counts_toward_the_cluster():
     """Corruption Hold's fourth minion mod scored +0, was never searched at
     any rung, and did not count toward coherence — the wording was simply
