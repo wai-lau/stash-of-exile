@@ -1143,6 +1143,48 @@ def test_the_archetype_survives_every_rung():
         assert group == "minion", f"rung {step} lost the archetype"
 
 
+def test_unrelated_mods_drop_before_generic_value():
+    """Survival order: identity, archetype mods, anointed notables, generic
+    value, unrelated mods last. On this ring the attack mod outlived a 36%
+    chaos-res total — but the buyer is a minion build who filters minion
+    mods and resistance, and nobody filters attack damage on a minion ring:
+    it constrains the comparables while describing no buyer."""
+    item = itemtext.parse(CORRUPTION_HOLD)
+    # Rung 1 keeps four axes: the minion cluster and the res total. The
+    # attack mod is the first thing widening gives up.
+    ids = _stat_ids(build_query(item, category_for(item), MODS, NOTABLES, relax=1))
+    assert "explicit.stat_3032590688" not in ids, "attack mod must drop first"
+    assert "pseudo.pseudo_total_chaos_resistance" in ids
+    # Rung 2, three axes: the cluster alone.
+    ids = _stat_ids(build_query(item, category_for(item), MODS, NOTABLES, relax=2))
+    assert "pseudo.pseudo_total_chaos_resistance" not in ids
+    assert len(ids) == 3
+
+
+def test_an_anointed_notable_drops_before_the_archetype_mods():
+    """An anoint can be re-anointed, so it is not identity the way a
+    Megalomaniac's rolled notables are: it rides behind the archetype mods
+    and widening gives it up before them."""
+    item = load("EnhancementAmulet")
+    exact = _stat_ids(build_query(item, category_for(item), MODS, NOTABLES))
+    assert NOTABLES["The Soul Meridian"] in exact
+    deep = _stat_ids(build_query(item, category_for(item), MODS, NOTABLES, relax=3))
+    assert NOTABLES["The Soul Meridian"] not in deep
+    assert deep, "the mods are what survive, not the anoint"
+
+
+def test_conditional_minion_damage_counts_toward_the_cluster():
+    """Corruption Hold's fourth minion mod scored +0, was never searched at
+    any rung, and did not count toward coherence — the wording was simply
+    missing from the curated allowlist while GGG's stats table carries it."""
+    from sox.valuation.mods import coherence_keys, match_mod
+
+    entry = match_mod(
+        "Minions deal 25% increased Damage if you've Hit Recently", MODS)
+    assert entry is not None
+    assert "minion" in coherence_keys(entry)
+
+
 def test_an_added_damage_mod_keeps_its_average_minimum():
     """The trade filter for "Adds # to #" compares the AVERAGE of the two
     numbers, and modRanges holds one roll's range — not the average's — so

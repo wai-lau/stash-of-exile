@@ -845,7 +845,7 @@
               <tr><td>Defences (ar, ev, es, ward, block, spirit)</td><td class="mono">min</td><td>The displayed total, runes removed. On a rare, rebuilt at the mods' floor rolls; on a unique, kept at the actual roll — the roll is all that separates copies.</td></tr>
               <tr><td>DPS</td><td class="mono">min</td><td>Total only, <strong>runes removed</strong>, the same as the defences. Not pdps/edps: splitting it pins the damage source.</td></tr>
               <tr><td>Granted skill</td><td class="mono">min</td><td>At its own level. Exempt from the widening ladder.</td></tr>
-              <tr><td>Pseudo totals</td><td class="mono">min</td><td>Summed at each contributor's <em>floor</em>. A buyer filters total resistance, not its sources. A stat GGG totals is <strong>always</strong> searched as that total and never as its mods: two filters ANDed are stricter than the sum they make, so searching them apart narrows what the total exists to widen. A total that serves no buyer of this item — resistances on an attack ring — is still searched, but placed last so widening drops it first.</td></tr>
+              <tr><td>Pseudo totals</td><td class="mono">min</td><td>Summed at each contributor's <em>floor</em>. A buyer filters total resistance, not its sources. A stat GGG totals is <strong>always</strong> searched as that total and never as its mods: two filters ANDed are stricter than the sum they make, so searching them apart narrows what the total exists to widen. A total that serves no buyer of this item is still searched, behind the archetype: defence totals (resistances, life) are generic value every buyer pays for and outlive the mods serving some other buyer, while an off-archetype attribute total — the Intelligence that once moved a 3ex quarterstaff to a 50ex median — sits at the very back and is dropped first.</td></tr>
               <tr><td>Explicit mods</td><td class="mono">min</td><td>The floor of the roll's own range — a point lower is the same good at the same tier. Measured on a five-mod ring: minimums at the exact rolls matched 0 listings (every near-copy rolled a point under somewhere; leech 7.76 against 7.81) and the ladder fell through to a 1 ex junk floor, while the same-tier market sat at 3–20 ex. Added-damage mods filter on the average of the two numbers, at the actual roll — the range of the average is not known.</td></tr>
               <tr><td>Implicits</td><td class="mono">min</td><td>At the <em>floor</em> of the range — the implicit comes with the base, and the buyer wants the base.</td></tr>
               <tr><td>A wording the item carries twice</td><td class="mono">min</td><td>An Iron Ring's implicit and its Flaring prefix are both "Adds # to # Physical Damage to Attacks". With no pseudo to total them — the trade table has none for damage — each is searched under its own group id at its own bound: the prefix at our roll, the implicit at its floor.</td></tr>
@@ -870,11 +870,20 @@
       <div class="stage-body">
         <h3>Widen until the sample means something</h3>
         <p>
-          <strong>Minimums are never lowered.</strong> Searching below our own
-          values asks what <em>worse</em> items are worth, which answers a
-          different question and drags the price down. Widening drops the
-          weakest mod instead — by the game's own tier where the item reports
-          one.
+          <strong>Minimums are never lowered</strong> below the roll's own
+          tier. Searching under the tier asks what <em>worse</em> items are
+          worth, which answers a different question and drags the price down.
+          Widening drops whole filters instead, in a fixed survival order,
+          front kept longest: <em>identity</em> (unique flags, and notables
+          the item rolled — a Megalomaniac's cannot be changed), the
+          <em>archetype</em> totals and mods the dominant buyer filters on,
+          <em>anointed notables</em> (an anoint can be re-anointed, so it is a
+          mod, not identity), <em>generic value</em> (defence totals and mods
+          every buyer pays for), and <em>unrelated</em> last — a mod serving
+          some other buyer, like attack damage on a minion ring, constrains
+          the comparables while describing nobody who would buy this item,
+          and is the first thing given up. Within a tier, weight leads, then
+          roll quality, then the game's own mod tier.
         </p>
         <div class="scroll">
           <table>

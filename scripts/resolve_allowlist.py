@@ -164,6 +164,8 @@ ALLOWLIST = OrderedDict(
             "minions",
             [
                 (2, "Minions deal #% increased Damage", None),
+                (2, "Minions deal #% increased Damage if you've Hit Recently",
+                 "conditional, but hitting is the minion player's normal loop"),
                 (2, "Minions have #% increased Attack and Cast Speed", None),
                 (2, "Minions have #% increased Critical Hit Chance", None),
                 (2, "Minions have #% increased Critical Damage Bonus", None),

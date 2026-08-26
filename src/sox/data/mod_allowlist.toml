@@ -593,6 +593,15 @@ tags = ["minion"]
 subject = "minion"
 
 [[category.mod]]
+ids = ["explicit.stat_2337295272"]
+slug = "minions_deal_increased_damage_if_you_ve_hit_recently"
+text = "Minions deal #% increased Damage if you've Hit Recently"
+weight = 2
+tags = ["minion"]
+subject = "minion"
+note = "conditional, but hitting is the minion player's normal loop"
+
+[[category.mod]]
 ids = ["explicit.stat_3091578504"]
 slug = "minions_have_increased_attack_and_cast_speed"
 text = "Minions have #% increased Attack and Cast Speed"
@@ -1102,18 +1111,18 @@ weight = 3
 tags = ["elemental"]
 
 [[category.mod]]
-ids = ["explicit.stat_239367161"]
-slug = "increased_stun_buildup"
-text = "#% increased Stun Buildup"
-weight = 1
-implicit_ids = ["implicit.stat_239367161"]
-
-[[category.mod]]
 ids = ["explicit.stat_101878827"]
 slug = "increased_presence_area_of_effect"
 text = "#% increased Presence Area of Effect"
 weight = 2
 tags = ["aoe"]
+
+[[category.mod]]
+ids = ["explicit.stat_239367161"]
+slug = "increased_stun_buildup"
+text = "#% increased Stun Buildup"
+weight = 1
+implicit_ids = ["implicit.stat_239367161"]
 
 [[category.mod]]
 ids = ["explicit.stat_1545858329"]
@@ -1263,16 +1272,16 @@ weight = 2
 implicit_ids = ["implicit.stat_1028592286"]
 
 [[category.mod]]
-ids = ["explicit.stat_805298720"]
-slug = "to_level_of_all_curse_skills"
-text = "# to Level of all Curse Skills"
+ids = ["explicit.stat_448592698|44"]
+slug = "to_level_of_all_tornado_shot_skills"
+text = "+# to Level of all Tornado Shot Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|44"]
-slug = "to_level_of_all_tornado_shot_skills"
-text = "+# to Level of all Tornado Shot Skills"
+ids = ["explicit.stat_448592698|56"]
+slug = "to_level_of_all_detonating_arrow_skills"
+text = "+# to Level of all Detonating Arrow Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1282,13 +1291,6 @@ slug = "to_level_of_all_shockchain_arrow_skills"
 text = "+# to Level of all Shockchain Arrow Skills"
 weight = 3
 tags = ["ailment"]
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|56"]
-slug = "to_level_of_all_detonating_arrow_skills"
-text = "+# to Level of all Detonating Arrow Skills"
-weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -1321,16 +1323,18 @@ tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|148"]
-slug = "to_level_of_all_vine_arrow_skills"
-text = "+# to Level of all Vine Arrow Skills"
+ids = ["explicit.stat_448592698|31"]
+slug = "to_level_of_all_bone_offering_skills"
+text = "+# to Level of all Bone Offering Skills"
 weight = 3
+tags = ["minion"]
+subject = "minion"
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|12"]
-slug = "to_level_of_all_berserk_skills"
-text = "+# to Level of all Berserk Skills"
+ids = ["explicit.stat_448592698|148"]
+slug = "to_level_of_all_vine_arrow_skills"
+text = "+# to Level of all Vine Arrow Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1343,19 +1347,17 @@ tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|88"]
-slug = "to_level_of_all_siphoning_strike_skills"
-text = "+# to Level of all Siphoning Strike Skills"
+ids = ["explicit.stat_448592698|165"]
+slug = "to_level_of_all_escape_shot_skills"
+text = "+# to Level of all Escape Shot Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|31"]
-slug = "to_level_of_all_bone_offering_skills"
-text = "+# to Level of all Bone Offering Skills"
+ids = ["explicit.stat_448592698|12"]
+slug = "to_level_of_all_berserk_skills"
+text = "+# to Level of all Berserk Skills"
 weight = 3
-tags = ["minion"]
-subject = "minion"
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -1374,9 +1376,25 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|2"]
-slug = "to_level_of_all_cast_on_dodge_skills"
-text = "+# to Level of all Cast on Dodge Skills"
+ids = ["explicit.stat_448592698|88"]
+slug = "to_level_of_all_siphoning_strike_skills"
+text = "+# to Level of all Siphoning Strike Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|105"]
+slug = "to_level_of_all_pain_offering_skills"
+text = "+# to Level of all Pain Offering Skills"
+weight = 3
+tags = ["minion"]
+subject = "minion"
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|8"]
+slug = "to_level_of_all_alchemist_s_boon_skills"
+text = "+# to Level of all Alchemist's Boon Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1395,46 +1413,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|105"]
-slug = "to_level_of_all_pain_offering_skills"
-text = "+# to Level of all Pain Offering Skills"
-weight = 3
-tags = ["minion"]
-subject = "minion"
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|165"]
-slug = "to_level_of_all_escape_shot_skills"
-text = "+# to Level of all Escape Shot Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|8"]
-slug = "to_level_of_all_alchemist_s_boon_skills"
-text = "+# to Level of all Alchemist's Boon Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|143"]
-slug = "to_level_of_all_staggering_palm_skills"
-text = "+# to Level of all Staggering Palm Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|100"]
-slug = "to_level_of_all_barrage_skills"
-text = "+# to Level of all Barrage Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|43"]
-slug = "to_level_of_all_emergency_reload_skills"
-text = "+# to Level of all Emergency Reload Skills"
+ids = ["explicit.stat_448592698|2"]
+slug = "to_level_of_all_cast_on_dodge_skills"
+text = "+# to Level of all Cast on Dodge Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1448,6 +1429,20 @@ subject = "minion"
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|86"]
+slug = "to_level_of_all_artillery_ballista_skills"
+text = "+# to Level of all Artillery Ballista Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|100"]
+slug = "to_level_of_all_barrage_skills"
+text = "+# to Level of all Barrage Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|120"]
 slug = "to_level_of_all_herald_of_ash_skills"
 text = "+# to Level of all Herald of Ash Skills"
@@ -1455,30 +1450,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|70"]
-slug = "to_level_of_all_defiance_banner_skills"
-text = "+# to Level of all Defiance Banner Skills"
+ids = ["explicit.stat_448592698|143"]
+slug = "to_level_of_all_staggering_palm_skills"
+text = "+# to Level of all Staggering Palm Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|68"]
-slug = "to_level_of_all_lingering_illusion_skills"
-text = "+# to Level of all Lingering Illusion Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|48"]
-slug = "to_level_of_all_rain_of_arrows_skills"
-text = "+# to Level of all Rain of Arrows Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|86"]
-slug = "to_level_of_all_artillery_ballista_skills"
-text = "+# to Level of all Artillery Ballista Skills"
+ids = ["explicit.stat_448592698|60"]
+slug = "to_level_of_all_mantra_of_destruction_skills"
+text = "+# to Level of all Mantra of Destruction Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1491,58 +1472,24 @@ tags = ["minion"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|118"]
-slug = "to_level_of_all_freezing_salvo_skills"
-text = "+# to Level of all Freezing Salvo Skills"
+ids = ["explicit.stat_448592698|68"]
+slug = "to_level_of_all_lingering_illusion_skills"
+text = "+# to Level of all Lingering Illusion Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|5"]
-slug = "to_level_of_all_attrition_skills"
-text = "+# to Level of all Attrition Skills"
+ids = ["explicit.stat_448592698|53"]
+slug = "to_level_of_all_mana_tempest_skills"
+text = "+# to Level of all Mana Tempest Skills"
 weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|79"]
-slug = "to_level_of_all_sniper_s_mark_skills"
-text = "+# to Level of all Sniper's Mark Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|75"]
-slug = "to_level_of_all_herald_of_plague_skills"
-text = "+# to Level of all Herald of Plague Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|62"]
-slug = "to_level_of_all_hand_of_chayula_skills"
-text = "+# to Level of all Hand of Chayula Skills"
-weight = 3
+tags = ["mana"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
 ids = ["explicit.stat_448592698|4"]
 slug = "to_level_of_all_dread_banner_skills"
 text = "+# to Level of all Dread Banner Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|60"]
-slug = "to_level_of_all_mantra_of_destruction_skills"
-text = "+# to Level of all Mantra of Destruction Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|110"]
-slug = "to_level_of_all_electrocuting_arrow_skills"
-text = "+# to Level of all Electrocuting Arrow Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1561,9 +1508,65 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|142"]
-slug = "to_level_of_all_flash_grenade_skills"
-text = "+# to Level of all Flash Grenade Skills"
+ids = ["explicit.stat_805298720"]
+slug = "to_level_of_all_curse_skills"
+text = "# to Level of all Curse Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|79"]
+slug = "to_level_of_all_sniper_s_mark_skills"
+text = "+# to Level of all Sniper's Mark Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|62"]
+slug = "to_level_of_all_hand_of_chayula_skills"
+text = "+# to Level of all Hand of Chayula Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|43"]
+slug = "to_level_of_all_emergency_reload_skills"
+text = "+# to Level of all Emergency Reload Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|48"]
+slug = "to_level_of_all_rain_of_arrows_skills"
+text = "+# to Level of all Rain of Arrows Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|70"]
+slug = "to_level_of_all_defiance_banner_skills"
+text = "+# to Level of all Defiance Banner Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|118"]
+slug = "to_level_of_all_freezing_salvo_skills"
+text = "+# to Level of all Freezing Salvo Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|75"]
+slug = "to_level_of_all_herald_of_plague_skills"
+text = "+# to Level of all Herald of Plague Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|5"]
+slug = "to_level_of_all_attrition_skills"
+text = "+# to Level of all Attrition Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1575,17 +1578,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|53"]
-slug = "to_level_of_all_mana_tempest_skills"
-text = "+# to Level of all Mana Tempest Skills"
-weight = 3
-tags = ["mana"]
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|71"]
-slug = "to_level_of_all_time_of_need_skills"
-text = "+# to Level of all Time of Need Skills"
+ids = ["explicit.stat_448592698|110"]
+slug = "to_level_of_all_electrocuting_arrow_skills"
+text = "+# to Level of all Electrocuting Arrow Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1597,16 +1592,23 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|157"]
-slug = "to_level_of_all_frost_bomb_skills"
-text = "+# to Level of all Frost Bomb Skills"
+ids = ["explicit.stat_448592698|142"]
+slug = "to_level_of_all_flash_grenade_skills"
+text = "+# to Level of all Flash Grenade Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|102"]
-slug = "to_level_of_all_wind_blast_skills"
-text = "+# to Level of all Wind Blast Skills"
+ids = ["explicit.stat_448592698|71"]
+slug = "to_level_of_all_time_of_need_skills"
+text = "+# to Level of all Time of Need Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|157"]
+slug = "to_level_of_all_frost_bomb_skills"
+text = "+# to Level of all Frost Bomb Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1618,23 +1620,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|10"]
-slug = "to_level_of_all_sacrifice_skills"
-text = "+# to Level of all Sacrifice Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|124"]
-slug = "to_level_of_all_ghost_dance_skills"
-text = "+# to Level of all Ghost Dance Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|96"]
-slug = "to_level_of_all_voltaic_mark_skills"
-text = "+# to Level of all Voltaic Mark Skills"
+ids = ["explicit.stat_448592698|7"]
+slug = "to_level_of_all_charge_regulation_skills"
+text = "+# to Level of all Charge Regulation Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1646,9 +1634,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|7"]
-slug = "to_level_of_all_charge_regulation_skills"
-text = "+# to Level of all Charge Regulation Skills"
+ids = ["explicit.stat_448592698|102"]
+slug = "to_level_of_all_wind_blast_skills"
+text = "+# to Level of all Wind Blast Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|124"]
+slug = "to_level_of_all_ghost_dance_skills"
+text = "+# to Level of all Ghost Dance Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1660,9 +1655,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|76"]
-slug = "to_level_of_all_combat_frenzy_skills"
-text = "+# to Level of all Combat Frenzy Skills"
+ids = ["explicit.stat_448592698|10"]
+slug = "to_level_of_all_sacrifice_skills"
+text = "+# to Level of all Sacrifice Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|96"]
+slug = "to_level_of_all_voltaic_mark_skills"
+text = "+# to Level of all Voltaic Mark Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1675,9 +1677,9 @@ tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|54"]
-slug = "to_level_of_all_oil_grenade_skills"
-text = "+# to Level of all Oil Grenade Skills"
+ids = ["explicit.stat_448592698|76"]
+slug = "to_level_of_all_combat_frenzy_skills"
+text = "+# to Level of all Combat Frenzy Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1689,23 +1691,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|54"]
+slug = "to_level_of_all_oil_grenade_skills"
+text = "+# to Level of all Oil Grenade Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|40"]
 slug = "to_level_of_all_hailstorm_rounds_skills"
 text = "+# to Level of all Hailstorm Rounds Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|14"]
-slug = "to_level_of_all_temporal_chains_skills"
-text = "+# to Level of all Temporal Chains Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|111"]
-slug = "to_level_of_all_snap_skills"
-text = "+# to Level of all Snap Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1724,6 +1719,13 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|111"]
+slug = "to_level_of_all_snap_skills"
+text = "+# to Level of all Snap Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|24"]
 slug = "to_level_of_all_siege_cascade_skills"
 text = "+# to Level of all Siege Cascade Skills"
@@ -1731,16 +1733,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|52"]
-slug = "to_level_of_all_volcanic_fissure_skills"
-text = "+# to Level of all Volcanic Fissure Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|116"]
-slug = "to_level_of_all_ice_shards_skills"
-text = "+# to Level of all Ice Shards Skills"
+ids = ["explicit.stat_448592698|14"]
+slug = "to_level_of_all_temporal_chains_skills"
+text = "+# to Level of all Temporal Chains Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1748,20 +1743,6 @@ note = "skill levels are the top scaler"
 ids = ["explicit.stat_448592698|17"]
 slug = "to_level_of_all_skeletal_cleric_skills"
 text = "+# to Level of all Skeletal Cleric Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|90"]
-slug = "to_level_of_all_profane_ritual_skills"
-text = "+# to Level of all Profane Ritual Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|18"]
-slug = "to_level_of_all_eye_of_winter_skills"
-text = "+# to Level of all Eye of Winter Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1781,9 +1762,37 @@ tags = ["aoe", "attack", "melee", "physical"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|116"]
+slug = "to_level_of_all_ice_shards_skills"
+text = "+# to Level of all Ice Shards Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|90"]
+slug = "to_level_of_all_profane_ritual_skills"
+text = "+# to Level of all Profane Ritual Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|167"]
 slug = "to_level_of_all_killing_palm_skills"
 text = "+# to Level of all Killing Palm Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|18"]
+slug = "to_level_of_all_eye_of_winter_skills"
+text = "+# to Level of all Eye of Winter Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|52"]
+slug = "to_level_of_all_volcanic_fissure_skills"
+text = "+# to Level of all Volcanic Fissure Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1795,100 +1804,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|162"]
-slug = "to_level_of_all_flame_wall_skills"
-text = "+# to Level of all Flame Wall Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|173"]
-slug = "to_level_of_all_fragmentation_rounds_skills"
-text = "+# to Level of all Fragmentation Rounds Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|95"]
-slug = "to_level_of_all_freezing_mark_skills"
-text = "+# to Level of all Freezing Mark Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
 ids = ["explicit.stat_448592698|138"]
 slug = "to_level_of_all_orb_of_storms_skills"
 text = "+# to Level of all Orb of Storms Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|33"]
-slug = "to_level_of_all_seismic_cry_skills"
-text = "+# to Level of all Seismic Cry Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|36"]
-slug = "to_level_of_all_supercharged_slam_skills"
-text = "+# to Level of all Supercharged Slam Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|73"]
-slug = "to_level_of_all_shard_scavenger_skills"
-text = "+# to Level of all Shard Scavenger Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|104"]
-slug = "to_level_of_all_gas_grenade_skills"
-text = "+# to Level of all Gas Grenade Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|20"]
-slug = "to_level_of_all_spiral_volley_skills"
-text = "+# to Level of all Spiral Volley Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|150"]
-slug = "to_level_of_all_high_velocity_rounds_skills"
-text = "+# to Level of all High Velocity Rounds Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|83"]
-slug = "to_level_of_all_vulnerability_skills"
-text = "+# to Level of all Vulnerability Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|128"]
-slug = "to_level_of_all_wind_dancer_skills"
-text = "+# to Level of all Wind Dancer Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|63"]
-slug = "to_level_of_all_blasphemy_skills"
-text = "+# to Level of all Blasphemy Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|59"]
-slug = "to_level_of_all_stormblast_bolts_skills"
-text = "+# to Level of all Stormblast Bolts Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -1900,11 +1818,102 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|162"]
+slug = "to_level_of_all_flame_wall_skills"
+text = "+# to Level of all Flame Wall Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|63"]
+slug = "to_level_of_all_blasphemy_skills"
+text = "+# to Level of all Blasphemy Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|150"]
+slug = "to_level_of_all_high_velocity_rounds_skills"
+text = "+# to Level of all High Velocity Rounds Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|95"]
+slug = "to_level_of_all_freezing_mark_skills"
+text = "+# to Level of all Freezing Mark Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|33"]
+slug = "to_level_of_all_seismic_cry_skills"
+text = "+# to Level of all Seismic Cry Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|173"]
+slug = "to_level_of_all_fragmentation_rounds_skills"
+text = "+# to Level of all Fragmentation Rounds Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|73"]
+slug = "to_level_of_all_shard_scavenger_skills"
+text = "+# to Level of all Shard Scavenger Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|83"]
+slug = "to_level_of_all_vulnerability_skills"
+text = "+# to Level of all Vulnerability Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|30"]
 slug = "to_level_of_all_ball_lightning_skills"
 text = "+# to Level of all Ball Lightning Skills"
 weight = 3
 tags = ["elemental"]
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|104"]
+slug = "to_level_of_all_gas_grenade_skills"
+text = "+# to Level of all Gas Grenade Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|59"]
+slug = "to_level_of_all_stormblast_bolts_skills"
+text = "+# to Level of all Stormblast Bolts Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|128"]
+slug = "to_level_of_all_wind_dancer_skills"
+text = "+# to Level of all Wind Dancer Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|20"]
+slug = "to_level_of_all_spiral_volley_skills"
+text = "+# to Level of all Spiral Volley Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|36"]
+slug = "to_level_of_all_supercharged_slam_skills"
+text = "+# to Level of all Supercharged Slam Skills"
+weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -1988,6 +1997,13 @@ tags = ["spirit"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|164"]
+slug = "to_level_of_all_rolling_slam_skills"
+text = "+# to Level of all Rolling Slam Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|159"]
 slug = "to_level_of_all_contagion_skills"
 text = "+# to Level of all Contagion Skills"
@@ -1995,9 +2011,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|164"]
-slug = "to_level_of_all_rolling_slam_skills"
-text = "+# to Level of all Rolling Slam Skills"
+ids = ["explicit.stat_448592698|77"]
+slug = "to_level_of_all_leap_slam_skills"
+text = "+# to Level of all Leap Slam Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2010,16 +2026,16 @@ tags = ["crit"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|77"]
-slug = "to_level_of_all_leap_slam_skills"
-text = "+# to Level of all Leap Slam Skills"
+ids = ["explicit.stat_448592698|146"]
+slug = "to_level_of_all_stormcaller_arrow_skills"
+text = "+# to Level of all Stormcaller Arrow Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|146"]
-slug = "to_level_of_all_stormcaller_arrow_skills"
-text = "+# to Level of all Stormcaller Arrow Skills"
+ids = ["explicit.stat_448592698|151"]
+slug = "to_level_of_all_incendiary_shot_skills"
+text = "+# to Level of all Incendiary Shot Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2043,13 +2059,6 @@ note = "skill levels are the top scaler"
 ids = ["explicit.stat_448592698|94"]
 slug = "to_level_of_all_storm_wave_skills"
 text = "+# to Level of all Storm Wave Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|151"]
-slug = "to_level_of_all_incendiary_shot_skills"
-text = "+# to Level of all Incendiary Shot Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2089,6 +2098,13 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|39"]
+slug = "to_level_of_all_stampede_skills"
+text = "+# to Level of all Stampede Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|155"]
 slug = "to_level_of_all_falling_thunder_skills"
 text = "+# to Level of all Falling Thunder Skills"
@@ -2102,13 +2118,6 @@ text = "+# to Level of all Ancestral Warrior Totem Skills"
 weight = 3
 tags = ["totem"]
 subject = "totem"
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|39"]
-slug = "to_level_of_all_stampede_skills"
-text = "+# to Level of all Stampede Skills"
-weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -2127,6 +2136,13 @@ tags = ["ailment"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|99"]
+slug = "to_level_of_all_incinerate_skills"
+text = "+# to Level of all Incinerate Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|156"]
 slug = "to_level_of_all_lightning_arrow_skills"
 text = "+# to Level of all Lightning Arrow Skills"
@@ -2135,16 +2151,30 @@ tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|99"]
-slug = "to_level_of_all_incinerate_skills"
-text = "+# to Level of all Incinerate Skills"
+ids = ["explicit.stat_448592698|23"]
+slug = "to_level_of_all_hammer_of_the_gods_skills"
+text = "+# to Level of all Hammer of the Gods Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|23"]
-slug = "to_level_of_all_hammer_of_the_gods_skills"
-text = "+# to Level of all Hammer of the Gods Skills"
+ids = ["explicit.stat_448592698|130"]
+slug = "to_level_of_all_scavenged_plating_skills"
+text = "+# to Level of all Scavenged Plating Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|147"]
+slug = "to_level_of_all_snipe_skills"
+text = "+# to Level of all Snipe Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|107"]
+slug = "to_level_of_all_bonestorm_skills"
+text = "+# to Level of all Bonestorm Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2163,23 +2193,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|106"]
+slug = "to_level_of_all_tempest_flurry_skills"
+text = "+# to Level of all Tempest Flurry Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|175"]
 slug = "to_level_of_all_permafrost_bolts_skills"
 text = "+# to Level of all Permafrost Bolts Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|130"]
-slug = "to_level_of_all_scavenged_plating_skills"
-text = "+# to Level of all Scavenged Plating Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|107"]
-slug = "to_level_of_all_bonestorm_skills"
-text = "+# to Level of all Bonestorm Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2191,9 +2214,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|147"]
-slug = "to_level_of_all_snipe_skills"
-text = "+# to Level of all Snipe Skills"
+ids = ["explicit.stat_448592698|113"]
+slug = "to_level_of_all_resonating_shield_skills"
+text = "+# to Level of all Resonating Shield Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2206,23 +2229,9 @@ tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|106"]
-slug = "to_level_of_all_tempest_flurry_skills"
-text = "+# to Level of all Tempest Flurry Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|113"]
-slug = "to_level_of_all_resonating_shield_skills"
-text = "+# to Level of all Resonating Shield Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|49"]
-slug = "to_level_of_all_sunder_skills"
-text = "+# to Level of all Sunder Skills"
+ids = ["explicit.stat_448592698|92"]
+slug = "to_level_of_all_explosive_shot_skills"
+text = "+# to Level of all Explosive Shot Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2235,6 +2244,13 @@ tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|34"]
+slug = "to_level_of_all_hexblast_skills"
+text = "+# to Level of all Hexblast Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|103"]
 slug = "to_level_of_all_ice_strike_skills"
 text = "+# to Level of all Ice Strike Skills"
@@ -2242,9 +2258,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|34"]
-slug = "to_level_of_all_hexblast_skills"
-text = "+# to Level of all Hexblast Skills"
+ids = ["explicit.stat_448592698|49"]
+slug = "to_level_of_all_sunder_skills"
+text = "+# to Level of all Sunder Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2256,16 +2272,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|92"]
-slug = "to_level_of_all_explosive_shot_skills"
-text = "+# to Level of all Explosive Shot Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|112"]
-slug = "to_level_of_all_perfect_strike_skills"
-text = "+# to Level of all Perfect Strike Skills"
+ids = ["explicit.stat_448592698|16"]
+slug = "to_level_of_all_skeletal_brute_skills"
+text = "+# to Level of all Skeletal Brute Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2278,13 +2287,6 @@ tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|16"]
-slug = "to_level_of_all_skeletal_brute_skills"
-text = "+# to Level of all Skeletal Brute Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
 ids = ["explicit.stat_448592698|123"]
 slug = "to_level_of_all_plague_bearer_skills"
 text = "+# to Level of all Plague Bearer Skills"
@@ -2292,23 +2294,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|25"]
-slug = "to_level_of_all_plasma_blast_skills"
-text = "+# to Level of all Plasma Blast Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|93"]
-slug = "to_level_of_all_glacial_bolt_skills"
-text = "+# to Level of all Glacial Bolt Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|117"]
-slug = "to_level_of_all_galvanic_shards_skills"
-text = "+# to Level of all Galvanic Shards Skills"
+ids = ["explicit.stat_448592698|112"]
+slug = "to_level_of_all_perfect_strike_skills"
+text = "+# to Level of all Perfect Strike Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2320,6 +2308,20 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|93"]
+slug = "to_level_of_all_glacial_bolt_skills"
+text = "+# to Level of all Glacial Bolt Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|25"]
+slug = "to_level_of_all_plasma_blast_skills"
+text = "+# to Level of all Plasma Blast Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|15"]
 slug = "to_level_of_all_flameblast_skills"
 text = "+# to Level of all Flameblast Skills"
@@ -2327,9 +2329,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|35"]
-slug = "to_level_of_all_whirling_assault_skills"
-text = "+# to Level of all Whirling Assault Skills"
+ids = ["explicit.stat_448592698|117"]
+slug = "to_level_of_all_galvanic_shards_skills"
+text = "+# to Level of all Galvanic Shards Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2341,9 +2343,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|91"]
-slug = "to_level_of_all_shield_wall_skills"
-text = "+# to Level of all Shield Wall Skills"
+ids = ["explicit.stat_448592698|35"]
+slug = "to_level_of_all_whirling_assault_skills"
+text = "+# to Level of all Whirling Assault Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2355,16 +2357,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|38"]
-slug = "to_level_of_all_shattering_palm_skills"
-text = "+# to Level of all Shattering Palm Skills"
+ids = ["explicit.stat_448592698|91"]
+slug = "to_level_of_all_shield_wall_skills"
+text = "+# to Level of all Shield Wall Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|61"]
-slug = "to_level_of_all_ice_shot_skills"
-text = "+# to Level of all Ice Shot Skills"
+ids = ["explicit.stat_448592698|38"]
+slug = "to_level_of_all_shattering_palm_skills"
+text = "+# to Level of all Shattering Palm Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2392,16 +2394,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|140"]
-slug = "to_level_of_all_frostbolt_skills"
-text = "+# to Level of all Frostbolt Skills"
+ids = ["explicit.stat_448592698|61"]
+slug = "to_level_of_all_ice_shot_skills"
+text = "+# to Level of all Ice Shot Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|82"]
-slug = "to_level_of_all_conductivity_skills"
-text = "+# to Level of all Conductivity Skills"
+ids = ["explicit.stat_448592698|140"]
+slug = "to_level_of_all_frostbolt_skills"
+text = "+# to Level of all Frostbolt Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2413,10 +2415,25 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|82"]
+slug = "to_level_of_all_conductivity_skills"
+text = "+# to Level of all Conductivity Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|139"]
 slug = "to_level_of_all_essence_drain_skills"
 text = "+# to Level of all Essence Drain Skills"
 weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|199", "explicit.stat_448592698|186"]
+slug = "to_level_of_all_herald_of_blood_skills"
+text = "+# to Level of all Herald of Blood Skills"
+weight = 3
+ambiguous = true  # matched by OR across these ids
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -2435,14 +2452,6 @@ tags = ["ailment"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|199", "explicit.stat_448592698|186"]
-slug = "to_level_of_all_herald_of_blood_skills"
-text = "+# to Level of all Herald of Blood Skills"
-weight = 3
-ambiguous = true  # matched by OR across these ids
-note = "skill levels are the top scaler"
-
-[[category.mod]]
 ids = ["explicit.stat_448592698|109"]
 slug = "to_level_of_all_solar_orb_skills"
 text = "+# to Level of all Solar Orb Skills"
@@ -2457,13 +2466,6 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|98"]
-slug = "to_level_of_all_arc_skills"
-text = "+# to Level of all Arc Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
 ids = ["explicit.stat_448592698|65"]
 slug = "to_level_of_all_cast_on_freeze_skills"
 text = "+# to Level of all Cast on Freeze Skills"
@@ -2472,16 +2474,23 @@ tags = ["ailment"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|50"]
-slug = "to_level_of_all_skeletal_reaver_skills"
-text = "+# to Level of all Skeletal Reaver Skills"
+ids = ["explicit.stat_448592698|66"]
+slug = "to_level_of_all_cast_on_ignite_skills"
+text = "+# to Level of all Cast on Ignite Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|66"]
-slug = "to_level_of_all_cast_on_ignite_skills"
-text = "+# to Level of all Cast on Ignite Skills"
+ids = ["explicit.stat_448592698|98"]
+slug = "to_level_of_all_arc_skills"
+text = "+# to Level of all Arc Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|50"]
+slug = "to_level_of_all_skeletal_reaver_skills"
+text = "+# to Level of all Skeletal Reaver Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2508,10 +2517,11 @@ ambiguous = true  # matched by OR across these ids
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|101"]
-slug = "to_level_of_all_skeletal_frost_mage_skills"
-text = "+# to Level of all Skeletal Frost Mage Skills"
+ids = ["explicit.stat_448592698|196"]
+slug = "to_level_of_all_elemental_sundering_skills"
+text = "+# to Level of all Elemental Sundering Skills"
 weight = 3
+tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
@@ -2522,38 +2532,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|177"]
-slug = "to_level_of_all_disengage_skills"
-text = "+# to Level of all Disengage Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|196"]
-slug = "to_level_of_all_elemental_sundering_skills"
-text = "+# to Level of all Elemental Sundering Skills"
-weight = 3
-tags = ["elemental"]
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|192"]
-slug = "to_level_of_all_bloodhound_s_mark_skills"
-text = "+# to Level of all Bloodhound's Mark Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|37"]
-slug = "to_level_of_all_comet_skills"
-text = "+# to Level of all Comet Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|190"]
-slug = "to_level_of_all_wind_serpent_s_fury_skills"
-text = "+# to Level of all Wind Serpent's Fury Skills"
+ids = ["explicit.stat_448592698|101"]
+slug = "to_level_of_all_skeletal_frost_mage_skills"
+text = "+# to Level of all Skeletal Frost Mage Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2565,9 +2546,30 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|227"]
-slug = "to_level_of_all_wing_blast_skills"
-text = "+# to Level of all Wing Blast Skills"
+ids = ["explicit.stat_448592698|190"]
+slug = "to_level_of_all_wind_serpent_s_fury_skills"
+text = "+# to Level of all Wind Serpent's Fury Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|192"]
+slug = "to_level_of_all_bloodhound_s_mark_skills"
+text = "+# to Level of all Bloodhound's Mark Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|177"]
+slug = "to_level_of_all_disengage_skills"
+text = "+# to Level of all Disengage Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|37"]
+slug = "to_level_of_all_comet_skills"
+text = "+# to Level of all Comet Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2579,23 +2581,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|227"]
+slug = "to_level_of_all_wing_blast_skills"
+text = "+# to Level of all Wing Blast Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|217"]
 slug = "to_level_of_all_rolling_magma_skills"
 text = "+# to Level of all Rolling Magma Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|194"]
-slug = "to_level_of_all_spear_of_solaris_skills"
-text = "+# to Level of all Spear of Solaris Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|243"]
-slug = "to_level_of_all_feral_invocation_skills"
-text = "+# to Level of all Feral Invocation Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2607,9 +2602,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|185"]
-slug = "to_level_of_all_thunderous_leap_skills"
-text = "+# to Level of all Thunderous Leap Skills"
+ids = ["explicit.stat_448592698|194"]
+slug = "to_level_of_all_spear_of_solaris_skills"
+text = "+# to Level of all Spear of Solaris Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2621,23 +2616,23 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|243"]
+slug = "to_level_of_all_feral_invocation_skills"
+text = "+# to Level of all Feral Invocation Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|185"]
+slug = "to_level_of_all_thunderous_leap_skills"
+text = "+# to Level of all Thunderous Leap Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|209"]
 slug = "to_level_of_all_toxic_domain_skills"
 text = "+# to Level of all Toxic Domain Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|195"]
-slug = "to_level_of_all_storm_lance_skills"
-text = "+# to Level of all Storm Lance Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|219"]
-slug = "to_level_of_all_volcano_skills"
-text = "+# to Level of all Volcano Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2656,9 +2651,23 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|213"]
-slug = "to_level_of_all_mirage_archer_skills"
-text = "+# to Level of all Mirage Archer Skills"
+ids = ["explicit.stat_448592698|195"]
+slug = "to_level_of_all_storm_lance_skills"
+text = "+# to Level of all Storm Lance Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|239"]
+slug = "to_level_of_all_eternal_rage_skills"
+text = "+# to Level of all Eternal Rage Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|219"]
+slug = "to_level_of_all_volcano_skills"
+text = "+# to Level of all Volcano Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2677,9 +2686,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|239"]
-slug = "to_level_of_all_eternal_rage_skills"
-text = "+# to Level of all Eternal Rage Skills"
+ids = ["explicit.stat_448592698|213"]
+slug = "to_level_of_all_mirage_archer_skills"
+text = "+# to Level of all Mirage Archer Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2698,6 +2707,27 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
+ids = ["explicit.stat_448592698|198"]
+slug = "to_level_of_all_trail_of_caltrops_skills"
+text = "+# to Level of all Trail of Caltrops Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|237"]
+slug = "to_level_of_all_arctic_howl_skills"
+text = "+# to Level of all Arctic Howl Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|214"]
+slug = "to_level_of_all_siphon_elements_skills"
+text = "+# to Level of all Siphon Elements Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
 ids = ["explicit.stat_448592698|188"]
 slug = "to_level_of_all_primal_strikes_skills"
 text = "+# to Level of all Primal Strikes Skills"
@@ -2712,16 +2742,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|214"]
-slug = "to_level_of_all_siphon_elements_skills"
-text = "+# to Level of all Siphon Elements Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|237"]
-slug = "to_level_of_all_arctic_howl_skills"
-text = "+# to Level of all Arctic Howl Skills"
+ids = ["explicit.stat_448592698|238"]
+slug = "to_level_of_all_briarpatch_skills"
+text = "+# to Level of all Briarpatch Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2733,30 +2756,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|198"]
-slug = "to_level_of_all_trail_of_caltrops_skills"
-text = "+# to Level of all Trail of Caltrops Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
 ids = ["explicit.stat_448592698|232"]
 slug = "to_level_of_all_cross_slash_skills"
 text = "+# to Level of all Cross Slash Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|238"]
-slug = "to_level_of_all_briarpatch_skills"
-text = "+# to Level of all Briarpatch Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|207"]
-slug = "to_level_of_all_forge_hammer_skills"
-text = "+# to Level of all Forge Hammer Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2768,9 +2770,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|234"]
-slug = "to_level_of_all_devour_skills"
-text = "+# to Level of all Devour Skills"
+ids = ["explicit.stat_448592698|207"]
+slug = "to_level_of_all_forge_hammer_skills"
+text = "+# to Level of all Forge Hammer Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2782,9 +2784,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|208"]
-slug = "to_level_of_all_ancestral_cry_skills"
-text = "+# to Level of all Ancestral Cry Skills"
+ids = ["explicit.stat_448592698|234"]
+slug = "to_level_of_all_devour_skills"
+text = "+# to Level of all Devour Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2796,9 +2798,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|244"]
-slug = "to_level_of_all_living_bomb_skills"
-text = "+# to Level of all Living Bomb Skills"
+ids = ["explicit.stat_448592698|208"]
+slug = "to_level_of_all_ancestral_cry_skills"
+text = "+# to Level of all Ancestral Cry Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2810,9 +2812,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|180"]
-slug = "to_level_of_all_spearfield_skills"
-text = "+# to Level of all Spearfield Skills"
+ids = ["explicit.stat_448592698|244"]
+slug = "to_level_of_all_living_bomb_skills"
+text = "+# to Level of all Living Bomb Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2824,9 +2826,9 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|211"]
-slug = "to_level_of_all_frost_darts_skills"
-text = "+# to Level of all Frost Darts Skills"
+ids = ["explicit.stat_448592698|180"]
+slug = "to_level_of_all_spearfield_skills"
+text = "+# to Level of all Spearfield Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2842,6 +2844,13 @@ note = "skill levels are the top scaler"
 ids = ["explicit.stat_448592698|187"]
 slug = "to_level_of_all_whirlwind_lance_skills"
 text = "+# to Level of all Whirlwind Lance Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|211"]
+slug = "to_level_of_all_frost_darts_skills"
+text = "+# to Level of all Frost Darts Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2863,16 +2872,16 @@ minion_subtype = "caster"
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|221"]
-slug = "to_level_of_all_pounce_skills"
-text = "+# to Level of all Pounce Skills"
+ids = ["explicit.stat_448592698|191"]
+slug = "to_level_of_all_rake_skills"
+text = "+# to Level of all Rake Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|191"]
-slug = "to_level_of_all_rake_skills"
-text = "+# to Level of all Rake Skills"
+ids = ["explicit.stat_448592698|221"]
+slug = "to_level_of_all_pounce_skills"
+text = "+# to Level of all Pounce Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2891,24 +2900,16 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|181"]
-slug = "to_level_of_all_lightning_spear_skills"
-text = "+# to Level of all Lightning Spear Skills"
+ids = ["explicit.stat_448592698|220"]
+slug = "to_level_of_all_wolf_pack_skills"
+text = "+# to Level of all Wolf Pack Skills"
 weight = 3
-tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
 ids = ["explicit.stat_448592698|184"]
 slug = "to_level_of_all_explosive_spear_skills"
 text = "+# to Level of all Explosive Spear Skills"
-weight = 3
-note = "skill levels are the top scaler"
-
-[[category.mod]]
-ids = ["explicit.stat_448592698|220"]
-slug = "to_level_of_all_wolf_pack_skills"
-text = "+# to Level of all Wolf Pack Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2920,16 +2921,17 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|228"]
-slug = "to_level_of_all_oil_barrage_skills"
-text = "+# to Level of all Oil Barrage Skills"
+ids = ["explicit.stat_448592698|181"]
+slug = "to_level_of_all_lightning_spear_skills"
+text = "+# to Level of all Lightning Spear Skills"
 weight = 3
+tags = ["elemental"]
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|218"]
-slug = "to_level_of_all_tornado_skills"
-text = "+# to Level of all Tornado Skills"
+ids = ["explicit.stat_448592698|228"]
+slug = "to_level_of_all_oil_barrage_skills"
+text = "+# to Level of all Oil Barrage Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
@@ -2941,16 +2943,23 @@ weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|183"]
-slug = "to_level_of_all_twister_skills"
-text = "+# to Level of all Twister Skills"
+ids = ["explicit.stat_448592698|222"]
+slug = "to_level_of_all_rampage_skills"
+text = "+# to Level of all Rampage Skills"
 weight = 3
 note = "skill levels are the top scaler"
 
 [[category.mod]]
-ids = ["explicit.stat_448592698|222"]
-slug = "to_level_of_all_rampage_skills"
-text = "+# to Level of all Rampage Skills"
+ids = ["explicit.stat_448592698|218"]
+slug = "to_level_of_all_tornado_skills"
+text = "+# to Level of all Tornado Skills"
+weight = 3
+note = "skill levels are the top scaler"
+
+[[category.mod]]
+ids = ["explicit.stat_448592698|183"]
+slug = "to_level_of_all_twister_skills"
+text = "+# to Level of all Twister Skills"
 weight = 3
 note = "skill levels are the top scaler"
 

@@ -175,6 +175,27 @@ def dominant_archetype(
     return key, top
 
 
+def survival_class(entry: ModEntry, dominant: str | None) -> int:
+    """How long a mod deserves to survive widening, smaller = longer.
+
+    0 — serves the dominant archetype: what the item's buyer filters on.
+    1 — generic value: defence-tagged mods (life, resistances) that every
+        buyer pays for whatever their build.
+    2 — unrelated: serves some OTHER buyer — an attack mod on a minion ring
+        constrains the comparables while describing nobody who would buy it,
+        so it is the first thing widening gives up.
+
+    With no dominant archetype there is nobody to be unrelated to, and rank
+    alone decides.
+    """
+    if dominant is None:
+        return 0
+    keys = coherence_keys(entry)
+    if dominant in keys:
+        return 0
+    return 1 if "defence" in keys else 2
+
+
 def select_synergistic(
     entries: list[ModEntry],
     limit: int,
@@ -183,14 +204,15 @@ def select_synergistic(
     rolls: dict[str, tuple[float, float, float]] | None = None,
     seed: dict[str, int] | None = None,
 ) -> tuple[list[ModEntry], str]:
-    """Order the mods for the query: cohering first, then the rest.
+    """Order the mods for the query: cohering, then generic, then unrelated.
 
     Every allowlisted mod belongs in the search — a chaos resistance roll adds
     value whether or not it serves the item's main archetype. Coherence
     decides the ORDER, not membership, so when the ladder widens the mods that
-    serve one buyer are the ones that survive.
+    serve one buyer are the ones that survive — and a mod serving a DIFFERENT
+    buyer goes behind the generic value everyone pays for.
 
-    Within each group, roll quality leads and mod tier breaks ties.
+    Within each class, weight leads, then roll quality, and tier breaks ties.
     """
     if not entries:
         return [], ""
@@ -216,16 +238,8 @@ def select_synergistic(
         # than a strong roll of the same weight — and tier breaks what is left.
         return (-entry.weight, -percentile, tier)
 
-    if key is None:
-        # No cluster: rank alone decides, and there is no archetype to name.
-        ordered = sorted(entries, key=rank)
-        return ordered[:limit], ""
-
-    cohering = [e for e in entries if key in coherence_keys(e)]
-    others = [e for e in entries if key not in coherence_keys(e)]
-    cohering.sort(key=rank)
-    others.sort(key=rank)
-    return (cohering + others)[:limit], key
+    ordered = sorted(entries, key=lambda e: (survival_class(e, key), *rank(e)))
+    return ordered[:limit], key or ""
 
 
 def coherence_bonus(

@@ -25,7 +25,12 @@ from sox.valuation.allowlists import (
     load_skills,
 )
 from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
-from sox.valuation.mods import match_mod, select_synergistic
+from sox.valuation.mods import (
+    coherence_keys,
+    match_mod,
+    select_synergistic,
+    survival_class,
+)
 from sox.valuation.rolls import parse_values
 
 # Widening ladder: how many cohering stats to keep at each rung.
@@ -1134,7 +1139,7 @@ def _build(
     mod_items = [(w, t, e) for w, t, e in scored
                  if not isinstance(e, (_Notable, _Flag))]
 
-    chosen_entries, _order_key = select_synergistic(
+    chosen_entries, order_key = select_synergistic(
         [e for _, _, e in mod_items], max_stats,
         tiers=item.get("modTiers") or {},
         texts={id(e): t for _, t, e in mod_items},
@@ -1149,13 +1154,37 @@ def _build(
     # the query carried it at every rung, so the breakdown said a mod had been
     # ignored that the price in fact rested on.
     #
-    # Three sources, in the order they survive widening: notables identify the
-    # item outright, pseudo totals describe it more faithfully than any single
-    # mod, and individual mods come last.
+    # The order everything survives widening, front kept longest:
+    #
+    #   1. identity — unique flags, and notables the item ROLLED (a
+    #      Megalomaniac's cannot be changed; drop one and the search
+    #      describes a different item)
+    #   2. archetype — the pseudo totals and mods the dominant buyer
+    #      filters on
+    #   3. anointed notables — an anoint can be re-anointed, so it is a mod
+    #      of the amulet, not its identity
+    #   4. generic value — defence totals and mods (life, resistances)
+    #      every buyer pays for whatever their build
+    #   5. unrelated — mods and totals serving some OTHER buyer. An attack
+    #      mod on a minion ring constrains the comparables while describing
+    #      nobody who would buy it; it outlived a 36% chaos-res total, and
+    #      the rung that priced the ring searched a buyer who does not exist.
     ranked: list[tuple[dict, list[str]]] = []
 
+    # A Corruption Enhancement reads like an explicit mod but is filed under
+    # the enchant group; searching it as explicit returned 0 listings where
+    # enchant returned thousands.
+    enchant_texts = set(item.get("enchantMods") or [])
+    implicit_texts = set(item.get("implicitMods") or [])
+
+    # An enchant-sourced "Allocates" IS an anoint; a rolled one is identity.
+    rolled_notables = [(w, t, e) for w, t, e in notable_items
+                       if t not in enchant_texts]
+    anointed_notables = [(w, t, e) for w, t, e in notable_items
+                         if t in enchant_texts]
+
     ranked += [({"id": e.stat_id, "value": {}}, [text])
-               for _, text, e in notable_items]
+               for _, text, e in rolled_notables]
 
     # No minimum, because there is no number to put one on. The id alone is
     # the whole filter: the listing either counts as a Forest Map or it does
@@ -1167,12 +1196,10 @@ def _build(
         labels = [e.text if (e := match_mod(t, index)) else t for t in used]
         ranked.append(({"id": pseudo_id, "value": {"min": value}}, labels))
 
-    # A Corruption Enhancement reads like an explicit mod but is filed under
-    # the enchant group; searching it as explicit returned 0 listings where
-    # enchant returned thousands.
-    enchant_texts = set(item.get("enchantMods") or [])
-    implicit_texts = set(item.get("implicitMods") or [])
-
+    cohering_rows: list[tuple[dict, list[str]]] = []
+    generic_rows: list[tuple[dict, list[str]]] = []
+    unrelated_rows: list[tuple[dict, list[str]]] = []
+    buckets = (cohering_rows, generic_rows, unrelated_rows)
     for entry in chosen_entries:
         text = by_entry[id(entry)]
         values = parse_values(text)
@@ -1216,22 +1243,39 @@ def _build(
         # the ladder: kept outside it, an or-group could not be widened away
         # and rungs 0 and 1 built the identical query.
         if len(ids) > 1:
-            ranked.append(({
+            row = ({
                 "type": "count",
                 "value": {"min": 1},
                 "filters": [
                     {"id": stat_id, "value": {"min": minimum}} for stat_id in ids
                 ],
-            }, [entry.text]))
+            }, [entry.text])
         else:
-            ranked.append(({"id": ids[0], "value": {"min": minimum}}, [entry.text]))
+            row = ({"id": ids[0], "value": {"min": minimum}}, [entry.text])
+        buckets[survival_class(entry, order_key or None)].append(row)
 
-    # Last in the ladder, so the first thing widening gives up: this total is
-    # not what a buyer of THIS item is shopping for, and it constrains the
-    # comparables the item is priced against.
+    ranked += cohering_rows
+    ranked += [({"id": e.stat_id, "value": {}}, [text])
+               for _, text, e in anointed_notables]
+
+    # A total is generic value when any mod feeding it carries the defence
+    # tag — resistances and life are bought by every build — and unrelated
+    # otherwise: an Intelligence total on an elemental weapon constrained the
+    # search to items most comparables do not carry, which alone moved a 3ex
+    # quarterstaff to a 50ex median. Unrelated totals sit at the very back.
+    generic_totals: list[tuple[dict, list[str]]] = []
+    unrelated_totals: list[tuple[dict, list[str]]] = []
     for pseudo_id, value, used in off_archetype:
         labels = [e.text if (e := match_mod(t, index)) else t for t in used]
-        ranked.append(({"id": pseudo_id, "value": {"min": value}}, labels))
+        row = ({"id": pseudo_id, "value": {"min": value}}, labels)
+        feeders = [e for t in used if (e := match_mod(t, index)) is not None]
+        if any("defence" in coherence_keys(e) for e in feeders):
+            generic_totals.append(row)
+        else:
+            unrelated_totals.append(row)
+
+    ranked += generic_totals + generic_rows
+    ranked += unrelated_rows + unrelated_totals
 
     # The granted skill is exempt from the widening cap. Dropping it would not
     # widen the search, it would change what is being searched for: a Level 20
@@ -1245,7 +1289,7 @@ def _build(
     # the index already reports as worth 1 exalted. A unique's flag is the
     # same kind of thing: drop the biome and a Mastered Domain tablet is one
     # of 26,357 the index also reports as worth 1 exalted.
-    keep = max(max_stats, 1) if notable_items or flag_items else max_stats
+    keep = max(max_stats, 1) if rolled_notables or flag_items else max_stats
     kept = ranked[:keep]
     and_filters = skill_filters + [f for f, _ in kept if "type" not in f]
     or_groups = skill_groups + [f for f, _ in kept if "type" in f]

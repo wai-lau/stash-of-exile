@@ -201,7 +201,9 @@ def test_the_first_search_asks_for_the_whole_item():
     _, whole = explain_selection(ring, MODS, NOTABLES, relax=0)
     _, trimmed = explain_selection(ring, MODS, NOTABLES, relax=1)
 
-    assert len(whole) == 6, "every searchable mod on the ring"
+    assert len(whole) == 7, "every searchable mod on the ring"
+    # The first cap holds exactly the minion cluster: four archetype mods
+    # fill it before the generic res total and the unrelated attack mod.
     assert len(trimmed) == RELAX_STEPS[1], "the second rung is the first cap"
     assert set(trimmed) <= set(whole), "widening only ever drops"
 
@@ -1091,10 +1093,11 @@ def test_a_minion_mod_does_not_tie_with_its_own_subtypes():
     from sox.valuation.mods import dominant_archetype, matched
 
     ring = itemtext.parse((FIXTURES / "MinionRing.txt").read_text())
-    assert dominant_archetype(matched(item_mods(ring), MODS)) == ("minion", 3)
-    # Reported as the family, not as one of its subtypes.
-    assert coherence_of(ring, MODS) == ("minion", 3, 2)
-    assert score_gear(ring, MODS, BASES)[0] == 12, "10 on mods, +2 for the cluster"
+    assert dominant_archetype(matched(item_mods(ring), MODS)) == ("minion", 4)
+    # Reported as the family, not as one of its subtypes. Four, counting the
+    # conditional minion damage the allowlist once missed.
+    assert coherence_of(ring, MODS) == ("minion", 4, 3)
+    assert score_gear(ring, MODS, BASES)[0] == 15, "12 on mods, +3 for the cluster"
 
 
 def test_the_cluster_decides_which_mods_survive_widening():
