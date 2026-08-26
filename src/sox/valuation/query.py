@@ -1,10 +1,12 @@
 """Build a trade2 query.
 
 The search is NOT "find my item". It is "find the cheapest item at least as
-good as mine", so every constraint is a minimum at our item's value and there
-are no maximums. Every listing returned is therefore >= ours on every
-constrained axis, which makes the cheapest one a CEILING on our ask rather
-than a comparable sale.
+good as mine", so every constraint is a minimum and there are no maximums —
+each mod's minimum sitting at the floor of its roll's own range, because a
+roll one point under ours is the same good at the same tier. Every listing
+returned is therefore at least our item's tier on every constrained axis,
+which makes the cheapest one a CEILING on our ask rather than a comparable
+sale.
 """
 
 from __future__ import annotations
@@ -28,11 +30,11 @@ from sox.valuation.rolls import parse_values
 
 # Widening ladder: how many cohering stats to keep at each rung.
 #
-# Minimums are NEVER lowered. Searching below your own values asks "what are
-# worse items worth", which answers a different question and drags the price
-# down. Widening instead drops the weakest mod — by the game's own tier where
-# the item reports one — so every rung still describes an item at least as
-# good as yours on the stats that remain.
+# Minimums are NEVER lowered below the roll's own tier. Searching under the
+# tier asks "what are worse items worth", which answers a different question
+# and drags the price down. Widening instead drops the weakest mod — by the
+# game's own tier where the item reports one — so every rung still describes
+# an item of at least your item's tiers on the stats that remain.
 #
 # The last rung keeps NO mods. What is left is still a real search — category,
 # rarity, item level, requirements, and the totals in the equipment filters —
@@ -1173,7 +1175,21 @@ def _build(
 
     for entry in chosen_entries:
         text = by_entry[id(entry)]
-        minimum = round(filter_value(entry.text, parse_values(text)) * scale, 2)
+        values = parse_values(text)
+        minimum = round(filter_value(entry.text, values) * scale, 2)
+        # A roll one point under ours is the same good at the same tier, so
+        # the floor of the roll's own range is the honest minimum — exactly
+        # as implicits already search. Gale Nail, live: five minimums at the
+        # exact rolls matched 0 listings, because every same-tier near-copy
+        # rolled a point under on some axis (leech 7.76 against 7.81), and
+        # the ladder, able only to drop whole mods, then priced the ring at
+        # the 1 ex junk floor while the same-tier market sat at 3-20 ex.
+        # Single-value mods only: an added-damage filter compares the
+        # AVERAGE of its two numbers, and modRanges holds one roll's range,
+        # not the average's — flooring it would compare the wrong quantity.
+        span = (item.get("modRanges") or {}).get(text)
+        if span and len(values) == 1:
+            minimum = min(minimum, round(span[1] * scale, 2))
         ids = stat_ids_for(entry, category)
         if text in enchant_texts:
             ids = regroup(ids, "enchant")

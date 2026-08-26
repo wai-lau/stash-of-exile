@@ -1066,6 +1066,57 @@ def test_a_priced_waystone_reports_its_stats(tmp_path):
     assert "tier 14+" in priced.map_stats
 
 
+GALE_NAIL = """Item Class: Rings
+Rarity: Rare
+Gale Nail
+Sapphire Ring
+--------
+Requirements:
+Level: 60
+--------
+Item Level: 81
+--------
++28% to Cold Resistance (implicit)
+--------
+{ Prefix Modifier "Flaming" (Tier: 3) }
+29(26-30)% increased Fire Damage
+{ Prefix Modifier "Catalyzing" (Tier: 3) }
+27(26-30)% increased Chaos Damage
+{ Suffix Modifier "of Legerdemain" (Tier: 4) }
+24(20-25)% increased Cast Speed
+{ Suffix Modifier "of the Lamprey" (Tier: 2) }
+Leech 7.81(7-8)% of Physical Attack Damage as Life
+"""
+
+
+def test_an_explicit_is_searched_at_its_roll_range_floor():
+    """Gale Nail, live: five minimums at the exact rolls matched 0 listings.
+    Every same-tier near-copy rolled a point under on some axis — fire 28
+    against 29, leech 7.76 against 7.81 — and the ladder, able only to drop
+    whole mods, priced the ring at the 1 ex junk floor while the same-tier
+    market sat at 3-20 ex. A roll one point lower is the same good at the
+    same tier, so the floor of the roll's own range is the honest minimum,
+    exactly as implicits already search."""
+    item = itemtext.parse(GALE_NAIL)
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    mins = {f["id"]: f["value"]["min"]
+            for f in query["query"]["stats"][0]["filters"] if "id" in f}
+    assert mins["explicit.stat_3962278098"] == 26   # fire, rolled 29
+    assert mins["explicit.stat_2891184298"] == 20   # cast speed, rolled 24
+    assert mins["explicit.stat_2557965901"] == 7    # leech, rolled 7.81
+
+
+def test_an_added_damage_mod_keeps_its_average_minimum():
+    """The trade filter for "Adds # to #" compares the AVERAGE of the two
+    numbers, and modRanges holds one roll's range — not the average's — so
+    flooring it would compare the wrong quantity. 12 to 31 averages 21.5."""
+    item = load("RingImplicitTwin")
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    mins = [f["value"]["min"] for group in query["query"]["stats"]
+            for f in group["filters"] if "id" in f]
+    assert 21.5 in mins
+
+
 def _stat_ids(query):
     """Every stat id the query asks for, and-filters and or-groups alike."""
     out = []
