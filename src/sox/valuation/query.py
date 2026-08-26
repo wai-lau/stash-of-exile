@@ -26,6 +26,7 @@ from sox.valuation.allowlists import (
 )
 from sox.valuation.classify import ItemClass, Rarity, classify, rarity_of
 from sox.valuation.mods import (
+    GENERIC_TAGS,
     coherence_keys,
     match_mod,
     select_synergistic,
@@ -1269,7 +1270,7 @@ def _build(
         labels = [e.text if (e := match_mod(t, index)) else t for t in used]
         row = ({"id": pseudo_id, "value": {"min": value}}, labels)
         feeders = [e for t in used if (e := match_mod(t, index)) is not None]
-        if any("defence" in coherence_keys(e) for e in feeders):
+        if any(GENERIC_TAGS & set(coherence_keys(e)) for e in feeders):
             generic_totals.append(row)
         else:
             unrelated_totals.append(row)

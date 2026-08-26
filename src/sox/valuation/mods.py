@@ -175,12 +175,19 @@ def dominant_archetype(
     return key, top
 
 
+# Value every buyer pays for whatever their build: the defences (life,
+# resistances) — and rarity, which is what makes maps valuable. The market
+# prices it like it: a 40% rarity roll on a ring sells for 75-400 divine
+# while chaos res floors at 1 ex.
+GENERIC_TAGS = frozenset({"defence", "rarity"})
+
+
 def survival_class(entry: ModEntry, dominant: str | None) -> int:
     """How long a mod deserves to survive widening, smaller = longer.
 
     0 — serves the dominant archetype: what the item's buyer filters on.
-    1 — generic value: defence-tagged mods (life, resistances) that every
-        buyer pays for whatever their build.
+    1 — generic value: defence and rarity, which every buyer pays for
+        whatever their build.
     2 — unrelated: serves some OTHER buyer — an attack mod on a minion ring
         constrains the comparables while describing nobody who would buy it,
         so it is the first thing widening gives up.
@@ -193,7 +200,7 @@ def survival_class(entry: ModEntry, dominant: str | None) -> int:
     keys = coherence_keys(entry)
     if dominant in keys:
         return 0
-    return 1 if "defence" in keys else 2
+    return 1 if GENERIC_TAGS & set(keys) else 2
 
 
 def select_synergistic(
