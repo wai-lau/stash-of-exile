@@ -1,12 +1,9 @@
-# sox — PoE2 item pricer
+# SoX — PoE2 item pricer
 
 Prices Path of Exile 2 items from the text the game puts on your clipboard.
 
 ```
-sox watch          # live feed: every item you copy gets priced
-sox price          # one-shot: paste, then Ctrl-D
-sox price -f items.txt
-sox leagues
+sox watch          
 ```
 
 ## Install
@@ -45,21 +42,6 @@ total 1,910 ex (5.0 div)  ·  1 priced  ·  2 searches
 ────────────────────────────────────────────────────────────────
 ```
 
-On WSL the Windows clipboard is read through a single long-lived
-powershell.exe, because starting one per poll costs about half a second.
-Native Linux (wl-paste, xclip, xsel) and macOS (pbpaste) are polled directly.
-Non-item text is ignored, and whatever was on the clipboard before startup is
-skipped — the watcher reports what that was, so the first item you copy is
-never mistaken for it. One copy is one price: on Windows a copy is a write to
-the clipboard, so copying the same item again re-prices it, while a clipboard
-that merely reads the same twice does not. The Linux and macOS backends have
-no such signal and compare text, so there a re-copy of an unchanged clipboard
-goes unnoticed.
-
-The banner names the commit it is running. A feed cannot pick up a fix while
-it is up: the module is imported once and the PowerShell watcher is a child
-process started with it, so a change to either needs the session restarted.
-
 ## What makes it different from an overlay
 
 Exiled Exchange 2 is the mature PoE2 price-check overlay and better at
@@ -68,29 +50,9 @@ the checkboxes and relevant filters for the item yourself. Choose stats that
 synergize well, this knowledge only comes from playing different build
 archetypes."
 
-sox encodes that. The first search asks for the WHOLE item — every mod it
-can search, at your own roll — because that is the only search that describes
-the item you are holding. When nothing is listed that good, it widens, and
-what survives the widening is chosen by the item's dominant archetype rather
-than by its heaviest mods. It prints what it chose and marks every mod the
-price actually rests on:
+SoX encodes that based on... well, [_my own judgement_](https://github.com/wai-lau/stash-of-exile/blob/master/docs/pricing-algorithm.html)(I read a few guides and try to sell stuff often, but that's about it).
 
-```
-Corruption Hold  [Amethyst Ring]
-  type       Rings → accessory.ring   ilvl 80
-  searched   as minion
-  score      12
-             +0  +13% to Chaos Resistance                        (implicit)
-             +2  Minions deal 22% increased Damage               (minion)
-             +2  Adds 9 to 18 Physical Damage to Attacks
-             +2  Minions have 37% increased Critical Hit Chance   (minion)
-             +2  Minions have 10% increased Attack and Cast Speed (minion)
-             +2  +23% to Chaos Resistance
-             +0  Minions deal 25% increased Damage if you've Hit Recently
-  coherence  3 mods cluster on minion  +2
-  market     low 5 div  ·  25th 8 div  ·  median 10 div
-             cheapest 10 of 175 listings, relaxed:1
-```
+The score 
 
 The exact search found too thin a market, so it widened one rung. Picking
 what survived by weight alone would have kept that chaos resistance roll and
