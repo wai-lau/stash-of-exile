@@ -1039,14 +1039,15 @@ def _build(
 
     # Item level constrains a CRAFT BASE and nothing else. A normal or magic
     # item is bought for the tiers its level can roll, so the level is the
-    # good itself and is pinned exactly — an ilvl 79 base is a different
-    # product from an ilvl 82 one, not a cheaper copy of it. A rare is bought
-    # on the mods it already rolled and a unique on its roll; there the level
-    # excludes comparables while describing nothing a buyer shops for.
+    # good itself — and a floor, not a pin: a higher level rolls everything
+    # a lower one can and more. Pinned exactly, a Bloodstone Amulet with
+    # Spirit and +1 minion skills found nothing at four rungs while every
+    # ilvl-40 copy was at least as good. A rare is bought on the mods it
+    # already rolled and a unique on its roll; there the level excludes
+    # comparables while describing nothing a buyer shops for.
     ilvl = int(item.get("ilvl") or 0)
     if ilvl and rarity in (Rarity.NORMAL, Rarity.MAGIC):
-        pinned = int(ilvl * scale)
-        type_filters["ilvl"] = {"min": pinned, "max": pinned}
+        type_filters["ilvl"] = {"min": int(ilvl * scale)}
 
     # Quality only on gems. Everywhere else currency takes an item to 20%, so
     # pinning it excludes cheaper copies a buyer would happily quality up

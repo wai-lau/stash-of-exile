@@ -90,7 +90,7 @@ session, so sox holds no credentials at all.
 | Currency, runes, essences, omens, fragments, gems | the game's own Currency Exchange first — fills cannot be faked by bait listings — then the bulk trade book, read from sellers who are online in league, against both exalted and divine, the broader book answering |
 | Most uniques | poe2scout index — free, no API call |
 | Rares, jewels | trade search for "the cheapest item at least as good as yours", each mod compared at the floor of its roll's tier — a point under your roll is the same good |
-| Normal and magic bases | the same search, pinned to the base and its exact item level |
+| Normal and magic bases | the same search, pinned to the base and floored at its item level |
 | Waystones | trade search on tier and item rarity — measured as the only stats buyers pay for; a stone whose search still caps at 10,000 matches is a commodity and is priced off its tier's bulk exchange book instead |
 | Tablets, relics, charms | trade search; no index covers them |
 | Anything allocating a notable | searched by the exact notable — a Megalomaniac, or an amulet carrying an enhancement |

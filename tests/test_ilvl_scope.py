@@ -1,10 +1,13 @@
-"""Item level constrains a craft base and nothing else.
+"""Item level constrains a craft base and nothing else — and as a floor.
 
 A normal or magic item IS its item level: an ilvl 82 base rolls tiers an
 ilvl 79 one cannot, and that is the whole of what a buyer is paying for. A
-rare is bought on the mods it already rolled and a unique on its roll, so on
-those the item level is a constraint that excludes comparables while
-describing nothing anyone shops for.
+higher level rolls everything a lower one can and more, so it is a floor,
+not a pin: a Bloodstone Amulet with Spirit and +1 minion skills pinned to
+ilvl 36 exactly found nothing at four rungs while every ilvl-40 copy was at
+least as good. A rare is bought on the mods it already rolled and a unique
+on its roll, so on those the item level is a constraint that excludes
+comparables while describing nothing anyone shops for.
 """
 
 from pathlib import Path
@@ -25,14 +28,14 @@ def type_filters(name):
     return item, query["query"]["filters"]["type_filters"]["filters"]
 
 
-def test_a_normal_base_is_pinned_to_its_exact_item_level():
+def test_a_normal_base_is_floored_at_its_item_level():
     item, filters = type_filters("NormalItem.txt")
-    assert filters["ilvl"] == {"min": item["ilvl"], "max": item["ilvl"]}
+    assert filters["ilvl"] == {"min": item["ilvl"]}
 
 
-def test_a_magic_base_is_pinned_to_its_exact_item_level():
+def test_a_magic_base_is_floored_at_its_item_level():
     item, filters = type_filters("MagicItem.txt")
-    assert filters["ilvl"] == {"min": item["ilvl"], "max": item["ilvl"]}
+    assert filters["ilvl"] == {"min": item["ilvl"]}
 
 
 def test_a_rare_is_not_constrained_by_item_level():
