@@ -458,3 +458,24 @@ def test_a_waystone_has_no_coherence_line():
         breakdown=ROWS,
     )
     assert "coherence" not in render(ITEM, priced, RATES)
+
+
+def test_a_waystones_killer_mods_are_called_out_in_colour():
+    """deadly red, risky yellow — the loot score says nothing about whether
+    the map can be run, and nothing else on a stone's report shows its mods."""
+    from sox.report import RESET, RISKY, UNSEARCHED
+
+    item = {
+        "itemClass": "Waystones", "rarity": "Rare", "baseType": "Waystone (Tier 15)",
+        "explicitMods": ["-8% maximum Player Resistances",
+                         "Monsters have 15% increased Attack, Cast and Movement Speed",
+                         "+30% Monster Elemental Resistances"],
+    }
+    priced = PricedItem(
+        name="Stone", item_class=ItemClass.ENDGAME, price_ex=6.0,
+        source="exchange", tag="waystone", loot=(65, "run it"),
+    )
+    text = render(item, priced, RATES)
+    assert (f"  danger     {UNSEARCHED}-8% maximum Player Resistances{RESET}  ·  "
+            f"{RISKY}Monsters have 15% increased Attack, Cast and Movement Speed{RESET}") in text
+    assert "Monster Elemental Resistances" not in text

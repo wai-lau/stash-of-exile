@@ -32,6 +32,9 @@ RESET = "\033[0m"
 # The mods the price does NOT account for are the reason to doubt the
 # number, so they are lit, not dimmed into the margin. Bright red.
 UNSEARCHED = "\033[91m"
+# A waystone's killer mods: deadly in the same red as the mods a price
+# does not account for, risky in yellow.
+RISKY = "\033[33m"
 # A waystone's loot score wears its band as a colour, bold: grey reroll,
 # blue run it, yellow juice it, green chase. The word would be the colour
 # said twice.
@@ -378,6 +381,17 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
             colour = LOOT_COLOURS.get(path.verdict, "")
             lines.append(f"  instill    {path.emotion} → {colour}{path.score}{RESET}"
                          f"  ·  {path.delirious}% delirious")
+    if priced.loot:
+        # The mods that kill the player, deadly red and risky yellow: the
+        # score says nothing about whether the map can be run, and nothing
+        # else on a stone's report shows its mods.
+        from sox.valuation.danger import dangers
+
+        flagged = dangers(item)
+        if flagged:
+            tint = {"deadly": UNSEARCHED, "risky": RISKY}
+            lines.append("  danger     " + "  ·  ".join(
+                f"{tint[tier]}{text}{RESET}" for text, tier in flagged))
     if priced.unsearched:
         # The query lines above say what the price rests on; this is the
         # rest of the item — dropped by widening, or never searchable — so
