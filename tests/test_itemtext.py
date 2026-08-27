@@ -201,3 +201,19 @@ def test_a_bare_enhancement_heads_a_block_like_any_other():
     assert item["enchantMods"] == [
         "Allocates The Soul Meridian — Unscalable Value"]
     assert len(item["explicitMods"]) == 5, "the five real affixes, and no brace"
+
+
+def test_value_less_waystone_mods_are_still_mods():
+    """"Players are periodically Cursed with Elemental Weakness", "Monsters
+    are Armoured": no number, no verb the flavour-text filter knew, and the
+    danger line never saw the curse."""
+    item = parse(
+        "Item Class: Waystones\nRarity: Rare\nDoom Route\nWaystone (Tier 15)\n"
+        "--------\nItem Level: 80\n--------\n"
+        "Players are periodically Cursed with Elemental Weakness\n"
+        "Monsters are Armoured\nMonsters are Evasive\n"
+    )
+    assert item["explicitMods"] == [
+        "Players are periodically Cursed with Elemental Weakness",
+        "Monsters are Armoured", "Monsters are Evasive",
+    ]

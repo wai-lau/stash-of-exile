@@ -338,7 +338,10 @@ def _looks_like_mod(line: str) -> bool:
         return False
     if any(ch.isdigit() for ch in line):
         return True
-    return bool(re.search(r"\b(cannot|immune|gain|grants|has|have)\b", line, re.I))
+    # The waystone mods with no number: "Players are periodically Cursed with
+    # Elemental Weakness", "Monsters are Armoured", "Monsters are Evasive".
+    return bool(re.search(
+        r"\b(cannot|immune|gain|grants|has|have|cursed|armoured|evasive)\b", line, re.I))
 
 
 _KIND_TO_FIELD = {
