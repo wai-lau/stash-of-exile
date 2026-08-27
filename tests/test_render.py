@@ -388,7 +388,7 @@ def test_a_waystone_prints_its_loot_score_and_verdict():
         name="Ghost Expedition", item_class=ItemClass.ENDGAME, price_ex=12.5,
         source="trade", tag="exact", listings=9, median_ex=12.5, p25_ex=12.5,
         map_stats=("tier 15+", "item rarity 24%+"),
-        loot=(55.4, "run it"),
+        loot=(55, "run it"),
     )
     text = render(ITEM, priced, RATES)
     # The number alone, bold, in the band's colour — the word was the colour.
