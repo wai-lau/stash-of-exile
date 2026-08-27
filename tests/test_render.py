@@ -436,3 +436,25 @@ def test_a_corrupted_waystone_says_it_cannot_be_instilled():
                              score=None, verdict=None),
     )
     assert "  instill    corrupted — cannot be instilled" in render(ITEM, priced, RATES)
+
+
+def test_a_stone_priced_off_the_book_as_a_floor_says_so():
+    priced = PricedItem(
+        name="Blasted Control", item_class=ItemClass.ENDGAME, price_ex=24.0,
+        source="exchange", tag="waystone-floor", offers=39, stock=2501,
+        ask_ex=24.0, loot=(83, "juice it"),
+        map_stats=("tier 16+", "monster rarity 32%+"),
+    )
+    text = render(ITEM, priced, RATES)
+    assert "no stone at least as good on every total is listed" in text
+    assert "floor" in text
+
+
+def test_a_waystone_has_no_coherence_line():
+    """Its mods are difficulty; a cluster of them serves no buyer."""
+    priced = PricedItem(
+        name="Stone", item_class=ItemClass.ENDGAME, price_ex=6.0,
+        source="exchange", tag="waystone", loot=(65, "run it"),
+        breakdown=ROWS,
+    )
+    assert "coherence" not in render(ITEM, priced, RATES)

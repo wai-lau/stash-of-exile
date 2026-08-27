@@ -398,6 +398,26 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 item, category, mod_index, notables, trade, cache, rates,
                 status=cfg.status, max_searches=cfg.max_searches,
             )
+            # A stone worth juicing whose search found nothing at least as
+            # good on all five totals is above what is listed — worth
+            # knowing — but it is still at least its tier, and the book by
+            # tier is the floor.
+            if (category == "map.waystone" and result.ceiling_ex is None
+                    and exchange is not None and item.get("baseType")):
+                bulk = price_by_exchange(item["baseType"], exchange,
+                                         rates.get("divine"), fills=fills)
+                if bulk is not None:
+                    return report.PricedItem(
+                        name=display_name(item), item_class=item_class,
+                        price_ex=bulk.price_ex, source="exchange",
+                        tag="waystone-floor", reason=verdict.reason,
+                        offers=bulk.offers, stock=bulk.stock,
+                        ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
+                        quoted=bulk.quoted, traded_ex=bulk.traded_ex,
+                        loot=loot, instill=instillation(item),
+                        map_stats=tuple(waystone_stat_texts(item, category)),
+                        **_identity_fields(item),
+                    )
             # Past the cap the engine sorts only a kept sample — measured
             # live, tier 15+ alone floored at 3 ex while its own subsets
             # floored at 1 ex and at 1 transmute — so the low is noise. A

@@ -1729,3 +1729,43 @@ def test_a_stone_under_the_juice_band_is_not_searched(tmp_path):
         types.SimpleNamespace(status="any", max_searches=4, force=False),
     )
     assert priced.source == "unpriced" and priced.tag == "unpriced:no-book"
+
+
+def test_a_searched_stone_with_no_comparable_falls_back_to_the_book_as_a_floor(tmp_path):
+    """Nothing at least as good on all five totals is listed: that is what
+    the search says, and it is worth knowing. But the stone is still at
+    least a Waystone (Tier 16), and the book by tier is the floor."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.exchange import Book, Offer
+
+    class NothingListed:
+        def search(self, query):
+            return "q1", [], 0
+
+        def fetch(self, query_id, hashes):
+            return []
+
+    class BulkBook:
+        def ids(self):
+            return {"Waystone (Tier 16)": "waystone-16"}
+
+        def book(self, item_id, have="exalted"):
+            if item_id == "waystone-16" and have == "exalted":
+                return Book([Offer(ratio=24.0, stock=500)], 2501)
+            return Book([], 0)
+
+    item = load("RareMapFakeAllProps")
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES,
+        NothingListed(), Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+        exchange=BulkBook(),
+    )
+    assert priced.source == "exchange"
+    assert priced.tag == "waystone-floor"
+    assert priced.price_ex == 24.0
+    assert "monster rarity 32%+" in priced.map_stats, "what the search asked is still shown"
+    assert priced.loot == (83, "juice it")

@@ -295,6 +295,12 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         # Rerouted here from a search that hit the 10,000 cap, where the sort
         # reads only a kept sample. Said out loud, or the exchange row makes
         # the item look like it was never searchable at all.
+        # A stone worth juicing whose search found nothing: what is listed
+        # is all worse than it on some total, so the book by tier is a
+        # floor, not a price.
+        if priced.tag == "waystone-floor":
+            out.append("             no stone at least as good on every total is "
+                       "listed — the tier's book is the floor, yours is worth more")
         if priced.tag == "capped-search":
             out.append("             the item search capped at 10,000 and reads "
                          "a sample — this is the bulk book instead")
@@ -381,7 +387,9 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
                 for text, why in priced.unsearched]
         lines.append(f"  unsearched {rows[0]}")
         lines += [f"             {row}" for row in rows[1:]]
-    if priced.breakdown:
+    # Not for a waystone: its mods are difficulty, and a cluster of them
+    # serves no buyer.
+    if priced.breakdown and not priced.loot:
         if priced.coherence_group and priced.coherence_count > 1:
             gain = f"  +{priced.coherence_bonus}" if priced.coherence_bonus else ""
             lines.append(f"  coherence  {priced.coherence_count} mods cluster on "
