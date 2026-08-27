@@ -3,7 +3,7 @@
 Prices Path of Exile 2 items from the text the game puts on your clipboard.
 
 ```
-sox watch          
+sox watch
 ```
 
 ## Install
@@ -52,12 +52,18 @@ archetypes."
 
 SoX encodes that based on... well, [_my own judgement_](https://github.com/wai-lau/stash-of-exile/blob/master/docs/pricing-algorithm.html)(I read a few guides and try to sell stuff often, but that's about it).
 
-The score 
-
-The exact search found too thin a market, so it widened one rung. Picking
-what survived by weight alone would have kept that chaos resistance roll and
-dropped the minion crit and the minion attack speed, describing a buyer who
-does not exist. It priced the ring at 65 ex.
+The first search asks for the whole item — every mod it can search, at the
+floor of its roll's own range, because a roll one point under yours is the
+same good. When nothing that good is listed, the search widens a rung at a
+time, and what survives each rung is chosen by what the item **is**, not by
+mod weight. What identifies the item survives longest — its unique flags,
+the notables it rolled — then the mods its dominant archetype's buyer
+filters on, then the generic value (life, resistances) every buyer pays for
+whatever their build; a mod serving some *other* buyer drops first. Weight
+alone would keep a heavy off-archetype roll while dropping the mods the
+real buyer filters on, and the widened search would describe a buyer who
+does not exist. The report names the archetype it searched as at every
+rung, and marks every mod the price actually rests on.
 
 ## Why the clipboard
 
