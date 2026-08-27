@@ -262,3 +262,34 @@ def test_an_exalted_exchange_price_is_lit_like_the_market_row():
     assert "against divine" not in text
     assert f"{report.MARKET}1 ex{report.RESET}" in text
     assert report.MARKET_DIV not in text
+
+
+def test_the_query_renders_under_searched_as():
+    priced = PricedItem(
+        name="Doom Shield", item_class=ItemClass.GEAR, price_ex=12.5,
+        source="trade", tag="relaxed:1", reason="score 4", score=4,
+        breakdown=ROWS, listings=9, median_ex=12.5, p25_ex=12.5,
+        searched_group="minion", searched_stats=("Minions deal #% increased Damage",),
+        query_stats=("Minions deal #% increased Damage ≥ 20",
+                     "total chaos resistance ≥ 30"),
+    )
+    text = render(ITEM, priced, RATES)
+    as_row = text.index("searched   as minion")
+    assert text.index("Minions deal #% increased Damage ≥ 20") > as_row
+    assert "total chaos resistance ≥ 30" in text
+
+
+def test_the_query_renders_without_an_archetype_too():
+    """A twice-corrupted chest has no dominant buyer, so there is no
+    "searched as" row — the query must not vanish with it."""
+    priced = PricedItem(
+        name="Doom Shield", item_class=ItemClass.GEAR, price_ex=12.5,
+        source="trade", tag="exact", reason="score 4", score=4,
+        breakdown=ROWS, listings=9, median_ex=12.5, p25_ex=12.5,
+        query_stats=("Grants Skill: Level 20 Spirit Vessel",
+                     "Companions have #% increased maximum Life ≥ 40"),
+    )
+    text = render(ITEM, priced, RATES)
+    assert "searched   " in text
+    assert "Grants Skill: Level 20 Spirit Vessel" in text
+    assert "Companions have #% increased maximum Life ≥ 40" in text

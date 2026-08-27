@@ -187,8 +187,12 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
         (text, None, "filter") for text in granted_skill_text(item)
     ]
     # Searched but not scored: an implicit costs no affix slot, so it neither
-    # earns weight nor spends the room left to craft.
-    rows += [(text, None, "implicit") for text in searchable_implicits(item, index)]
+    # earns weight nor spends the room left to craft. One summed into a
+    # pseudo total is searched through that total, not under its own id, and
+    # the row must say which query it is actually part of.
+    rows += [(text, None,
+              "implicit, pseudo" if text in via_pseudo else "implicit")
+             for text in searchable_implicits(item, index)]
     for text, weight in explain_score(mods, index):
         entry = match_mod(text, index)
         tag = ""

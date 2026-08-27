@@ -305,23 +305,33 @@ call.
 
 <pre>Forgotten Warden  [Primal Markings]
   type       Body Armours → armour.chest   ilvl 84
-  searched   as attribute
+  searched   Grants Skill: Level 20 Spirit Vessel
+             total dexterity ≥ 20
+             Companions have #% increased maximum Life ≥ 30
   score      0
-             <ins>+1  +24 to Dexterity</ins>
-             +0  18% increased Rarity of Items found  (implicit)
+             <ins>+0  Grants Skill: Level 20 Spirit Vessel                                                    (filter)</ins>
+             +0  +76 to Deflection Rating per 50 missing Energy Shield
+             <ins>+0  280% increased Evasion and Energy Shield                                                (filter)</ins>
+             <ins>+1  +24 to Dexterity                                                                        (pseudo)</ins>
+             <ins>+2  Companions have 42% increased maximum Life</ins>
+             +0  14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you
   coherence  none — the mods serve different builds
-  market     <b>low 4.7 div  ·  25th 6.58 div  ·  median 13.15 div</b>
-             cheapest 10 of 196 listings, exact
-             20 skipped — met your numbers only with their runes</pre>
+  market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>899 ex</b>
+             cheapest 10 of 1,156 listings, exact</pre>
 
 In the terminal, cyan (underlined here) marks a mod that drove the
-search, and the market prices are lit amber (bold here). `(filter)`
-marks a mod searched through a total rather than as a stat. The
-`searched as` row names the item's dominant archetype — the buyer the
-whole widening ladder is ordered around — so it holds at every rung
-rather than being re-read off whichever filters a rung kept. The market
-row is last because the rows above it explain how the number was
-reached.
+search, and the market prices are lit amber (bold here). The dim lines
+under `searched` are the query itself — each stat filter the priced
+rung sent, with the floor it asked at: the pseudo sums (`total
+dexterity ≥ 20` is the +24 roll at the floor of its range) and the
+skill at its own level. On an item with a dominant archetype the row
+reads `searched as minion` first — the buyer the whole widening ladder
+is ordered around, named from the item's own mods so it holds at every
+rung; this chest serves no single buyer, so the query stands alone.
+`(filter)` marks a mod searched through an equipment total rather than
+as a stat, `(pseudo)` one summed into a pseudo total — an implicit
+folded in reads `(implicit, pseudo)`. The market row is last because
+the rows above it explain how the number was reached.
 
 ## Caveats
 

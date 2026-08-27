@@ -1294,6 +1294,10 @@ def _build(
     and_filters = skill_filters + [f for f, _ in kept if "type" not in f]
     or_groups = skill_groups + [f for f, _ in kept if "type" in f]
     searched = [text for _, labels in kept for text in labels]
+    # The query as sent, one line per stat filter with the floor it asks at.
+    # The skill line already carries its level in its own wording.
+    shown = granted_skill_text(item) + [_query_line(f, labels)
+                                        for f, labels in kept]
 
     # Named from the ITEM's mods, not from what a rung kept. The archetype is
     # the judge that ordered the whole ladder — cohering mods survive, the
@@ -1364,7 +1368,27 @@ def _build(
         base = base_type(item)
         if base:
             query["query"]["type"] = base
-    return query, group, searched
+    return query, group, searched, shown
+
+
+def _query_line(f: dict, labels: list[str]) -> str:
+    """One stat filter as the report shows it: its wording and its floor."""
+    def fmt(value) -> str:
+        return str(int(value)) if float(value).is_integer() else str(value)
+
+    if "type" in f:
+        # An or-group is one mod asked for under several ids; the ids share
+        # one minimum and the wording is what the reader needs.
+        return f"{labels[0]} ≥ {fmt(f['filters'][0]['value']['min'])}"
+    fid = f.get("id", "")
+    minimum = (f.get("value") or {}).get("min")
+    if fid.startswith("pseudo."):
+        name = fid.removeprefix("pseudo.pseudo_total_").replace("_", " ")
+        return f"total {name} ≥ {fmt(minimum)}"
+    if minimum is None:
+        # A notable or a flag: the id alone is the whole filter.
+        return labels[0]
+    return f"{labels[0]} ≥ {fmt(minimum)}"
 
 
 def build_query(
@@ -1376,6 +1400,22 @@ def build_query(
     relax: int = 0,
 ) -> dict:
     return _build(item, category, index, notables, status, relax)[0]
+
+
+def explain_query(
+    item: dict,
+    index: dict[str, ModEntry],
+    notables: dict[str, str],
+    relax: int = 0,
+) -> list[str]:
+    """The stat filters a rung sends, each with the floor it asks at.
+
+    The breakdown highlights which mods drove the search; these lines show
+    the search itself — the pseudo sums and the floors — which nothing else
+    in the output states.
+    """
+    return _build(item, category_for(item) or "", index, notables,
+                  relax=relax)[3]
 
 
 def query_hash(query: dict) -> str:
@@ -1400,7 +1440,7 @@ def explain_selection(
     dropped it at rung 2 — so the breakdown showed the item's best mod as one
     the price did not rest on.
     """
-    _, group, searched = _build(
+    _, group, searched, _ = _build(
         item, category_for(item) or "", index, notables, relax=relax)
     return (group or None), searched
 
@@ -1446,5 +1486,12 @@ def searched_item_texts(item: dict, index, notables, relax: int = 0) -> list[str
     out = []
     for text in searchable_mods(item):
         if normalize_mod(text) in wanted:
+            out.append(text)
+    # Mods riding an equipment filter and the granted skill survive every
+    # rung, so they are always lit. Appended here rather than in the caller:
+    # cli adding implicits on its own lit the ring's implicit at a rung that
+    # had dropped the chaos total it rides in.
+    for text in defence_mod_texts(item) + granted_skill_text(item):
+        if text not in out:
             out.append(text)
     return out

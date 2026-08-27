@@ -60,6 +60,7 @@ class PricedItem:
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
     searched_texts: tuple[str, ...] = ()   # the ITEM's wording, for highlighting
+    query_stats: tuple[str, ...] = ()      # each filter sent, with its floor
     map_stats: tuple[str, ...] = ()        # waystone minimums the search sent
     item_class_name: str = ""              # the game's own label, e.g. "Quarterstaves"
     category: str | None = None            # the trade category searched
@@ -282,8 +283,18 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
 
     if priced.searched_stats and priced.searched_group:
         # The mods themselves are highlighted in the score breakdown, so
-        # listing them again here would say the same thing twice.
+        # listing them again here would say the same thing twice. The query
+        # lines are different information: the floors it asked at, and the
+        # pseudo sums, which appear nowhere else.
         lines.append(f"  searched   as {priced.searched_group}")
+        for line in priced.query_stats:
+            lines.append(f"             {DIM}{line}{RESET}")
+    elif priced.query_stats:
+        # No dominant buyer, no "as" — but the query still went out and its
+        # floors still need stating.
+        head, *rest = priced.query_stats
+        lines.append(f"  searched   {DIM}{head}{RESET}")
+        lines += [f"             {DIM}{line}{RESET}" for line in rest]
     if priced.map_stats:
         # Spelled out in full, unlike the mods above: a waystone's stats are
         # properties, not mods, so they appear nowhere in the breakdown and

@@ -1420,3 +1420,48 @@ def test_an_unmapped_class_says_so_rather_than_blaming_the_index(tmp_path):
         types.SimpleNamespace(status="any", max_searches=4, force=False),
     )
     assert priced.tag == "unpriced:no-category:Fishing Rods"
+
+
+def test_a_pseudo_fed_implicit_reads_as_part_of_the_total():
+    """The ring's implicit chaos res is summed into the pseudo total.
+
+    Its breakdown row said "(implicit)" alone, which reads as a separate
+    implicit filter the query does not contain.
+    """
+    from sox.valuation.candidates import score_rows
+
+    rows = {text: tag for text, _, tag in
+            score_rows(load("MinionRing"), MODS, load_bases())}
+    assert rows["+13% to Chaos Resistance"] == "implicit, pseudo"
+
+
+def test_highlights_respect_the_rung_that_priced():
+    """One assembly decides what the breakdown lights up.
+
+    cli appended every implicit unconditionally, so the ring's implicit lit
+    up cyan at a rung that had dropped the chaos total it rides in.
+    """
+    from sox.valuation.query import defence_mod_texts, searched_item_texts
+
+    ring = load("MinionRing")
+    lit = searched_item_texts(ring, MODS, NOTABLES, relax=1)
+    assert "+13% to Chaos Resistance" not in lit, "its total was dropped"
+    assert "+13% to Chaos Resistance" in searched_item_texts(
+        ring, MODS, NOTABLES, relax=0), "at rung 0 the total is searched"
+
+    armour = load("ArmourHighValueRareItem")
+    covered = defence_mod_texts(armour)
+    assert covered, "fixture must carry defence mods"
+    lit = searched_item_texts(armour, MODS, NOTABLES)
+    assert set(covered) <= set(lit), "equipment-filter mods are searched too"
+
+
+def test_explain_query_prints_each_filter_with_its_floor():
+    from sox.valuation.query import explain_query
+
+    ring = load("MinionRing")
+    exact = explain_query(ring, MODS, NOTABLES, relax=0)
+    assert "total chaos resistance ≥ 30" in exact, "implicit 10 + explicit 20"
+    assert "Minions deal #% increased Damage ≥ 20" in exact
+    relaxed = explain_query(ring, MODS, NOTABLES, relax=1)
+    assert not any("chaos" in line for line in relaxed), "dropped at rung 1"

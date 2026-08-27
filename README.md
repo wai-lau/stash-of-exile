@@ -23,15 +23,19 @@ Park a terminal on a second monitor and run `sox watch`. Copy any item in
 game with Ctrl+C and its price appears, with a running session total:
 
 <pre>════════════════════════════════════════════════════════════════
-<b>sox watch</b> 0.1.0+6f1f4e9  ·  Runes of Aldur  ·  1 div = 360 ex
+<b>sox watch</b> 0.1.0+ec2a131  ·  Runes of Aldur  ·  1 div = 360 ex
 clipboard: powershell.exe (Windows clipboard via WSL)
 copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
 ════════════════════════════════════════════════════════════════
-22:53:27 <b>Corruption Hold  [Amethyst Ring]</b>
+13:11:22 <b>Corruption Hold  [Amethyst Ring]</b>
             type       Rings → accessory.ring   ilvl 80
             searched   as minion
+                       Minions have #% increased Critical Hit Chance ≥ 30
+                       Minions deal #% increased Damage if you've Hit Recently ≥ 20
+                       Minions have #% increased Attack and Cast Speed ≥ 8
+                       Minions deal #% increased Damage ≥ 20
             score      15
-                       <ins>+0  +13% to Chaos Resistance                                  (implicit)</ins>
+                       +0  +13% to Chaos Resistance                                  (implicit, pseudo)
                        <ins>+2  Minions deal 22% increased Damage                         (minion)</ins>
                        +2  Adds 9 to 18 Physical Damage to Attacks
                        <ins>+2  Minions have 37% increased Critical Hit Chance            (minion)</ins>
@@ -44,6 +48,13 @@ copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
                        found only after widening, so these comparables are weaker than your item — read the price as a floor
 ────────────────────────────────────────────────────────────────
 <ins>total 3,956 ex (11.0 div)</ins>  ·  1 priced  ·  2 searches
+────────────────────────────────────────────────────────────────
+13:12:04 <b>Igniferis  [Crimson Amulet]</b>
+            type       unique   ilvl 80
+            index      1 ex   (11,598 listed)
+            rolls      35th percentile (average roll)
+────────────────────────────────────────────────────────────────
+<ins>total 3,957 ex (11.0 div)</ins>  ·  2 priced  ·  2 searches
 ────────────────────────────────────────────────────────────────</pre>
 
 ## What makes it different from an overlay
