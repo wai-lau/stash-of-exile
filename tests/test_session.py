@@ -7,7 +7,7 @@ never been exercised.
 import httpx
 import pytest
 
-from sox.ggg.governor import RateGovernor
+from sox.ggg.governor import Budget, RateGovernor
 from sox.ggg.session import Blocked, GGGError, GGGSession, RateLimited
 
 
@@ -170,3 +170,10 @@ def test_each_endpoint_gets_its_own_governor():
     assert {r.limit for r in governors["search"].rules} == {2}
     assert {r.limit for r in governors["fetch"].rules} == {3}
     assert {r.limit for r in governors["exchange"].rules} == {5}
+
+
+def test_the_search_budget_is_readable_for_the_status_line():
+    session, _ = build(by_endpoint)
+    session.post(SEARCH, json={})
+    assert session.budget("search") == Budget(remaining=1, limit=2, period=10)
+    assert session.budget("fetch") is None, "never asked, nothing learned"

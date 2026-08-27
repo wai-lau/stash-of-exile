@@ -216,7 +216,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
     base_rules, unique_rules = load_bases(), load_uniques()
     notables = load_notables()
 
-    trade = exchange = None
+    trade = exchange = session = None
     if not args.no_trade:
         def announce(seconds: float, reason: str) -> None:
             print(watch_ui.waiting_on_limit(seconds, reason), flush=True)
@@ -306,7 +306,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                 else:
                     print(watch_ui.entry(body, priced.price_ex, divine_ex),
                           flush=True)
-                print(watch_ui.status(stats, divine_ex), flush=True)
+                print(watch_ui.status(stats, divine_ex, _budget(session)), flush=True)
         except KeyboardInterrupt:
             if stop.is_set() or not interactive:
                 break
@@ -319,8 +319,13 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         break
 
     print()
-    print(watch_ui.status(stats, divine_ex))
+    print(watch_ui.status(stats, divine_ex, _budget(session)))
     return 0
+
+
+def _budget(session: GGGSession | None):
+    """The search budget for the status line; None with --no-trade."""
+    return session.budget("search") if session else None
 
 
 def price_one(block, index, rates, mod_index, base_rules, unique_rules,

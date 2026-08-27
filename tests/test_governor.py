@@ -5,7 +5,7 @@ Real limits captured live 2026-08-18:
 Four clauses enforced at once, so one rule can carry several.
 """
 
-from sox.ggg.governor import RateGovernor
+from sox.ggg.governor import Budget, RateGovernor
 
 
 def make(clock_start=0.0):
@@ -123,3 +123,78 @@ def test_a_named_governor_says_which_bucket_is_waiting():
     gov.record_request()
     gov.before_request()
     assert announced == ["search rate limit"]
+
+
+# Live 2026-08-27 the state header rides beside the rules:
+#
+#     x-rate-limit-ip:       5:10:60,15:60:300,30:300:1800,600:21600:3600
+#     x-rate-limit-ip-state: 1:10:0,1:60:0,1:300:0,53:21600:0
+#
+# hits:period:restricted-seconds, one per clause. It is the server's count,
+# and the server's count includes the browser on the trade site, an overlay,
+# a second sox, and the run before this one — none of which the local
+# history can see. The 30:300 clause locks the IP out for 1800s.
+
+def observe_state(gov, rules, state):
+    gov.observe({"X-Rate-Limit-Rules": "Ip", "X-Rate-Limit-Ip": rules,
+                 "X-Rate-Limit-Ip-State": state})
+
+
+def test_the_servers_count_seeds_the_window():
+    """One local request, but GGG has seen five this window: the next waits."""
+    gov, _, slept = make()
+    gov.before_request()
+    gov.record_request()
+    observe_state(gov, "5:10:60", "5:10:0")
+    gov.before_request()
+    assert slept == [10]
+
+
+def test_seeded_hits_sit_just_outside_the_shorter_window():
+    """GGG says one hit in the last 10s and five in the last 60s, so the four
+    it saw and we did not are older than 10s: they expire in 50s, not 60."""
+    gov, _, slept = make()
+    gov.before_request()
+    gov.record_request()
+    observe_state(gov, "2:10:60,5:60:300", "1:10:0,5:60:0")
+    gov.before_request()
+    assert slept == [50]
+
+
+def test_the_servers_count_also_trims_a_pessimistic_history():
+    """Seeded by one response, corrected by the next: the server's count is
+    the truth in both directions."""
+    gov, _, slept = make()
+    gov.before_request()
+    gov.record_request()
+    observe_state(gov, "5:10:60", "5:10:0")
+    observe_state(gov, "5:10:60", "1:10:0")
+    gov.before_request()
+    assert slept == []
+
+
+def test_a_restriction_in_progress_is_waited_out_before_asking():
+    """The state header says a restriction is running; the next request
+    waits it out rather than earning a longer one."""
+    now = [0.0]
+    announced = []
+    gov = RateGovernor(clock=lambda: now[0],
+                       sleeper=lambda s: now.__setitem__(0, now[0] + s),
+                       on_wait=lambda s, r: announced.append((s, r)))
+    gov.record_request()
+    observe_state(gov, "5:10:60", "1:10:45")
+    gov.before_request()
+    assert announced == [(45.0, "restricted by GGG")]
+
+
+def test_budget_is_the_tightest_clause():
+    gov, _, _ = make()
+    gov.record_request()
+    observe_state(gov, "5:10:60,15:60:300", "3:10:0,14:60:0")
+    assert gov.budget() == Budget(remaining=1, limit=15, period=60)
+
+
+def test_no_budget_before_any_headers():
+    gov, _, _ = make()
+    gov.record_request()
+    assert gov.budget() is None

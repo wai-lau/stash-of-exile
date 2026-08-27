@@ -19,7 +19,7 @@ from typing import Any
 
 import httpx
 
-from sox.ggg.governor import RateGovernor
+from sox.ggg.governor import Budget, RateGovernor
 
 MAX_429_RETRIES = 3
 TRADE2 = "/api/trade2/"
@@ -63,6 +63,11 @@ class GGGSession:
 
     def post(self, url: str, json: Any = None, **kw: Any) -> httpx.Response:
         return self._request("POST", url, json=json, **kw)
+
+    def budget(self, bucket: str) -> Budget | None:
+        """What the bucket has left, or None before it has answered once."""
+        governor = self._governors.get(bucket)
+        return governor.budget() if governor else None
 
     def _governor(self, url: str) -> RateGovernor:
         name = bucket(url)

@@ -43,7 +43,7 @@ copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
              cheapest 10 of 98 listings, relaxed:1
              found only after widening, so these comparables are weaker than your item — read the price as a floor
 ────────────────────────────────────────────────────────────────
-<ins>total 3,956 ex (11.0 div)</ins>  ·  1 priced  ·  2 searches
+<ins>total 3,956 ex (11.0 div)</ins>  ·  1 priced  ·  2 searches  ·  3/5 left (10s window)
 ────────────────────────────────────────────────────────────────
 14:32:39 <b>Honour Spiral  [Unset Ring]</b>
   type       Rings → accessory.ring   ilvl 82
@@ -58,7 +58,7 @@ copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
              found only after widening, so these comparables are weaker than your item — read the price as a floor
              the low is 11x under the median — read the 25th as the price
 ────────────────────────────────────────────────────────────────
-<ins>total 4,125 ex (11.5 div)</ins>  ·  2 priced  ·  4 searches
+<ins>total 4,125 ex (11.5 div)</ins>  ·  2 priced  ·  4 searches  ·  11/15 left (60s window)
 ────────────────────────────────────────────────────────────────</pre>
 
 ## What makes it different from an overlay

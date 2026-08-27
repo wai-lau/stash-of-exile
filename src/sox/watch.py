@@ -13,6 +13,7 @@ from datetime import datetime
 from pathlib import Path
 
 from sox import __version__
+from sox.ggg.governor import Budget
 
 DIM = "\033[2m"
 BOLD = "\033[1m"
@@ -134,12 +135,19 @@ def entry(body: str, price_ex: float | None, divine_ex: float) -> str:
     return f"{head}\n{rest}" if rest else head
 
 
-def status(session: Session, divine_ex: float) -> str:
+def status(session: Session, divine_ex: float, budget: Budget | None = None) -> str:
+    # What GGG has left for us in the tightest window, so the next copy can
+    # wait for the window to turn instead of finding a wait line. Nothing
+    # until the first search has answered, because the limits are only
+    # advertised on responses.
+    left = (f"{budget.remaining}/{budget.limit} left ({_window(budget.period)} window)"
+            if budget else "")
     parts = [
         f"{session.priced} priced",
         f"{session.junk} junk" if session.junk else "",
         f"{session.unpriced} unpriced" if session.unpriced else "",
         f"{session.searches} searches",
+        left,
     ]
     total = f"{session.total_ex:,.0f} ex"
     if divine_ex > 0:
@@ -149,6 +157,14 @@ def status(session: Session, divine_ex: float) -> str:
         p for p in parts if p
     )
     return f"{rule()}\n{line}\n{rule()}"
+
+
+def _window(period: int) -> str:
+    if period <= 60:
+        return f"{period}s"
+    if period < 3600:
+        return f"{period // 60}min"
+    return f"{period // 3600}h"
 
 
 def waiting(message: str) -> str:

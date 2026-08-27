@@ -141,6 +141,18 @@ shared between search and fetch charged every fetch to the search window
 and gated each call by whichever endpoint answered last — half the
 searches GGG allows, spent pacing the wrong thing. The session keeps a
 governor per endpoint, keyed by the trade2 path segment.
+
+The governor also **takes GGG's count over its own**. The limit is per
+IP, and the `x-rate-limit-ip-state` header (`hits:period:restricted`
+per clause) counts what a local history cannot see: the trade site open
+in a browser, an overlay, a second sox, and the run before this one —
+restart `sox watch` and the last five minutes of searches are still on
+the clock, against a `30:300` clause whose penalty is 1,800 seconds.
+Each response reconciles the history to the server's count — padding
+hits it missed just outside the next shorter window, where the server
+says they are not — and a restriction in progress is waited out rather
+than earned twice. The watch status line prints what the tightest
+clause has left.
 Static ids are cached for a week, books for six hours.
 
 Books are league-scoped, and so is the index: sox reads the **softcore**
