@@ -292,6 +292,14 @@ def should_search_unique(item: dict, entry: IndexEntry | None, rules: UniqueRule
     if granted_skill_filter(item) is not None:
         return "granted-skill"
 
+    # A roll premium is a multiple of the price, and at the listing floor
+    # there is nothing to multiply. Erian's Cobble: fifteen mods rolling from
+    # 0, indexed at 1 ex, and 1 - 0.75^15 of its copies carry SOME roll in
+    # the top quarter — each one spent two searches to learn it was worth
+    # 1 ex. Forgotten Warden at 9 ex still escalates.
+    if entry.price_ex < rules.thresholds.get("good_roll_floor_ex", 3):
+        return None
+
     threshold = rules.thresholds.get("roll_score_percentile", 0.75)
     # The item's own advanced descriptions carry the range on the same line as
     # the roll, so prefer them; the index template has to be matched by text.

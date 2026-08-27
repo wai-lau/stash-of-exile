@@ -83,7 +83,9 @@ A unique escalates from index to search when *any* holds:
 - the index price is ≥ 5,000 ex;
 - it grants a skill — **no unique in the index records one**, so the
   level is invisible to its price;
-- **any single roll** sits at the 75th percentile or above.
+- **any single roll** sits at the 75th percentile or above — on a unique
+  the index prices at 3 ex or more, since at the listing floor a roll has
+  nothing to multiply.
 
 That last clause is the best roll, not the mean. A copy with one
 near-perfect build-defining roll beside poor filler averages out to
@@ -243,7 +245,7 @@ mature overlays leave to the player.
 | DPS | `min` | Total only, **runes removed**, the same as the defences. Not pdps/edps: splitting it pins the damage source. |
 | Granted skill | `min` | At its own level. Exempt from the widening ladder. |
 | Pseudo totals | `min` | Summed at each contributor's *floor*. A buyer filters total resistance, not its sources. A stat GGG totals is **always** searched as that total and never as its mods: two filters ANDed are stricter than the sum they make, so searching them apart narrows what the total exists to widen. A total that serves no buyer of this item is still searched, behind the archetype: defence totals (resistances, life) are generic value every buyer pays for and outlive the mods serving some other buyer, while an off-archetype attribute total — the Intelligence that once moved a 3ex quarterstaff to a 50ex median — sits at the very back and is dropped first. |
-| Explicit mods | `min` | The floor of the roll's own range — a point lower is the same good at the same tier. Measured on a five-mod ring: minimums at the exact rolls matched 0 listings (every near-copy rolled a point under somewhere; leech 7.76 against 7.81) and the ladder fell through to a 1 ex junk floor, while the same-tier market sat at 3–20 ex. Added-damage mods filter on the average of the two numbers, at the actual roll — the range of the average is not known. |
+| Explicit mods | `min` | The floor of the roll's own range — a point lower is the same good at the same tier. Measured on a five-mod ring: minimums at the exact rolls matched 0 listings (every near-copy rolled a point under somewhere; leech 7.76 against 7.81) and the ladder fell through to a 1 ex junk floor, while the same-tier market sat at 3–20 ex. Added-damage mods filter on the average of the two numbers, at the actual roll — the range of the average is not known. On a unique, the actual roll — there is no same-tier near-copy of a unique, only a worse one, and the roll is what escalated it. |
 | Implicits | `min` | At the *floor* of the range — the implicit comes with the base, and the buyer wants the base. |
 | A wording the item carries twice | `min` | An Iron Ring's implicit and its Flaring prefix are both "Adds # to # Physical Damage to Attacks". With no pseudo to total them — the trade table has none for damage — each is searched under its own group id at its own bound: the prefix at our roll, the implicit at its floor. |
 | Waystone tier, item rarity | `min` | A waystone is bought on the totals at the top of the item, never its mods — and only the two a buyer pays for. Measured live one stat at a time on securable T16s: item rarity 57+ alone moved the floor from 95 ex to 280, while drop chance and monster rarity left it standing — high rolls of those are table stakes on any listed T16. Like a defence total, these survive every rung of the ladder. (Measured against *securable* listings; at status "any" the offline ghosts put every floor at 1 ex and the differences vanish.) |

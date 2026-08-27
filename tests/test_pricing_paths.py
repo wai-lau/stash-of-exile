@@ -1601,3 +1601,45 @@ def test_flat_energy_shield_is_searched_where_it_is_global():
     assert not any(i.endswith(("3489782002", "4052037485")) for i in ids), \
         "on armour the ES total already carries it"
     assert "es" in query["query"]["filters"]["equipment_filters"]["filters"]
+
+
+def test_a_good_roll_on_a_unique_at_the_listing_floor_takes_the_index_price():
+    """Erian's Cobble: fifteen mods, every one rolling from 0, indexed at
+    1 ex. Almost every copy carries some roll in the top quarter — the odds
+    are 1 - 0.75^15 — and each one spent two searches to learn it was worth
+    1 ex. At the listing floor a roll has nothing to multiply; Forgotten
+    Warden at 9 ex still escalates."""
+    from dataclasses import replace
+
+    from sox.valuation.candidates import should_search_unique
+
+    item, entry = _forgotten_warden(dex=29, life=32)
+    assert should_search_unique(item, entry, UNIQUES) == "good-roll"
+    assert should_search_unique(item, replace(entry, price_ex=1.0), UNIQUES) is None
+
+
+ERIANS_COBBLE = """Item Class: Helmets
+Rarity: Unique
+Erian's Cobble
+Guarded Helm
+--------
+Item Level: 80
+--------
++8(0-10) to Strength
++3(0-10) to Dexterity
++24(0-30) to maximum Life
+"""
+
+
+def test_a_uniques_mods_are_searched_at_their_roll_not_the_range_floor():
+    """Every Erian's Cobble mod rolls from 0, so its range floor asks for any
+    copy at all: 112 listings at 1 ex, and the roll that escalated it never
+    in the query. On a unique the roll is the only thing separating copies —
+    the defences already search that way. The tier-floor argument is a
+    rare's: there is no same-tier near-copy of a unique, only a worse one."""
+    item = itemtext.parse(ERIANS_COBBLE)
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    mins = {f["id"]: f["value"]["min"]
+            for f in query["query"]["stats"][0]["filters"] if "id" in f}
+    assert mins["explicit.stat_4080418644"] == 8    # strength, range 0-10
+    assert mins["explicit.stat_3299347043"] == 24   # life, range 0-30

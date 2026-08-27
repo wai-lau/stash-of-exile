@@ -1222,8 +1222,13 @@ def _build(
         # Single-value mods only: an added-damage filter compares the
         # AVERAGE of its two numbers, and modRanges holds one roll's range,
         # not the average's — flooring it would compare the wrong quantity.
+        # NOT for uniques: there is no same-tier near-copy of a unique, only
+        # a worse one, and the roll is the only thing separating copies —
+        # exactly as the defences already search. Erian's Cobble, live: every
+        # mod rolls from 0, so its floors asked for any copy at all — 112
+        # listings at 1 ex, the roll that escalated it never in the query.
         span = (item.get("modRanges") or {}).get(text)
-        if span and len(values) == 1:
+        if span and len(values) == 1 and rarity_of(item) is not Rarity.UNIQUE:
             minimum = min(minimum, round(span[1] * scale, 2))
         ids = stat_ids_for(entry, category)
         if text in enchant_texts:
