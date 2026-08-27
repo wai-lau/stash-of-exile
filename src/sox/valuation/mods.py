@@ -11,7 +11,12 @@ from __future__ import annotations
 import re
 
 from sox.valuation.allowlists import ModEntry
-from sox.valuation.tagging import minion_subtype, subject_for, tags_for
+from sox.valuation.tagging import (
+    NOT_PLAYER_GEAR,
+    minion_subtype,
+    subject_for,
+    tags_for,
+)
 
 _NUMBER = re.compile(r"[+-]?\d+(?:\.\d+)?")
 
@@ -101,6 +106,12 @@ def unlisted_mods(stats: dict, listed: list[ModEntry]) -> list[ModEntry]:
     local: dict[str, str] = {}
     for entry in groups.get("explicit", []):
         text = entry["text"]
+        # A waystone's or map's mods are difficulty, searched through the
+        # tooltip totals and never as floors: "Monster Elemental Resistances
+        # ≥ 30" asks for a HARDER stone. The generator refuses these
+        # wordings; so does this.
+        if NOT_PLAYER_GEAR.search(text):
+            continue
         if text.endswith(LOCAL_SUFFIX):
             local[normalize_mod(text[: -len(LOCAL_SUFFIX)])] = entry["id"]
             continue

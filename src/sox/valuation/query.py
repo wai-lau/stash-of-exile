@@ -523,7 +523,15 @@ def searchable_mods(item: dict) -> list[str]:
     against the room left to craft, but they are real stats on the item and a
     buyer filters on them like any other — 40 of the allowlisted mods can be
     rolled as an implicit.
+
+    A waystone has none. Its mods are difficulty, and what they pay out is
+    already summed into the tooltip totals the search rests on; as floors
+    they ask for a HARDER stone — "Monster Elemental Resistances ≥ 30" —
+    which is the wrong direction. Tablets keep theirs: a tablet's mods are
+    its reward lines.
     """
+    if category_for(item) == "map.waystone":
+        return []
     return (
         list(item.get("explicitMods") or [])
         + list(item.get("fracturedMods") or [])

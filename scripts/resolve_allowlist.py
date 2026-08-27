@@ -19,7 +19,9 @@ from pathlib import Path
 # Runs as plain python3 from a checkout, so the package is reached by path.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from sox.valuation.tagging import minion_subtype, subject_for, tags_for  # noqa: E402
+from sox.valuation.tagging import (  # noqa: E402
+    NOT_PLAYER_GEAR, minion_subtype, subject_for, tags_for,
+)
 
 # (weight, canonical mod text, note)
 # weight 3 = build-defining, alone justifies a search
@@ -317,15 +319,6 @@ def slugify(text):
 # against the live table so whole families are covered and stay covered when
 # GGG adds to them.
 
-# Mods that can never be a tradeable affix on a player's item. Excluded before
-# any pattern runs, so map/monster/debuff text cannot leak into the allowlist.
-NOT_PLAYER_GEAR = re.compile(
-    r"^(Allocates|Small Passive|Notable Passive|Players |Player |Monsters? |"
-    r"Rare Monsters|Magic Monsters|Map |Area |Waystone|Unique Boss|Enemies |"
-    r"Your Maps?|League |Strongbox|Shrines|Chests)|"
-    r"( in Map$| per Level$|Monster |to Monsters)",
-    re.I,
-)
 
 # (regex, weight, note). First match wins.
 PATTERN_RULES = [

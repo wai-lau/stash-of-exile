@@ -118,3 +118,22 @@ def test_unlisted_mods_are_tagged_and_cohere_like_any_other():
 def test_unlisted_mods_do_not_score():
     mods = item_mods(itemtext.parse(GLYPH_BEADS))
     assert score_mods(mods, INDEX) == score_mods(mods, build_index(LISTED))
+
+
+def test_map_and_monster_wordings_are_not_gear_mods():
+    """A waystone's mods are difficulty, searched through the tooltip totals
+    and never as floors — "Monster Elemental Resistances ≥ 30" asks for a
+    HARDER stone, the wrong direction. The generator already refuses these
+    wordings; the runtime has to refuse the same ones."""
+    from sox.valuation.query import build_query, category_for
+
+    for text in ("+30% Monster Elemental Resistances",
+                 "Monsters Break Armour equal to 29% of Physical Damage dealt",
+                 "Players have 25% less Cooldown Recovery Rate",
+                 "Area has patches of Chilled Ground"):
+        assert match_mod(text, INDEX) is None, text
+
+    stone = itemtext.parse(
+        (Path(__file__).parent / "fixtures" / "items" / "GhostExpedition.txt").read_text())
+    query = build_query(stone, category_for(stone), INDEX, NOTABLES)
+    assert query["query"]["stats"][0]["filters"] == [], "totals only"

@@ -239,7 +239,13 @@ def unsearched_rows(item: dict, index, notables,
     "unsearchable" — no filter exists for it: not in the allowlist, or
     value-less with no flag id, so no rung could ever ask for it.
     """
-    from sox.valuation.query import searched_item_texts
+    from sox.valuation.query import category_for, searched_item_texts
+
+    # A waystone's mods are difficulty, searched through the tooltip totals
+    # (see searchable_mods); six red rows of them would say the price rests
+    # on nothing, when it rests on the totals.
+    if category_for(item) == "map.waystone":
+        return []
 
     lit = set(searched_item_texts(item, index, notables, relax=relax))
     rung0 = (set(searched_item_texts(item, index, notables, relax=0))

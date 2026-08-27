@@ -223,3 +223,14 @@ def tags_for(text):
     if subject_for(text) != "self":
         tags -= {"defence", "life", "es", "armour", "evasion", "resistance"}
     return sorted(tags)
+
+
+# Mods that can never be a tradeable affix on a player's item. Excluded before
+# any pattern runs, so map/monster/debuff text cannot leak into the allowlist.
+NOT_PLAYER_GEAR = re.compile(
+    r"^(Allocates|Small Passive|Notable Passive|Players |Player |Monsters? |"
+    r"Rare Monsters|Magic Monsters|Map |Area |Waystone|Unique Boss|Enemies |"
+    r"Your Maps?|League |Strongbox|Shrines|Chests)|"
+    r"( in Map$| per Level$|Monster |to Monsters)",
+    re.I,
+)
