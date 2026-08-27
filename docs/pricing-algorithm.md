@@ -193,7 +193,7 @@ gets a query built, below it the tool spends nothing.
 
 | Contribution | Range | Rule |
 |---|---|---|
-| Mods | `3 / 2 / 1 each` | Matched against an allowlist generated from build guides: 3 build-defining, 2 strong, 1 supporting. Weight-1 mods total **at most 2** — four low-tier mods make an item worth *less*, since they occupy affixes a buyer would craft into. Rune mods and unrevealed desecrated mods are not scored. |
+| Mods | `3 / 2 / 1 each` | Matched against an allowlist generated from build guides: 3 build-defining, 2 strong, 1 supporting. Weight-1 mods total **at most 2** — four low-tier mods make an item worth *less*, since they occupy affixes a buyer would craft into. Rune mods and unrevealed desecrated mods are not scored. The allowlist decides weight, not what can be searched: every other mod in GGG's trade stats table is searched at weight 0 — in the first rung, behind everything weighted, and the first thing widening drops. Glyph Beads: two amulet mods the allowlist never named printed as `(unsearchable)`, and the first rung searched an item two mods short of the one in hand. |
 | Coherence | `0 … 3` | Cluster size − 1, capped at 3. Needs two mods on one archetype; a group of one is not a cluster. |
 | Open affixes | `0 … 3` | Room left to craft. Rare holds 6 affixes, magic 2, normal none. With a weight-3 mod present, up to 3 points; otherwise 1, and only once the mods already score 4. **Zero on corrupted or mirrored items** — their empty slots are permanently empty. An unrevealed mod still occupies its slot. |
 | Base — rare | `0 or 1` | A single point when the base's own score reaches 4. On a rare the mods are the item; the base is a tiebreak. |
@@ -340,9 +340,9 @@ call.
              <ins>Grants Skill: Level 20 Spirit Vessel</ins>
              <ins>total dexterity ≥ 20</ins>
              <ins>Companions have #% increased maximum Life ≥ 30</ins>
-  unsearched 40% increased Thorns damage                                                             (unsearchable)
-             +76 to Deflection Rating per 50 missing Energy Shield                                   (unsearchable)
-             14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you  (unsearchable)
+  unsearched 40% increased Thorns damage                                                             (widened away)
+             +76 to Deflection Rating per 50 missing Energy Shield                                   (widened away)
+             14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you  (widened away)
   coherence  none — the mods serve different builds
   market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>1,079 ex</b>
              cheapest 19 of 1,153 listings, exact
@@ -366,7 +366,9 @@ at every rung; this chest serves no single buyer, so the query stands
 alone. `unsearched`, dimmed grey in the terminal, is the rest of the
 item — the mods the price does NOT account for: `(widened away)` means rung 0 asked for it and the
 rung that priced had dropped it, `(unsearchable)` means no filter
-exists for it at all. The market prices are lit amber (bold here), and
+exists for it at all — a value-less mod with no flag id, or a wording
+GGG's own table lacks; a mod the allowlist merely never weighted is
+still searched. The market prices are lit amber (bold here), and
 the market row is last because the rows above it explain how the
 number was reached.
 

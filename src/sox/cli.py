@@ -29,7 +29,7 @@ from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_
 from sox.valuation.classify import ItemClass, classify, display_name
 from sox.valuation.exchange_pricer import exchange_rates, price_by_exchange
 from sox.valuation.index_pricer import index_key, index_price_for
-from sox.valuation.mods import build_index, explain_score
+from sox.valuation.mods import build_index, explain_score, unlisted_mods
 from sox.valuation.rolls import (
     roll_percentiles,
     roll_percentiles_from_item,
@@ -108,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
 
         index = scout.prices(league.short)
         rates = scout.currency_rates(index)
-        mod_index = build_index(load_mods())
+        listed = load_mods()
         base_rules, unique_rules = load_bases(), load_uniques()
         notables = load_notables()
 
@@ -124,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
             rates = exchange_rates(exchange, rates, fills=fills)
         else:
             fills = {}
+        mod_index = _mod_index(listed, trade)
 
         for n, block in enumerate(blocks):
             if n:
@@ -208,11 +209,20 @@ def _ggg_session(cfg, announce) -> GGGSession:
                       httpx.Client(timeout=30), cfg.user_agent)
 
 
+def _mod_index(listed, trade: TradeClient | None):
+    """Every mod the trade table knows, with the allowlist's weights on the
+    ones it names. Without a trade client nothing is searched, so the
+    allowlist alone — it still scores."""
+    if trade is None:
+        return build_index(listed)
+    return build_index(listed + unlisted_mods(trade.stats(), listed))
+
+
 def run_watch(args, cfg, cache, scout, league) -> int:
     """Price every item copied to the clipboard, until Ctrl-D."""
     index = scout.prices(league.short)
     rates = scout.currency_rates(index)
-    mod_index = build_index(load_mods())
+    listed = load_mods()
     base_rules, unique_rules = load_bases(), load_uniques()
     notables = load_notables()
 
@@ -228,6 +238,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         rates = exchange_rates(exchange, rates, fills=fills)
     else:
         fills = {}
+    mod_index = _mod_index(listed, trade)
 
     divine_ex = rates.get("divine") or league.divine_price_ex
     print(watch_ui.banner(league.value, divine_ex,

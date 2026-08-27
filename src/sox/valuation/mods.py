@@ -65,6 +65,63 @@ def build_index(entries: list[ModEntry]) -> dict[str, ModEntry]:
     return {normalize_mod(e.text): e for e in entries}
 
 
+# The trade table carries a stat twice where an item can provide it itself:
+# "#% increased Evasion Rating" and "#% increased Evasion Rating (Local)".
+# The clipboard shows one wording for both, so the local twin rides on the
+# entry and the item's category picks it (stat_ids_for).
+LOCAL_SUFFIX = " (Local)"
+
+
+def unlisted_mods(stats: dict, listed: list[ModEntry]) -> list[ModEntry]:
+    """A weight-0 entry for every explicit stat the allowlist does not name.
+
+    The allowlist decides WEIGHT — what a mod is worth and which buyer it
+    serves. It never decided what could be searched, but it did by default:
+    a mod it did not name had no stat id, and the first rung searched an item
+    with fewer mods than the one in hand. Glyph Beads, live: "37% increased
+    Evasion Rating" and "24% increased Global Armour, Evasion and Energy
+    Shield" printed as (unsearchable) on a rare amulet. GGG's own table
+    knows every one of them.
+
+    Weight 0 means no score, no coherence vote, and last in line: it is in
+    the first rung and the first thing widening drops. The rules are the
+    resolver's — explicit ids only (the same wording under fractured,
+    crafted or desecrated matches only items carrying it that way), every
+    id a wording has (an OR group, never a guess), the (Local) twin and the
+    implicit twin alongside.
+    """
+    known = {normalize_mod(e.text) for e in listed}
+    groups = {g.get("id"): g.get("entries") or [] for g in stats.get("result") or []}
+    implicit = {e["id"].split(".", 1)[-1]: e["id"] for e in groups.get("implicit", [])}
+
+    wordings: dict[str, tuple[str, list[str]]] = {}
+    local: dict[str, str] = {}
+    for entry in groups.get("explicit", []):
+        text = entry["text"]
+        if text.endswith(LOCAL_SUFFIX):
+            local[normalize_mod(text[: -len(LOCAL_SUFFIX)])] = entry["id"]
+            continue
+        key = normalize_mod(text)
+        wordings.setdefault(key, (text, []))[1].append(entry["id"])
+
+    out = []
+    for key, (text, ids) in wordings.items():
+        if key in known:
+            continue
+        twins = tuple(implicit[n] for n in (i.split(".", 1)[-1] for i in ids)
+                      if n in implicit)
+        out.append(ModEntry(
+            ids=ids,
+            slug=re.sub(r"[^a-z0-9]+", "_", key).strip("_"),
+            text=text,
+            weight=0,
+            category="unlisted",
+            local_ids=(local[key],) if key in local else (),
+            implicit_ids=twins,
+        ))
+    return out
+
+
 def match_mod(text: str, index: dict[str, ModEntry]) -> ModEntry | None:
     return index.get(normalize_mod(text))
 
@@ -108,6 +165,8 @@ def score_mods(item_mods: list[str], index: dict[str, ModEntry]) -> tuple[int, d
     by_category: dict[str, int] = {}
     for entry in matched(item_mods, index):
         weight = entry.weight
+        if not weight:
+            continue  # unlisted: searchable, never scored
         if weight == 1:
             if supporting >= SUPPORTING_CAP:
                 continue
