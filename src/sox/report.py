@@ -29,6 +29,9 @@ MARKET_DIV = "\033[1;33;7m"
 # carry because the session total counts it, and the one not to trade on.
 DIM = "\033[2m"
 RESET = "\033[0m"
+# The mods the price does NOT account for are the reason to doubt the
+# number, so they are lit, not dimmed into the margin. Bright red.
+UNSEARCHED = "\033[91m"
 
 # The game's own rarity hues, as the tooltip paints an item's header —
 # yellow rare, blue magic, orange unique, white normal — and the name and
@@ -347,7 +350,7 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
         # rest of the item — dropped by widening, or never searchable — so
         # the reader knows what the number does NOT account for.
         width = max(len(text) for text, _ in priced.unsearched)
-        rows = [f"{DIM}{text:<{width}}  ({why}){RESET}"
+        rows = [f"{UNSEARCHED}{text:<{width}}  ({why}){RESET}"
                 for text, why in priced.unsearched]
         lines.append(f"  unsearched {rows[0]}")
         lines += [f"             {row}" for row in rows[1:]]

@@ -312,8 +312,10 @@ def test_the_query_renders_without_an_archetype_too():
     assert "Companions have #% increased maximum Life ≥ 40" in text
 
 
-def test_sections_indent_two_spaces_searched_blue_unsearched_dim():
-    from sox.report import BLUE, DIM
+def test_sections_indent_two_spaces_searched_blue_unsearched_red():
+    """Unsearched is what the price does NOT account for — the reason to
+    doubt the number — so it is lit bright red, not dimmed into the margin."""
+    from sox.report import BLUE, UNSEARCHED
 
     priced = PricedItem(
         name="Doom Shield", item_class=ItemClass.GEAR, price_ex=12.5,
@@ -328,7 +330,8 @@ def test_sections_indent_two_spaces_searched_blue_unsearched_dim():
     assert any(l.startswith("  searched") for l in body)
     assert any(l.startswith("  unsearched") for l in body)
     assert f"{BLUE}Minions deal #% increased Damage ≥ 20" in "\n".join(body)
-    assert f"{DIM}+8% to Fire Resistance" in "\n".join(body)
+    assert UNSEARCHED == "\033[91m", "bright red"
+    assert f"{UNSEARCHED}+8% to Fire Resistance" in "\n".join(body)
 
 
 JUNK = PricedItem(

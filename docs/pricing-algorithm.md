@@ -363,7 +363,7 @@ the skill at its own level. On an item with a dominant archetype the
 row reads `searched as minion` first — the buyer the whole widening
 ladder is ordered around, named from the item's own mods so it holds
 at every rung; this chest serves no single buyer, so the query stands
-alone. `unsearched`, dimmed grey in the terminal, is the rest of the
+alone. `unsearched`, bright red in the terminal, is the rest of the
 item — the mods the price does NOT account for: `(widened away)` means rung 0 asked for it and the
 rung that priced had dropped it, `(unsearchable)` means no filter
 exists for it at all — a value-less mod with no flag id, or a wording
