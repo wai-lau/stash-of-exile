@@ -34,14 +34,14 @@ RESET = "\033[0m"
 UNSEARCHED = "\033[91m"
 # A waystone's deadly mods wear the same red as the mods a price does not
 # account for; the risky tier stays off the report.
-# A waystone's loot score wears its band as a colour, bold: grey reroll,
-# blue run it, yellow juice it, green chase. The word would be the colour
-# said twice.
+# A waystone's loot score wears its band as a colour: grey reroll, blue run
+# it, yellow juice it, orange chase — bold from yellow up, so the good ones
+# stand out at a glance. The word would be the colour said twice.
 LOOT_COLOURS = {
-    "reroll": "\033[1;90m",
-    "run it": "\033[1;94m",
+    "reroll": "\033[90m",
+    "run it": "\033[94m",
     "juice it": "\033[1;33m",
-    "chase": "\033[1;92m",
+    "chase": "\033[1;38;2;255;140;0m",
 }
 
 # The game's own rarity hues, as the tooltip paints an item's header —

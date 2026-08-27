@@ -392,17 +392,18 @@ def test_a_waystone_prints_its_loot_score_and_verdict():
     )
     text = render(ITEM, priced, RATES)
     # The number alone, bold, in the band's colour — the word was the colour.
-    assert "  loot       \033[1;94m55\033[0m" in text
+    assert "  loot       \033[94m55\033[0m" in text
     assert "run it" not in text
 
 
 def test_the_loot_bands_are_colours():
-    """reroll grey, run it blue, juice it yellow, chase green."""
+    """reroll grey, run it blue, juice it yellow, chase orange — bold only
+    from yellow up, so the good ones stand out at a glance."""
     from sox.report import LOOT_COLOURS
 
     assert LOOT_COLOURS == {
-        "reroll": "\033[1;90m", "run it": "\033[1;94m",
-        "juice it": "\033[1;33m", "chase": "\033[1;92m",
+        "reroll": "\033[90m", "run it": "\033[94m",
+        "juice it": "\033[1;33m", "chase": "\033[1;38;2;255;140;0m",
     }
     for verdict, colour in LOOT_COLOURS.items():
         priced = PricedItem(

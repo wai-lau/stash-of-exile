@@ -981,7 +981,7 @@ def test_a_waystones_loot_score_weighs_rares_over_whites():
     from sox.valuation.query import loot_score
 
     # 37 + 0/2 + 24/2 + 16 = 65 -> the integer, and the band is its
-    assert loot_score(load("GhostExpedition")) == (65, "run it")
+    assert loot_score(load("GhostExpedition")) == (65, "juice it")
     # 32 + 45/2 + 17/2 + 20 = 83
     assert loot_score(load("RareMapFakeAllProps")) == (83, "juice it")
     assert loot_score(load("RareItem")) is None
@@ -1708,7 +1708,7 @@ def test_a_waystone_worth_juicing_is_searched_on_its_totals(tmp_path):
     assert priced.instill is not None and priced.instill.blocked == "corrupted"
 
 
-def test_a_stone_under_the_juice_band_is_not_searched(tmp_path):
+def test_a_stone_under_the_search_gate_is_not_searched(tmp_path):
     import types
 
     from sox.cache import Cache
@@ -1717,12 +1717,12 @@ def test_a_stone_under_the_juice_band_is_not_searched(tmp_path):
 
     class NoSearch:
         def search(self, query):
-            raise AssertionError("a 65 is the book's to price")
+            raise AssertionError("under 70 is the book's to price")
 
         fetch = search
 
     item = load("GhostExpedition")
-    assert loot_score(item) == (65, "run it")
+    assert loot_score(item) == (65, "juice it")
     priced = _price_item(
         item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, NoSearch(),
         Cache(tmp_path / "c.sqlite"),
