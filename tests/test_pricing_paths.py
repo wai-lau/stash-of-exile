@@ -1671,7 +1671,7 @@ def test_a_uniques_mods_are_searched_at_their_roll_not_the_range_floor():
 
 
 def test_a_waystone_worth_juicing_is_searched_on_its_totals(tmp_path):
-    """From 70 up — the juice-it band — a stone is worth a search: the
+    """From 80 up a stone is worth a search: the
     comparable is one at least as good on all five totals, which the bulk
     book by tier cannot say. Below that, the book."""
     import types
@@ -1717,7 +1717,7 @@ def test_a_stone_under_the_search_gate_is_not_searched(tmp_path):
 
     class NoSearch:
         def search(self, query):
-            raise AssertionError("under 70 is the book's to price")
+            raise AssertionError("under 80 is the book's to price")
 
         fetch = search
 
