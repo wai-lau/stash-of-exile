@@ -77,3 +77,12 @@ def test_every_emotion_is_scored_by_the_loot_weights():
     rares — at 0.4."""
     gains = {name: e.gain for name, e in EMOTIONS.items()}
     assert gains == {"Paranoia": 15.0, "Ire": 8.0, "Greed": 4.0, "Guilt": 3.2}
+
+
+def test_a_half_rounds_up_not_to_even():
+    """30 + 25/2 = 42.5. Python's round() is banker's and printed 42; a
+    reader rounds a half up."""
+    stone = BARE_T15.replace("Item Rarity: +24%", "Item Rarity: +25%") \
+                    .replace("Pack Size: +16%", "Pack Size: +0%") \
+                    .replace("Monster Rarity: +37%", "Monster Rarity: +30%")
+    assert loot_score(itemtext.parse(stone)) == (43, "reroll")

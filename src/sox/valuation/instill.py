@@ -70,5 +70,5 @@ def instillation(item: dict) -> Instillation | None:
         return Instillation(None, 0, "instilled", None, None)
 
     name, emotion = max(EMOTIONS.items(), key=lambda pair: pair[1].gain)
-    score = round(base[0] + emotion.gain)
+    score = int(base[0] + emotion.gain + 0.5)   # half up, as loot_score rounds
     return Instillation(name, emotion.delirious, None, score, loot_verdict(score))

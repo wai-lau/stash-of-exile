@@ -825,8 +825,9 @@ def loot_score(item: dict) -> tuple[int, str] | None:
     totals = {name: _property(item, name) for name in LOOT_WEIGHTS}
     if all(value is None for value in totals.values()):
         return None
-    score = round(sum((totals[name] or 0) * weight
-                      for name, weight in LOOT_WEIGHTS.items()))
+    exact = sum((totals[name] or 0) * weight for name, weight in LOOT_WEIGHTS.items())
+    # Half up, as a reader rounds. round() is banker's: 42.5 printed 42.
+    score = int(exact + 0.5)
     return score, loot_verdict(score)
 
 
