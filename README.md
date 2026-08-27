@@ -23,38 +23,38 @@ Park a terminal on a second monitor and run `sox watch`. Copy any item in
 game with Ctrl+C and its price appears, with a running session total:
 
 <pre>════════════════════════════════════════════════════════════════
-<b>sox watch</b> 0.1.0+d63becf  ·  Runes of Aldur  ·  1 div = 360 ex
+<b>sox watch</b> 0.1.0+b64db70  ·  Runes of Aldur  ·  1 div = 360 ex
 clipboard: powershell.exe (Windows clipboard via WSL)
 copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
 ════════════════════════════════════════════════════════════════
-13:48:41 <b>Corruption Hold  [Amethyst Ring]</b>
-type       Rings → accessory.ring   ilvl 80
-searched   as minion
-           <ins>Minions have #% increased Critical Hit Chance ≥ 30</ins>
-           <ins>Minions deal #% increased Damage if you've Hit Recently ≥ 20</ins>
-           <ins>Minions have #% increased Attack and Cast Speed ≥ 8</ins>
-           <ins>Minions deal #% increased Damage ≥ 20</ins>
-unsearched +13% to Chaos Resistance                 (widened away)
-           Adds 9 to 18 Physical Damage to Attacks  (widened away)
-           +23% to Chaos Resistance                 (widened away)
-coherence  4 mods cluster on minion  +3
-market     low <b>11 div</b>  ·  25th <b>20 div</b>  ·  median <b>32.5 div</b>
-           cheapest 10 of 98 listings, relaxed:1
-           found only after widening, so these comparables are weaker than your item — read the price as a floor
+14:13:05 <b>Corruption Hold  [Amethyst Ring]</b>
+  type       Rings → accessory.ring   ilvl 80
+  searched   as minion
+             <ins>Minions have #% increased Critical Hit Chance ≥ 30</ins>
+             <ins>Minions deal #% increased Damage if you've Hit Recently ≥ 20</ins>
+             <ins>Minions have #% increased Attack and Cast Speed ≥ 8</ins>
+             <ins>Minions deal #% increased Damage ≥ 20</ins>
+  unsearched +13% to Chaos Resistance                 (widened away)
+             Adds 9 to 18 Physical Damage to Attacks  (widened away)
+             +23% to Chaos Resistance                 (widened away)
+  coherence  4 mods cluster on minion  +3
+  market     low <b>11 div</b>  ·  25th <b>20 div</b>  ·  median <b>32.5 div</b>
+             cheapest 10 of 98 listings, relaxed:1
+             found only after widening, so these comparables are weaker than your item — read the price as a floor
 ────────────────────────────────────────────────────────────────
 <ins>total 3,956 ex (11.0 div)</ins>  ·  1 priced  ·  2 searches
 ────────────────────────────────────────────────────────────────
-13:49:21 <b>Honour Spiral  [Unset Ring]</b>
-type       Rings → accessory.ring   ilvl 82
-searched   as elemental
-           <ins>Grants 1 additional Skill Slot</ins>
-           <ins>total elemental resistance ≥ 88</ins>
-           <ins>#% increased Fire Damage ≥ 10</ins>
-unsearched Minions deal 15% increased Damage if you've Hit Recently  (widened away)
-coherence  4 mods cluster on elemental  +3
-market     low <b>3 ex</b>  ·  25th <b>5 ex</b>  ·  median <b>5 ex</b>
-           cheapest 10 of 586 listings, relaxed:2
-           found only after widening, so these comparables are weaker than your item — read the price as a floor
+14:13:45 <b>Honour Spiral  [Unset Ring]</b>
+  type       Rings → accessory.ring   ilvl 82
+  searched   as elemental
+             <ins>Grants 1 additional Skill Slot</ins>
+             <ins>total elemental resistance ≥ 88</ins>
+             <ins>#% increased Fire Damage ≥ 10</ins>
+  unsearched Minions deal 15% increased Damage if you've Hit Recently  (widened away)
+  coherence  4 mods cluster on elemental  +3
+  market     low <b>3 ex</b>  ·  25th <b>5 ex</b>  ·  median <b>5 ex</b>
+             cheapest 10 of 585 listings, relaxed:2
+             found only after widening, so these comparables are weaker than your item — read the price as a floor
 ────────────────────────────────────────────────────────────────
 <ins>total 3,959 ex (11.0 div)</ins>  ·  2 priced  ·  4 searches
 ────────────────────────────────────────────────────────────────</pre>

@@ -304,16 +304,17 @@ call.
 ## Reading the output
 
 <pre>Forgotten Warden  [Primal Markings]
-type       Body Armours → armour.chest   ilvl 84
-searched   <ins>Grants Skill: Level 20 Spirit Vessel</ins>
-           <ins>total dexterity ≥ 20</ins>
-           <ins>Companions have #% increased maximum Life ≥ 30</ins>
-unsearched 40% increased Thorns damage                                                             (unsearchable)
-           +76 to Deflection Rating per 50 missing Energy Shield                                   (unsearchable)
-           14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you  (unsearchable)
-coherence  none — the mods serve different builds
-market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>899 ex</b>
-           cheapest 10 of 1,154 listings, exact</pre>
+  type       Body Armours → armour.chest   ilvl 84
+  searched   <ins>Grants Skill: Level 20 Spirit Vessel</ins>
+             <ins>total dexterity ≥ 20</ins>
+             <ins>Companions have #% increased maximum Life ≥ 30</ins>
+  unsearched 40% increased Thorns damage                                                             (unsearchable)
+             +76 to Deflection Rating per 50 missing Energy Shield                                   (unsearchable)
+             14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you  (unsearchable)
+  coherence  none — the mods serve different builds
+  market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>1,079 ex</b>
+             cheapest 19 of 1,154 listings, exact
+             1 skipped — met your numbers only with their runes</pre>
 
 The blue lines under `searched` (underlined here) are the query itself — each stat filter
 the priced rung sent, with the floor it asked at: the pseudo sums
