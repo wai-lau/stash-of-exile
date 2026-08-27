@@ -814,7 +814,7 @@ LOOT_WEIGHTS = {
     "Monster Effectiveness": 0.5,
     "Item Rarity": 0.5,
 }
-LOOT_BANDS = ((85, "chase"), (65, "juice it"), (50, "run it"), (0, "reroll"))
+LOOT_BANDS = ((90, "chase"), (70, "juice it"), (50, "run it"), (0, "reroll"))
 # From 80 a stone is worth a search: the comparable is one at least as good
 # on all five totals, which the bulk book by tier cannot say. Below it, the
 # book.

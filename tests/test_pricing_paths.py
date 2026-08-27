@@ -981,7 +981,7 @@ def test_a_waystones_loot_score_weighs_rares_over_whites():
     from sox.valuation.query import loot_score
 
     # 37 + 0/2 + 24/2 + 16 = 65 -> the integer, and the band is its
-    assert loot_score(load("GhostExpedition")) == (65, "juice it")
+    assert loot_score(load("GhostExpedition")) == (65, "run it")
     # 32 + 45/2 + 17/2 + 20 = 83
     assert loot_score(load("RareMapFakeAllProps")) == (83, "juice it")
     assert loot_score(load("RareItem")) is None
@@ -1722,7 +1722,7 @@ def test_a_stone_under_the_search_gate_is_not_searched(tmp_path):
         fetch = search
 
     item = load("GhostExpedition")
-    assert loot_score(item) == (65, "juice it")
+    assert loot_score(item) == (65, "run it")
     priced = _price_item(
         item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, NoSearch(),
         Cache(tmp_path / "c.sqlite"),
