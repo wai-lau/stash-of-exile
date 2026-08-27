@@ -240,7 +240,7 @@ mature overlays leave to the player.
 | Category, rarity | `exact` | Every rarity searches itself — a rare and a normal of the same base are different goods. |
 | Item level | `min + max` | Pinned exactly, and **only on a normal or magic base**. There the level is the good itself. A rare is bought on its mods and a unique on its roll, so neither carries the filter at all. |
 | Quality | `min` | **Gems only.** Currency takes anything else to 20%. |
-| Requirements (lvl, str, dex, int) | `max` | A requirement is a cost. An item demanding less is easier to equip and *is* a comparable. |
+| Requirements (str, dex, int) | `max` | A requirement is a cost. An item demanding less is easier to equip and *is* a comparable. **Never the level**: it follows the mods rather than the base — a Bloodstone Amulet with Spirit and +1 minion skills searched at "level ≤ 36" found nothing at four rungs — and a level the buyer is past is not a cost anyone pays. |
 | Defences (ar, ev, es, ward, block, spirit) | `min` | The displayed total, runes removed. On a rare, rebuilt at the mods' floor rolls; on a unique, kept at the actual roll — the roll is all that separates copies. |
 | DPS | `min` | Total only, **runes removed**, the same as the defences. Not pdps/edps: splitting it pins the damage source. |
 | Granted skill | `min` | At its own level. Exempt from the widening ladder. |

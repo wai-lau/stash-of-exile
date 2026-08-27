@@ -1060,9 +1060,14 @@ def _build(
     # other filter takes a min. An item demanding less than ours is strictly
     # easier to equip and is a comparable; one demanding more is not, and it
     # is also what separates a Bandit Mace from the whole one-handed category.
+    # Never the LEVEL, though: it follows the mods rather than the base — a
+    # Bloodstone Amulet with Spirit and +1 minion skills was searched at
+    # "level ≤ 36" and found nothing at four rungs — and a level the buyer
+    # is past is not a cost anyone pays.
     requirements = {
         key: {"max": value}
         for key, value in (item.get("requirements") or {}).items()
+        if key != "lvl"
     }
 
     equipment: dict = dict(damage_filters(item))

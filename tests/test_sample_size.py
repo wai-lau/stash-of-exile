@@ -435,9 +435,11 @@ def test_requirements_are_capped_not_floored():
     )
     assert mace["requirements"] == {"lvl": 60, "str": 104}
     filters = build_query(mace, category_for(mace), MODS, NOTABLES)["query"]["filters"]
-    assert filters["req_filters"]["filters"] == {
-        "lvl": {"max": 60}, "str": {"max": 104}
-    }
+    # The level requirement is never sent. It follows the mods — a
+    # Bloodstone Amulet with Spirit and +1 minion skills was searched at
+    # "level ≤ 36" and found nothing at four rungs — and a level nobody
+    # is at any more is not a cost anyone pays.
+    assert filters["req_filters"]["filters"] == {"str": {"max": 104}}
 
 
 def test_added_damage_filters_on_the_average():

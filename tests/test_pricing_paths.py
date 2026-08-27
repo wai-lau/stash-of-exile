@@ -845,8 +845,7 @@ def test_the_ladder_can_widen_all_the_way_to_no_mods():
     assert last["query"]["stats"][0]["filters"] == [], "no mods left"
     filters = last["query"]["filters"]
     assert filters["equipment_filters"]["filters"]["dps"]["min"] > 0
-    assert filters["req_filters"]["filters"] == {"lvl": {"max": 60},
-                                                 "str": {"max": 104}}
+    assert filters["req_filters"]["filters"] == {"str": {"max": 104}}
 
 
 # A unique tablet's biome. Measured live 2026-08-19 against Runes of Aldur:
