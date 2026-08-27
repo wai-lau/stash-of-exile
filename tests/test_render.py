@@ -41,15 +41,29 @@ def test_render_handles_every_outcome(tag, price):
     assert "armour.shield" in text
 
 
-def test_equipment_filter_mods_are_marked_not_dismissed():
+def test_the_score_section_gives_way_to_unsearched_mods():
+    """The query lines already show what the search rests on; the only mod
+    news left is what it does NOT rest on."""
+    priced = PricedItem(
+        name="Doom Shield", item_class=ItemClass.GEAR, price_ex=12.5,
+        source="trade", tag="exact", reason="score 4", score=4,
+        breakdown=ROWS, listings=9, median_ex=12.5, p25_ex=12.5,
+        unsearched=(("+8% to Fire Resistance", "widened away"),),
+    )
+    text = render(ITEM, priced, RATES)
+    assert "score      4" not in text
+    assert "+145 to Evasion Rating" not in text, "breakdown rows are gone"
+    assert "unsearched +8% to Fire Resistance" in text
+    assert "(widened away)" in text
+
+
+def test_no_unsearched_section_when_everything_was_searched():
     priced = PricedItem(
         name="Doom Shield", item_class=ItemClass.GEAR, price_ex=12.5,
         source="trade", tag="exact", reason="score 4", score=4,
         breakdown=ROWS, listings=9, median_ex=12.5, p25_ex=12.5,
     )
-    text = render(ITEM, priced, RATES)
-    assert "(filter)" in text, "a mod driving the search must not read as ignored"
-    assert "+0  +145 to Evasion Rating" in text
+    assert "unsearched" not in render(ITEM, priced, RATES)
 
 
 def test_the_market_block_is_the_last_thing_rendered():
@@ -67,7 +81,8 @@ def test_the_market_block_is_the_last_thing_rendered():
     # Labelled rows open a section; everything else is that section's detail.
     labels = [re.match(r"  (\w+)", l).group(1) for l in body if re.match(r"  \w", l)]
     assert labels[-1] == "market", labels
-    assert {"score", "coherence", "searched"} <= set(labels[:-1])
+    assert {"coherence", "searched"} <= set(labels[:-1])
+    assert "score" not in labels
 
 
 def test_a_waystone_names_the_stats_the_search_rested_on():

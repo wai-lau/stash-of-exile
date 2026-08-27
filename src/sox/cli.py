@@ -40,7 +40,6 @@ from sox.valuation.query import (
     category_for,
     explain_query,
     explain_selection,
-    searched_item_texts,
     waystone_stat_texts,
 )
 from sox.valuation.trade_pricer import price_by_search
@@ -378,8 +377,6 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             # Explain the rung that actually produced the price, not rung 0.
             group, stats = explain_selection(item, mod_index, notables,
                                              relax=result.relax_used)
-            highlighted = searched_item_texts(item, mod_index, notables,
-                                              relax=result.relax_used)
             return report.PricedItem(
                 name=display_name(item), item_class=item_class,
                 price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",
@@ -394,9 +391,10 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 suggested_ask_ex=result.suggested_ask_ex,
                 searches_used=result.searches_used, from_cache=result.from_cache,
                 searched_group=group, searched_stats=stats,
-                searched_texts=tuple(highlighted),
                 query_stats=tuple(explain_query(item, mod_index, notables,
                                                 relax=result.relax_used)),
+                unsearched=tuple(candidates.unsearched_rows(
+                    item, mod_index, notables, relax=result.relax_used)),
                 map_stats=tuple(waystone_stat_texts(item, category)),
             )
 

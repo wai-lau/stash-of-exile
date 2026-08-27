@@ -308,30 +308,26 @@ call.
   searched   Grants Skill: Level 20 Spirit Vessel
              total dexterity ≥ 20
              Companions have #% increased maximum Life ≥ 30
-  score      0
-             <ins>+0  Grants Skill: Level 20 Spirit Vessel                                                    (filter)</ins>
-             +0  +76 to Deflection Rating per 50 missing Energy Shield
-             <ins>+0  280% increased Evasion and Energy Shield                                                (filter)</ins>
-             <ins>+1  +24 to Dexterity                                                                        (pseudo)</ins>
-             <ins>+2  Companions have 42% increased maximum Life</ins>
-             +0  14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you
+  unsearched 40% increased Thorns damage                                                             (unsearchable)
+             +76 to Deflection Rating per 50 missing Energy Shield                                   (unsearchable)
+             14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you  (unsearchable)
   coherence  none — the mods serve different builds
   market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>899 ex</b>
-             cheapest 10 of 1,156 listings, exact</pre>
+             cheapest 10 of 1,155 listings, exact</pre>
 
-In the terminal, cyan (underlined here) marks a mod that drove the
-search, and the market prices are lit amber (bold here). The dim lines
-under `searched` are the query itself — each stat filter the priced
-rung sent, with the floor it asked at: the pseudo sums (`total
-dexterity ≥ 20` is the +24 roll at the floor of its range) and the
-skill at its own level. On an item with a dominant archetype the row
-reads `searched as minion` first — the buyer the whole widening ladder
-is ordered around, named from the item's own mods so it holds at every
-rung; this chest serves no single buyer, so the query stands alone.
-`(filter)` marks a mod searched through an equipment total rather than
-as a stat, `(pseudo)` one summed into a pseudo total — an implicit
-folded in reads `(implicit, pseudo)`. The market row is last because
-the rows above it explain how the number was reached.
+The dim lines under `searched` are the query itself — each stat filter
+the priced rung sent, with the floor it asked at: the pseudo sums
+(`total dexterity ≥ 20` is a +24 roll at the floor of its range) and
+the skill at its own level. On an item with a dominant archetype the
+row reads `searched as minion` first — the buyer the whole widening
+ladder is ordered around, named from the item's own mods so it holds
+at every rung; this chest serves no single buyer, so the query stands
+alone. `unsearched` is the rest of the item, the mods the price does
+NOT account for: `(widened away)` means rung 0 asked for it and the
+rung that priced had dropped it, `(unsearchable)` means no filter
+exists for it at all. The market prices are lit amber (bold here), and
+the market row is last because the rows above it explain how the
+number was reached.
 
 ## Caveats
 

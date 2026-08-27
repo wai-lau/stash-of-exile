@@ -890,13 +890,20 @@ def flag_stat_id(item: dict, text: str) -> str | None:
     not; it is wrong for a unique, where the flag is not a value on the item
     but the identity of it. Six Mastered Domain tablets share a name, a base
     and an index price of 1 exalted, and the Forest one sells for 55.
+
+    An IMPLICIT flag is the identity of the BASE, so it searches at any
+    rarity: a rare's search is deliberately not base-pinned, and "Grants 1
+    additional Skill Slot" is what keeps an Unset Ring's comparables Unset
+    Rings. The number in that wording is fixed text, not a roll, so the
+    flag table is consulted before the value gate rather than behind it.
     """
     from sox.valuation.mods import normalize_mod
 
+    if text in (item.get("implicitMods") or []):
+        return _flag_ids()["implicit"].get(normalize_mod(text))
     if rarity_of(item) is not Rarity.UNIQUE or parse_values(text):
         return None
-    group = "implicit" if text in (item.get("implicitMods") or []) else "explicit"
-    return _flag_ids()[group].get(normalize_mod(text))
+    return _flag_ids()["explicit"].get(normalize_mod(text))
 
 
 def _fold(text: str) -> str:
@@ -1311,7 +1318,10 @@ def _build(
                                seed=defence_seed(item))[0] or ""
     if notable_items:
         group = "notable"
-    elif flag_items:
+    elif flag_items and not group:
+        # A unique tablet IS its flag. A rare carrying an implicit flag —
+        # an Unset Ring's skill slot — is still bought on its mods, and its
+        # archetype keeps the name.
         group = "variant"
 
     query: dict = {

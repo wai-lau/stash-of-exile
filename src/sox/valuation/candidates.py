@@ -231,6 +231,26 @@ def score_rows(item: dict, index, base_rules) -> list[tuple[str, object, str]]:
     return rows
 
 
+def unsearched_rows(item: dict, index, notables,
+                    relax: int = 0) -> list[tuple[str, str]]:
+    """Item mods the priced rung's query does not rest on, and why.
+
+    "widened away" — rung 0 searched it and the rung that priced dropped it.
+    "unsearchable" — no filter exists for it: not in the allowlist, or
+    value-less with no flag id, so no rung could ever ask for it.
+    """
+    from sox.valuation.query import searched_item_texts
+
+    lit = set(searched_item_texts(item, index, notables, relax=relax))
+    rung0 = (set(searched_item_texts(item, index, notables, relax=0))
+             if relax else lit)
+    mods = (list(item.get("implicitMods") or [])
+            + list(item.get("enchantMods") or [])
+            + item_mods(item))
+    return [(text, "widened away" if text in rung0 else "unsearchable")
+            for text in mods if text not in lit]
+
+
 def qualifies(item: dict, score: int) -> bool:
     ilvl = int(item.get("ilvl") or 0)
     if rarity_of(item) is Rarity.RARE:

@@ -1465,3 +1465,49 @@ def test_explain_query_prints_each_filter_with_its_floor():
     assert "Minions deal #% increased Damage ≥ 20" in exact
     relaxed = explain_query(ring, MODS, NOTABLES, relax=1)
     assert not any("chaos" in line for line in relaxed), "dropped at rung 1"
+
+
+def test_unsearched_rows_name_the_mods_the_price_ignores():
+    """The ring's chaos res and phys damage were in the rung-0 query and the
+    widened rung dropped them; the Warden's deflection mods were never
+    searchable at all. The section must say which is which."""
+    from sox.valuation.candidates import unsearched_rows
+
+    ring = load("MinionRing")
+    rows = dict(unsearched_rows(ring, MODS, NOTABLES, relax=1))
+    assert rows["+23% to Chaos Resistance"] == "widened away"
+    assert rows["Adds 9 to 18 Physical Damage to Attacks"] == "widened away"
+    assert rows["+13% to Chaos Resistance"] == "widened away"
+    assert not any("Minions" in text for text in rows)
+
+    assert unsearched_rows(ring, MODS, NOTABLES, relax=0) == []
+
+    warden = load("ForgottenWardenTwiceCorrupted")
+    rows = dict(unsearched_rows(warden, MODS, NOTABLES, relax=0))
+    assert rows["+76 to Deflection Rating per 50 missing Energy Shield"] == "unsearchable"
+
+
+def test_an_unset_rings_skill_slot_implicit_is_searched():
+    """"Grants 1 additional Skill Slot" reported (unsearchable) on a rare —
+    a lie: flag_mods carries implicit.stat_958696139 for it, and the slot is
+    the whole reason an Unset Ring is bought. An implicit flag is the BASE's
+    identity, so it must search at any rarity and survive every rung — a
+    rare's search is not base-pinned, and this is what keeps the comparables
+    Unset Rings."""
+    from sox.valuation.candidates import unsearched_rows
+
+    ring = load("UnsetRing")
+    slot = {"id": "implicit.stat_958696139", "value": {}}
+    query = build_query(ring, "accessory.ring", MODS, NOTABLES)
+    assert slot in query["query"]["stats"][0]["filters"]
+
+    group, _ = explain_selection(ring, MODS, NOTABLES)
+    assert group != "variant", "a rare's archetype is its mods, not the flag"
+
+    rows = dict(unsearched_rows(ring, MODS, NOTABLES))
+    assert "Grants 1 additional Skill Slot" not in rows
+
+    bare = build_query(ring, "accessory.ring", MODS, NOTABLES,
+                       relax=len(RELAX_STEPS) - 1)
+    assert slot in bare["query"]["stats"][0]["filters"], \
+        "never priced as a bare ring"

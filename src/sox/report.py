@@ -12,7 +12,6 @@ from sox.valuation.classify import ItemClass, display_name
 
 # Mods that made it into the query are highlighted, so the score breakdown
 # shows at a glance which mods the price actually rests on.
-SEARCHED = "\033[36m"
 # The market row is the answer; everything else on screen explains it.
 MARKET = "\033[1;33m"
 # Priced in divine, the same colour is worn inside out. A divine price is the
@@ -59,8 +58,8 @@ class PricedItem:
     traded_ex: float = 0.0        # exchange fills: exalted actually exchanged
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
-    searched_texts: tuple[str, ...] = ()   # the ITEM's wording, for highlighting
     query_stats: tuple[str, ...] = ()      # each filter sent, with its floor
+    unsearched: tuple[tuple[str, str], ...] = ()   # (mod text, why not)
     map_stats: tuple[str, ...] = ()        # waystone minimums the search sent
     item_class_name: str = ""              # the game's own label, e.g. "Quarterstaves"
     category: str | None = None            # the trade category searched
@@ -300,31 +299,23 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
         # properties, not mods, so they appear nowhere in the breakdown and
         # this line is their only mention.
         lines.append("  searched   " + "  ·  ".join(priced.map_stats))
+    if priced.unsearched:
+        # The query lines above say what the price rests on; this is the
+        # rest of the item — dropped by widening, or never searchable — so
+        # the reader knows what the number does NOT account for.
+        width = max(len(text) for text, _ in priced.unsearched)
+        rows = [f"{text:<{width}}  ({why})" for text, why in priced.unsearched]
+        lines.append(f"  unsearched {rows[0]}")
+        lines += [f"             {row}" for row in rows[1:]]
     if priced.breakdown:
-        lines.append(f"  score      {priced.score}")
-        width = max((len(str(t)) for t, _, _ in priced.breakdown), default=0)
-        for text, weight, tag in priced.breakdown:
-            if weight is None:
-                # +0 says it all when the mod is simply unknown — but a
-                # defence mod scores nothing while still driving the search
-                # through the item's total, and that must not read as ignored.
-                mark, note = "+0", f"({tag})" if tag else ""
-            elif weight == 0:
-                mark, note = "·", "(mod cap)"
-            else:
-                mark, note = f"+{weight}", f"({tag})" if tag else ""
-            row = f"{mark:<3} {str(text):<{width}}  {note}".rstrip()
-            if text in priced.searched_texts:
-                row = f"{SEARCHED}{row}{RESET}"
-            lines.append(f"             {row}")
         if priced.coherence_group and priced.coherence_count > 1:
             gain = f"  +{priced.coherence_bonus}" if priced.coherence_bonus else ""
             lines.append(f"  coherence  {priced.coherence_count} mods cluster on "
                          f"{priced.coherence_group}{gain}")
-        elif priced.breakdown:
+        else:
             lines.append("  coherence  none — the mods serve different builds")
 
-    # Last: the score and coherence explain how the number was arrived at, and
-    # the number is what you read off the end.
+    # Last: the rows above explain how the number was arrived at, and the
+    # number is what you read off the end.
     lines += _price_lines(priced, rates)
     return "\n".join(lines)
