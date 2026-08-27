@@ -340,6 +340,9 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
         title(item),
         "  type       "
         + (f"{rarity.value} · " if rarity else "")
+        # The instill line refuses a corrupted stone off this flag; the row
+        # shows where it came from — the small red word at the tooltip's foot.
+        + ("corrupted · " if item.get("corrupted") else "")
         + f"{priced.item_class_name or priced.item_class}"
         + (f" → {priced.category}" if priced.category else "")
         + (f"   ilvl {item['ilvl']}" if item.get("ilvl") else ""),
@@ -388,8 +391,11 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
         # there says nothing.
         from sox.valuation.danger import dangers
 
-        rows = [f"{UNSEARCHED}{text}{RESET}" for text, tier in dangers(item)
-                if tier == "deadly"]
+        flagged = dangers(item)
+        rows = [f"{UNSEARCHED}{text}{RESET}" for text, tier in flagged if tier == "deadly"]
+        risky = sum(1 for _, tier in flagged if tier == "risky")
+        if risky:
+            rows.append(f"{DIM}{risky} risky{RESET}")
         if rows:
             lines.append(f"  danger     {rows[0]}")
             lines += [f"             {row}" for row in rows[1:]]

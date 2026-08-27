@@ -464,7 +464,7 @@ def test_a_waystones_deadly_mods_are_called_out_one_per_row():
     """Red, one per row like the unsearched mods; the risky tier stays off
     the report — the loot score says nothing about whether the map can be
     run, and only the killers are worth a line."""
-    from sox.report import RESET, UNSEARCHED
+    from sox.report import DIM, RESET, UNSEARCHED
 
     item = {
         "itemClass": "Waystones", "rarity": "Rare", "baseType": "Waystone (Tier 15)",
@@ -479,6 +479,37 @@ def test_a_waystones_deadly_mods_are_called_out_one_per_row():
     )
     text = render(item, priced, RATES)
     assert (f"  danger     {UNSEARCHED}-8% maximum Player Resistances{RESET}\n"
-            f"             {UNSEARCHED}Monster Damage Penetrates 14% Elemental Resistances{RESET}") in text
-    assert "Movement Speed" not in text, "risky is not shown"
+            f"             {UNSEARCHED}Monster Damage Penetrates 14% Elemental Resistances{RESET}\n"
+            f"             {DIM}1 risky{RESET}") in text
+    assert "Movement Speed" not in text, "risky is counted, not shown"
     assert "Monster Elemental Resistances" not in text
+
+
+def test_risky_mods_alone_are_a_count():
+    from sox.report import DIM, RESET
+
+    item = {
+        "itemClass": "Waystones", "rarity": "Rare", "baseType": "Waystone (Tier 15)",
+        "explicitMods": ["Monsters have 15% increased Attack, Cast and Movement Speed",
+                         "Players gain 31% reduced Flask Charges",
+                         "+30% Monster Elemental Resistances"],
+    }
+    priced = PricedItem(
+        name="Stone", item_class=ItemClass.ENDGAME, price_ex=6.0,
+        source="exchange", tag="waystone", loot=(65, "run it"),
+    )
+    assert f"  danger     {DIM}2 risky{RESET}" in render(item, priced, RATES)
+
+
+def test_the_type_row_says_corrupted():
+    """The instill line says "corrupted — cannot be instilled" off the same
+    flag; the type row shows where it came from."""
+    priced = PricedItem(
+        name="Doom Shield", item_class=ItemClass.GEAR, price_ex=12.5,
+        source="trade", tag="exact", listings=9, median_ex=12.5, p25_ex=12.5,
+        item_class_name="Shields", category="armour.shield",
+    )
+    text = render({**ITEM, "rarity": "Rare", "corrupted": True}, priced, RATES)
+    assert "  type       rare · corrupted · Shields → armour.shield" in text
+    text = render({**ITEM, "rarity": "Rare"}, priced, RATES)
+    assert "corrupted" not in text
