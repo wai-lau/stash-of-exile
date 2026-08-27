@@ -825,8 +825,11 @@ def loot_score(item: dict) -> tuple[float, str] | None:
         return None
     score = round(sum((totals[name] or 0) * weight
                       for name, weight in LOOT_WEIGHTS.items()), 1)
-    verdict = next(label for floor, label in LOOT_BANDS if score >= floor)
-    return score, verdict
+    return score, loot_verdict(score)
+
+
+def loot_verdict(score: float) -> str:
+    return next(label for floor, label in LOOT_BANDS if score >= floor)
 
 # The tier lives in the base name — "Waystone (Tier 14)" — not in the
 # property block.

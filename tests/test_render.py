@@ -392,3 +392,30 @@ def test_a_waystone_prints_its_loot_score_and_verdict():
     )
     text = render(ITEM, priced, RATES)
     assert "  loot       55 (run it)" in text
+
+
+def test_a_waystone_prints_its_instillation_path():
+    from sox.valuation.instill import Instillation
+
+    priced = PricedItem(
+        name="Ghost Expedition", item_class=ItemClass.ENDGAME, price_ex=6.0,
+        source="exchange", tag="waystone", offers=33, stock=3380, ask_ex=6.0,
+        loot=(55.4, "run it"),
+        instill=Instillation(emotion="Paranoia", delirious=36, blocked=None,
+                             steps=((1, 70.4, "juice it"), (2, 85.4, "chase"),
+                                    (3, 100.4, "chase"))),
+    )
+    text = render(ITEM, priced, RATES)
+    assert ("  instill    Paranoia ×1 → 70 (juice it)  ·  ×2 → 85 (chase)  ·  "
+            "×3 → 100 (chase)  ·  36% delirious") in text
+
+
+def test_a_corrupted_waystone_says_it_cannot_be_instilled():
+    from sox.valuation.instill import Instillation
+
+    priced = PricedItem(
+        name="Ghost Expedition", item_class=ItemClass.ENDGAME, price_ex=6.0,
+        source="exchange", tag="waystone", loot=(55.4, "run it"),
+        instill=Instillation(emotion=None, delirious=0, blocked="corrupted", steps=()),
+    )
+    assert "  instill    corrupted — cannot be instilled" in render(ITEM, priced, RATES)
