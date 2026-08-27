@@ -350,12 +350,15 @@ def test_the_title_wears_the_games_rarity_colour():
     body = render({**ITEM, "rarity": "Rare"}, JUNK, RATES).splitlines()
     assert body[0] == f"\033[38;2;255;255;119mDoom Shield  [Tower Shield]{RESET}"
     assert body[1] == "  type       rare · Shields → armour.shield   ilvl 70"
-    assert title({**ITEM, "rarity": "Unique"}).startswith("\033[38;2;175;96;37m")
-    assert title({**ITEM, "rarity": "Magic"}).startswith("\033[38;2;136;136;255m")
-    assert title({**ITEM, "rarity": "Normal"}).startswith("\033[38;2;200;200;200m")
+    # The game's hues, but bright: the tooltip's own values are painted on a
+    # near-black panel, and its unique orange (175,96,37) read as brown on a
+    # terminal.
+    assert title({**ITEM, "rarity": "Unique"}).startswith("\033[38;2;255;140;0m")
+    assert title({**ITEM, "rarity": "Magic"}).startswith("\033[38;2;160;160;255m")
+    assert title({**ITEM, "rarity": "Normal"}).startswith("\033[38;2;255;255;255m")
     # A gem or a currency has no rarity; the game paints those by what they are.
     gem = {"baseType": "Uncut Skill Gem (Level 19)", "itemClass": "Uncut Skill Gems"}
-    assert title(gem) == f"\033[38;2;27;162;155mUncut Skill Gem (Level 19){RESET}"
+    assert title(gem) == f"\033[38;2;64;224;208mUncut Skill Gem (Level 19){RESET}"
     # Nothing known about it: the title stays plain and the row says nothing.
     body = render(ITEM, JUNK, RATES).splitlines()
     assert body[0] == "Doom Shield  [Tower Shield]"

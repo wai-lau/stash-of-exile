@@ -30,21 +30,23 @@ MARKET_DIV = "\033[1;33;7m"
 DIM = "\033[2m"
 RESET = "\033[0m"
 
-# The game's own rarity colours, as the tooltip paints an item's header —
+# The game's own rarity hues, as the tooltip paints an item's header —
 # yellow rare, blue magic, orange unique, white normal — and the name and
 # base share the one colour there, so they do here. 24-bit, because the
 # nearest of the terminal's sixteen is a different yellow; a terminal
-# without it rounds to its own palette.
+# without it rounds to its own palette. Brighter than the tooltip's own
+# values: those sit on a near-black panel, and its unique orange
+# (175, 96, 37) read as brown on a terminal.
 RARITY_RGB = {
-    Rarity.NORMAL: (200, 200, 200),
-    Rarity.MAGIC: (136, 136, 255),
+    Rarity.NORMAL: (255, 255, 255),
+    Rarity.MAGIC: (160, 160, 255),
     Rarity.RARE: (255, 255, 119),
-    Rarity.UNIQUE: (175, 96, 37),
+    Rarity.UNIQUE: (255, 140, 0),
 }
 # A gem or a currency has no rarity; the game paints those by what they are.
 CLASS_RGB = {
-    ItemClass.GEM: (27, 162, 155),
-    ItemClass.CURRENCY: (170, 158, 130),
+    ItemClass.GEM: (64, 224, 208),
+    ItemClass.CURRENCY: (222, 205, 160),
 }
 
 
