@@ -359,6 +359,31 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
 
     verdict = candidates.assess(item, entry, mod_index, base_rules, unique_rules)
 
+    # A waystone is never searched. Its search caps at 10,000 matches — a
+    # commodity, and the exchange carries that commodity by tier: Waystone
+    # (Tier 15) held 6,957 online units — so the search only ever spent a
+    # call to learn what the book already said. What separates one stone
+    # from another is the loot score, computed from the tooltip.
+    if category_for(item) == "map.waystone":
+        bulk = None
+        if exchange is not None and item.get("baseType"):
+            bulk = price_by_exchange(item["baseType"], exchange,
+                                     rates.get("divine"), fills=fills)
+        if bulk is None:
+            return report.PricedItem(
+                name=display_name(item), item_class=item_class, price_ex=None,
+                source="unpriced", tag="unpriced:no-book", reason=verdict.reason,
+                loot=loot_score(item), **_identity_fields(item),
+            )
+        return report.PricedItem(
+            name=display_name(item), item_class=item_class,
+            price_ex=bulk.price_ex, source="exchange", tag="waystone",
+            reason=verdict.reason, offers=bulk.offers, stock=bulk.stock,
+            ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex, quoted=bulk.quoted,
+            traded_ex=bulk.traded_ex, loot=loot_score(item),
+            **_identity_fields(item),
+        )
+
     if wants_search(verdict, entry, item, force=getattr(cfg, "force", False)) \
             and trade is not None:
         category = category_for(item)

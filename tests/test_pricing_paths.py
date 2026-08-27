@@ -987,26 +987,24 @@ def test_a_waystones_loot_score_weighs_rares_over_whites():
     assert loot_score(load("RareItem")) is None
 
 
-def test_a_capped_search_is_priced_off_the_bulk_book(tmp_path):
-    """Past 10,000 matches the trade engine sorts only a kept sample, so the
-    low is noise — measured live, tier 15+ alone floored at 3 ex while its
-    own subsets floored at 1 ex and at 1 transmute. A stone whose search
-    caps is a commodity, and the exchange carries that commodity by tier:
-    Waystone (Tier 15) held 6,957 online units against the sample's ten."""
+def test_a_waystone_is_priced_off_its_tiers_bulk_book_without_a_search(tmp_path):
+    """A waystone is never searched. Its search caps at 10,000 matches —
+    a commodity, and the exchange carries that commodity by tier: Waystone
+    (Tier 15) held 6,957 online units — so the search only ever spent a
+    call to learn what the book already said. What separates one stone from
+    another is the loot score, computed from the tooltip."""
     import types
 
     from sox.cache import Cache
     from sox.cli import _price_item
     from sox.ggg.exchange import Book, Offer
-    from sox.ggg.trade import Listing
+    from sox.valuation.query import loot_score
 
-    class CappedRung:
+    class NoSearch:
         def search(self, query):
-            return "q1", [f"h{i}" for i in range(100)], 10_000
+            raise AssertionError("a waystone must not be searched")
 
-        def fetch(self, query_id, hashes):
-            return [Listing(amount=1.0, currency="exalted", account="a")
-                    for _ in hashes]
+        fetch = search
 
     class BulkBook:
         def ids(self):
@@ -1020,13 +1018,16 @@ def test_a_capped_search_is_priced_off_the_bulk_book(tmp_path):
     item = load("RareMap")
     priced = _price_item(
         item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES,
-        CappedRung(), Cache(tmp_path / "c.sqlite"),
+        NoSearch(), Cache(tmp_path / "c.sqlite"),
         types.SimpleNamespace(status="any", max_searches=4, force=False),
         exchange=BulkBook(),
     )
     assert priced.source == "exchange"
-    assert priced.tag == "capped-search"
+    assert priced.tag == "waystone"
     assert priced.price_ex == 24.0
+    assert priced.loot == loot_score(item) == (13.6, "reroll")
+    assert priced.map_stats == (), "nothing was searched"
+    assert priced.category == "map.waystone"
 
 
 def test_a_capped_search_with_no_book_keeps_the_sample_and_its_note(tmp_path):
@@ -1050,18 +1051,18 @@ def test_a_capped_search_with_no_book_keeps_the_sample_and_its_note(tmp_path):
         def ids(self):
             return {}
 
-    item = load("RareMap")
+    item = load("RareItem")
     priced = _price_item(
         item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES,
         CappedRung(), Cache(tmp_path / "c.sqlite"),
-        types.SimpleNamespace(status="any", max_searches=4, force=False),
+        types.SimpleNamespace(status="any", max_searches=4, force=True),
         exchange=EmptyExchange(),
     )
     assert priced.source == "trade"
     assert priced.matches == 10_000
 
 
-def test_a_priced_waystone_reports_its_stats(tmp_path):
+def test_a_waystone_without_a_book_is_unpriced_but_still_scored(tmp_path):
     """The wiring end to end: a waystone priced by search hands the report
     the stats the price rested on."""
     import types
@@ -1084,8 +1085,11 @@ def test_a_priced_waystone_reports_its_stats(tmp_path):
         Cache(tmp_path / "c.sqlite"),
         types.SimpleNamespace(status="any", max_searches=4, force=False),
     )
-    assert priced.source == "trade"
-    assert "tier 14+" in priced.map_stats
+    # No exchange to hand (--no-trade): still no search, still the score.
+    assert priced.source == "unpriced"
+    assert priced.tag == "unpriced:no-book"
+    assert priced.loot == (13.6, "reroll")
+    assert priced.map_stats == ()
 
 
 GALE_NAIL = """Item Class: Rings
