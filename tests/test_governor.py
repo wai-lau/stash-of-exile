@@ -198,3 +198,29 @@ def test_no_budget_before_any_headers():
     gov, _, _ = make()
     gov.record_request()
     assert gov.budget() is None
+
+
+def test_a_long_429_is_recorded_not_slept():
+    """A 1800s Retry-After — the 30:300:1800 clause — is a lockout, not a
+    pause. Sleeping it stalls the watch loop for half an hour with copies
+    queueing behind it; recording it lets the loop keep pricing without
+    the search until it lapses."""
+    from sox.ggg.governor import SEARCH_DOWN_AFTER
+
+    now = [0.0]
+    slept = []
+    gov = RateGovernor(clock=lambda: now[0], sleeper=slept.append)
+    assert SEARCH_DOWN_AFTER == 60
+    assert gov.on_429(retry_after=1800.0) is False
+    assert slept == []
+    assert gov.wait() == 1800.0
+    now[0] = 1000.0
+    assert gov.wait() == 800.0
+
+
+def test_a_short_429_is_still_slept():
+    slept = []
+    gov = RateGovernor(clock=lambda: 0.0, sleeper=slept.append)
+    assert gov.on_429(retry_after=7.0) is True
+    assert slept == [7.0]
+    assert gov.wait() == 0.0, "slept through it; nothing left to wait"

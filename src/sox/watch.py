@@ -127,13 +127,17 @@ def entry(body: str) -> str:
     return f"{head}\n{rest}" if rest else head
 
 
-def status(session: Session, divine_ex: float, budget: Budget | None = None) -> str:
+def status(session: Session, divine_ex: float, budget: Budget | None = None,
+           down: float = 0.0) -> str:
     # What GGG has left for us in the tightest window, so the next copy can
     # wait for the window to turn instead of finding a wait line. Nothing
     # until the first search has answered, because the limits are only
-    # advertised on responses.
+    # advertised on responses. In a lockout the budget is moot; what matters
+    # is when the search is back.
     left = (f"{budget.remaining}/{budget.limit} left ({_window(budget.period)} window)"
             if budget else "")
+    if down:
+        left = f"{YELLOW}search down {down / 60:.0f} min{RESET}"
     parts = [
         f"{session.priced} priced",
         f"{session.junk} junk" if session.junk else "",

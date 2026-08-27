@@ -40,6 +40,11 @@ from dataclasses import dataclass
 
 BASE_BACKOFF = 5.0
 MAX_BACKOFF = 300.0
+# A wait this long is a lockout, not a pause — the 30:300:1800 clause hands
+# out half an hour. Sleeping it stalls the watch loop with copies queueing
+# behind it; instead the wait is recorded, the call refused, and the caller
+# prices without the search until it lapses.
+SEARCH_DOWN_AFTER = 60.0
 
 
 def _header(headers: Mapping[str, str], key: str) -> str | None:
@@ -179,6 +184,8 @@ class RateGovernor:
         penalty = self._penalty_until - now
         if penalty > 0:
             return penalty, "restricted by GGG"
+        if not self.rules:
+            return 0.0, "rate limit"
 
         longest = max(r.period for r in self.rules)
         while self._history and now - self._history[0] > longest:
@@ -191,15 +198,29 @@ class RateGovernor:
                 waits.append(rule.period - (now - min(in_window)))
         return (max(waits) if waits else 0.0), "rate limit"
 
-    def on_429(self, retry_after: float | None) -> None:
+    def on_429(self, retry_after: float | None) -> bool:
+        """Wait out a 429 and say so, or record a lockout and return False."""
         self._consecutive_429 += 1
         if retry_after is not None:
+            if retry_after >= SEARCH_DOWN_AFTER:
+                # A lockout is recorded, not slept; a short wait is slept
+                # through and leaves nothing to record.
+                self._penalty_until = max(self._penalty_until,
+                                          self._clock() + retry_after)
+                return False
             self._announce(retry_after, "429, server asked us to wait")
             self._sleep(retry_after)
-            return
+            return True
         backoff = min(BASE_BACKOFF * (2 ** (self._consecutive_429 - 1)), MAX_BACKOFF)
         self._announce(backoff, "429, backing off")
         self._sleep(backoff)
+        return True
+
+    def wait(self) -> float:
+        """Seconds a request would wait right now; nothing is slept."""
+        if not self.rules and self._penalty_until <= self._clock():
+            return 0.0
+        return max(self._wait_needed()[0], 0.0)
 
     def on_success(self) -> None:
         self._consecutive_429 = 0

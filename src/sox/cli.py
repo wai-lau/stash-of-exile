@@ -20,7 +20,7 @@ from sox import clipboard, itemtext, report, watch as watch_ui
 from sox.cache import Cache
 from sox.config import load_config
 from sox.ggg.governor import RateGovernor
-from sox.ggg.session import GGGError, GGGSession
+from sox.ggg.session import GGGError, GGGSession, SearchDown
 from sox.ggg.exchange import ExchangeClient
 from sox.ggg.trade import TradeClient
 from sox.scout import ScoutClient
@@ -322,7 +322,8 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                     print(watch_ui.body_lines(body), flush=True)
                 else:
                     print(watch_ui.entry(body), flush=True)
-                print(watch_ui.status(stats, divine_ex, _budget(session)), flush=True)
+                print(watch_ui.status(stats, divine_ex, _budget(session),
+                                      down=_down(session)), flush=True)
         except KeyboardInterrupt:
             if stop.is_set() or not interactive:
                 break
@@ -335,13 +336,18 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         break
 
     print()
-    print(watch_ui.status(stats, divine_ex, _budget(session)))
+    print(watch_ui.status(stats, divine_ex, _budget(session), down=_down(session)))
     return 0
 
 
 def _budget(session: GGGSession | None):
     """The search budget for the status line; None with --no-trade."""
     return session.budget("search") if session else None
+
+
+def _down(session: GGGSession | None) -> float:
+    """Seconds of search lockout for the status line; 0 with --no-trade."""
+    return session.down("search") if session else 0.0
 
 
 def price_one(block, index, rates, mod_index, base_rules, unique_rules,
@@ -368,7 +374,12 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
     # SEARCH_LOOT up the stone is worth one: a comparable at least as good
     # on all five totals is what the book by tier cannot say.
     loot = loot_score(item)
-    if category_for(item) == "map.waystone" and (loot is None or loot[0] < SEARCH_LOOT):
+    # A lockout longer than a minute: nothing is queued behind it. Every
+    # item is priced with what is left — the index, the book, the loot
+    # score — and the report says the search was down.
+    search_down = float(getattr(trade, "down", lambda: 0.0)()) if trade is not None else 0.0
+    if category_for(item) == "map.waystone" and (
+            loot is None or loot[0] < SEARCH_LOOT or search_down):
         bulk = None
         if exchange is not None and item.get("baseType"):
             bulk = price_by_exchange(item["baseType"], exchange,
@@ -378,7 +389,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 name=display_name(item), item_class=item_class, price_ex=None,
                 source="unpriced", tag="unpriced:no-book", reason=verdict.reason,
                 loot=loot_score(item), instill=instillation(item),
-                **_identity_fields(item),
+                search_down=search_down, **_identity_fields(item),
             )
         return report.PricedItem(
             name=display_name(item), item_class=item_class,
@@ -386,83 +397,90 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             reason=verdict.reason, offers=bulk.offers, stock=bulk.stock,
             ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex, quoted=bulk.quoted,
             traded_ex=bulk.traded_ex, loot=loot_score(item),
-            instill=instillation(item),
+            instill=instillation(item), search_down=search_down,
             **_identity_fields(item),
         )
 
     if wants_search(verdict, entry, item, force=getattr(cfg, "force", False)) \
-            and trade is not None:
+            and trade is not None and not search_down:
         category = category_for(item)
         if category:
-            result = price_by_search(
-                item, category, mod_index, notables, trade, cache, rates,
-                status=cfg.status, max_searches=cfg.max_searches,
-            )
-            # A stone worth juicing whose search found nothing at least as
-            # good on all five totals is above what is listed — worth
-            # knowing — but it is still at least its tier, and the book by
-            # tier is the floor.
-            if (category == "map.waystone" and result.ceiling_ex is None
-                    and exchange is not None and item.get("baseType")):
-                bulk = price_by_exchange(item["baseType"], exchange,
-                                         rates.get("divine"), fills=fills)
-                if bulk is not None:
-                    return report.PricedItem(
-                        name=display_name(item), item_class=item_class,
-                        price_ex=bulk.price_ex, source="exchange",
-                        tag="waystone-floor", reason=verdict.reason,
-                        offers=bulk.offers, stock=bulk.stock,
-                        ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
-                        quoted=bulk.quoted, traded_ex=bulk.traded_ex,
-                        loot=loot, instill=instillation(item),
-                        map_stats=tuple(waystone_stat_texts(item, category)),
-                        **_identity_fields(item),
-                    )
-            # Past the cap the engine sorts only a kept sample — measured
-            # live, tier 15+ alone floored at 3 ex while its own subsets
-            # floored at 1 ex and at 1 transmute — so the low is noise. A
-            # search that caps has described a commodity, and a commodity's
-            # market is its bulk book: Waystone (Tier 15) held 6,957 online
-            # units against the sample's ten. Gear never has a book, so this
-            # reroutes nothing else.
-            if (result.matches >= report.SEARCH_CAP and exchange is not None
-                    and item.get("baseType")):
-                bulk = price_by_exchange(item["baseType"], exchange,
-                                         rates.get("divine"), fills=fills)
-                if bulk is not None:
-                    return report.PricedItem(
-                        name=display_name(item), item_class=item_class,
-                        price_ex=bulk.price_ex, source="exchange",
-                        tag="capped-search", reason=verdict.reason,
-                        offers=bulk.offers, stock=bulk.stock,
-                        ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
-                        quoted=bulk.quoted, traded_ex=bulk.traded_ex,
-                        loot=loot, instill=instillation(item),
-                    )
-            # Explain the rung that actually produced the price, not rung 0.
-            group, stats = explain_selection(item, mod_index, notables,
-                                             relax=result.relax_used)
-            return report.PricedItem(
-                name=display_name(item), item_class=item_class,
-                price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",
-                tag=result.tag, reason=verdict.reason, listings=result.listings,
-                matches=result.matches, rune_inflated=result.rune_inflated,
-                score=verdict.score,
-                breakdown=tuple(candidates.score_rows(item, mod_index, base_rules)),
-                **_coherence_fields(item, mod_index), **_identity_fields(item),
-                median_ex=result.median_ex, p25_ex=result.p25_ex,
-                confidence=result.confidence, skewed=result.skewed,
-                relax_used=result.relax_used,
-                suggested_ask_ex=result.suggested_ask_ex,
-                searches_used=result.searches_used, from_cache=result.from_cache,
-                searched_group=group, searched_stats=stats,
-                query_stats=tuple(explain_query(item, mod_index, notables,
-                                                relax=result.relax_used)),
-                unsearched=tuple(candidates.unsearched_rows(
-                    item, mod_index, notables, relax=result.relax_used)),
-                map_stats=tuple(waystone_stat_texts(item, category)),
-                loot=loot, instill=instillation(item),
-            )
+            result = None
+            try:
+                result = price_by_search(
+                    item, category, mod_index, notables, trade, cache, rates,
+                    status=cfg.status, max_searches=cfg.max_searches,
+                )
+            except SearchDown as exc:
+                # Locked out mid-ladder: this item and the next ones are
+                # priced without the search until it lapses.
+                search_down = exc.seconds
+            if result is not None:
+                # A stone worth juicing whose search found nothing at least as
+                # good on all five totals is above what is listed — worth
+                # knowing — but it is still at least its tier, and the book by
+                # tier is the floor.
+                if (category == "map.waystone" and result.ceiling_ex is None
+                        and exchange is not None and item.get("baseType")):
+                    bulk = price_by_exchange(item["baseType"], exchange,
+                                             rates.get("divine"), fills=fills)
+                    if bulk is not None:
+                        return report.PricedItem(
+                            name=display_name(item), item_class=item_class,
+                            price_ex=bulk.price_ex, source="exchange",
+                            tag="waystone-floor", reason=verdict.reason,
+                            offers=bulk.offers, stock=bulk.stock,
+                            ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
+                            quoted=bulk.quoted, traded_ex=bulk.traded_ex,
+                            loot=loot, instill=instillation(item),
+                            map_stats=tuple(waystone_stat_texts(item, category)),
+                            **_identity_fields(item),
+                        )
+                # Past the cap the engine sorts only a kept sample — measured
+                # live, tier 15+ alone floored at 3 ex while its own subsets
+                # floored at 1 ex and at 1 transmute — so the low is noise. A
+                # search that caps has described a commodity, and a commodity's
+                # market is its bulk book: Waystone (Tier 15) held 6,957 online
+                # units against the sample's ten. Gear never has a book, so this
+                # reroutes nothing else.
+                if (result.matches >= report.SEARCH_CAP and exchange is not None
+                        and item.get("baseType")):
+                    bulk = price_by_exchange(item["baseType"], exchange,
+                                             rates.get("divine"), fills=fills)
+                    if bulk is not None:
+                        return report.PricedItem(
+                            name=display_name(item), item_class=item_class,
+                            price_ex=bulk.price_ex, source="exchange",
+                            tag="capped-search", reason=verdict.reason,
+                            offers=bulk.offers, stock=bulk.stock,
+                            ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
+                            quoted=bulk.quoted, traded_ex=bulk.traded_ex,
+                            loot=loot, instill=instillation(item),
+                        )
+                # Explain the rung that actually produced the price, not rung 0.
+                group, stats = explain_selection(item, mod_index, notables,
+                                                 relax=result.relax_used)
+                return report.PricedItem(
+                    name=display_name(item), item_class=item_class,
+                    price_ex=result.ceiling_ex, source="trade" if result.ceiling_ex else "unpriced",
+                    tag=result.tag, reason=verdict.reason, listings=result.listings,
+                    matches=result.matches, rune_inflated=result.rune_inflated,
+                    score=verdict.score,
+                    breakdown=tuple(candidates.score_rows(item, mod_index, base_rules)),
+                    **_coherence_fields(item, mod_index), **_identity_fields(item),
+                    median_ex=result.median_ex, p25_ex=result.p25_ex,
+                    confidence=result.confidence, skewed=result.skewed,
+                    relax_used=result.relax_used,
+                    suggested_ask_ex=result.suggested_ask_ex,
+                    searches_used=result.searches_used, from_cache=result.from_cache,
+                    searched_group=group, searched_stats=stats,
+                    query_stats=tuple(explain_query(item, mod_index, notables,
+                                                    relax=result.relax_used)),
+                    unsearched=tuple(candidates.unsearched_rows(
+                        item, mod_index, notables, relax=result.relax_used)),
+                    map_stats=tuple(waystone_stat_texts(item, category)),
+                    loot=loot, instill=instillation(item),
+                )
 
     # The exchange answers first: the game's own fills when the item traded
     # enough, the online books behind them. It carries only what trades in
@@ -509,12 +527,17 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
         # Called junk rather than unpriced: "unpriced" reads as a failure,
         # when the tool in fact reached a confident verdict about the item.
         tag = "junk"
+    elif search_down:
+        # Not queued behind the lockout: priced with what is left, and the
+        # report says the search was down rather than that nothing matched.
+        tag = "unpriced:search-down"
     else:
         tag = "unpriced:no-index"
     return report.PricedItem(
         name=display_name(item), item_class=item_class, price_ex=None,
         source="unpriced", tag=tag, reason=verdict.reason, score=verdict.score,
         breakdown=tuple(candidates.score_rows(item, mod_index, base_rules)),
+        search_down=search_down,
         **_coherence_fields(item, mod_index), **_identity_fields(item),
     )
 

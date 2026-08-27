@@ -514,3 +514,20 @@ def test_the_type_row_says_corrupted():
     assert "  type       rare · corrupted · Shields → armour.shield" in text
     text = render({**ITEM, "rarity": "Rare"}, priced, RATES)
     assert "corrupted" not in text
+
+
+def test_an_item_priced_while_the_search_was_down_says_so():
+    priced = PricedItem(
+        name="Doom Shield", item_class=ItemClass.GEAR, price_ex=None,
+        source="unpriced", tag="unpriced:search-down", search_down=1700.0,
+    )
+    text = render(ITEM, priced, RATES)
+    assert "search down" in text and "28 min" in text
+
+
+def test_a_stone_priced_off_the_book_while_the_search_is_down_says_so():
+    priced = PricedItem(
+        name="Stone", item_class=ItemClass.ENDGAME, price_ex=6.0,
+        source="exchange", tag="waystone", loot=(83, "juice it"), search_down=1700.0,
+    )
+    assert "search down, 28 min left — priced without it" in render(ITEM, priced, RATES)

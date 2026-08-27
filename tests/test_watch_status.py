@@ -22,3 +22,10 @@ def test_longer_windows_read_in_minutes_and_hours():
 def test_no_budget_before_the_first_search_answers():
     stats = watch_ui.Session(priced=1, searches=0)
     assert "left" not in watch_ui.status(stats, divine_ex=360.0)
+
+
+def test_the_status_line_says_the_search_is_down_instead_of_a_budget():
+    stats = watch_ui.Session(priced=1, searches=4)
+    line = watch_ui.status(stats, divine_ex=360.0, budget=Budget(0, 30, 300), down=1700.0)
+    assert "search down 28 min" in line
+    assert "left" not in line

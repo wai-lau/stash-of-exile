@@ -36,6 +36,10 @@ class TradeClient:
         self._cache = cache
         self._league = league
 
+    def down(self) -> float:
+        """Seconds of search lockout left; 0 when a search would go."""
+        return self._session.down("search")
+
     def search(self, query: dict) -> tuple[str, list[str], int]:
         """Query id, the matching listing hashes, and how many matched.
 

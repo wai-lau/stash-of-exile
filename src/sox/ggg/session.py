@@ -19,7 +19,7 @@ from typing import Any
 
 import httpx
 
-from sox.ggg.governor import Budget, RateGovernor
+from sox.ggg.governor import SEARCH_DOWN_AFTER, Budget, RateGovernor
 
 MAX_429_RETRIES = 3
 TRADE2 = "/api/trade2/"
@@ -35,6 +35,15 @@ class Blocked(GGGError):
 
 class RateLimited(GGGError):
     pass
+
+
+class SearchDown(RateLimited):
+    """The bucket is in a lockout longer than SEARCH_DOWN_AFTER: the call was
+    refused rather than slept, and `seconds` says how long is left."""
+
+    def __init__(self, seconds: float) -> None:
+        super().__init__(f"locked out for {seconds:.0f}s")
+        self.seconds = seconds
 
 
 def bucket(url: str) -> str:
@@ -69,6 +78,12 @@ class GGGSession:
         governor = self._governors.get(bucket)
         return governor.budget() if governor else None
 
+    def down(self, bucket: str) -> float:
+        """Seconds of lockout left on the bucket, 0 when a call would go."""
+        governor = self._governors.get(bucket)
+        wait = governor.wait() if governor else 0.0
+        return wait if wait >= SEARCH_DOWN_AFTER else 0.0
+
     def _governor(self, url: str) -> RateGovernor:
         name = bucket(url)
         if name not in self._governors:
@@ -80,6 +95,9 @@ class GGGSession:
         governor = self._governor(url)
 
         for attempt in range(MAX_429_RETRIES + 1):
+            wait = governor.wait()
+            if wait >= SEARCH_DOWN_AFTER:
+                raise SearchDown(wait)
             governor.before_request()
             governor.record_request()
             response = self._client.request(
@@ -91,7 +109,8 @@ class GGGSession:
                 if attempt == MAX_429_RETRIES:
                     raise RateLimited("rate limited by GGG after repeated backoff")
                 retry_after = response.headers.get("Retry-After")
-                governor.on_429(float(retry_after) if retry_after else None)
+                if not governor.on_429(float(retry_after) if retry_after else None):
+                    raise SearchDown(governor.wait())
                 continue
 
             governor.on_success()

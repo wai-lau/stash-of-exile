@@ -1769,3 +1769,69 @@ def test_a_searched_stone_with_no_comparable_falls_back_to_the_book_as_a_floor(t
     assert priced.price_ex == 24.0
     assert "monster rarity 32%+" in priced.map_stats, "what the search asked is still shown"
     assert priced.loot == (83, "juice it")
+
+
+def test_with_the_search_down_gear_is_priced_without_it(tmp_path):
+    """Search is in a lockout: the item is not queued behind it, it is
+    priced with what is left — the index, the book, the loot score — and
+    says the search was down."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+
+    class Down:
+        def down(self):
+            return 1700.0
+
+        def search(self, query):
+            raise AssertionError("search is down; it must not be called")
+
+        fetch = search
+
+    item = load("RareItem")
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, Down(),
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=True),
+    )
+    assert priced.source == "unpriced"
+    assert priced.tag == "unpriced:search-down"
+    assert priced.search_down == 1700.0
+
+
+def test_with_the_search_down_a_stone_keeps_its_loot_and_its_book(tmp_path):
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.exchange import Book, Offer
+
+    class Down:
+        def down(self):
+            return 1700.0
+
+        def search(self, query):
+            raise AssertionError("search is down; it must not be called")
+
+        fetch = search
+
+    class BulkBook:
+        def ids(self):
+            return {"Waystone (Tier 16)": "waystone-16"}
+
+        def book(self, item_id, have="exalted"):
+            if item_id == "waystone-16" and have == "exalted":
+                return Book([Offer(ratio=24.0, stock=500)], 2501)
+            return Book([], 0)
+
+    item = load("RareMapFakeAllProps")   # loot 83: would search, if it could
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, Down(),
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+        exchange=BulkBook(),
+    )
+    assert priced.source == "exchange" and priced.price_ex == 24.0
+    assert priced.loot == (83, "juice it")
+    assert priced.search_down == 1700.0

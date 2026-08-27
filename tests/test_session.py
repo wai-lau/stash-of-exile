@@ -177,3 +177,32 @@ def test_the_search_budget_is_readable_for_the_status_line():
     session.post(SEARCH, json={})
     assert session.budget("search") == Budget(remaining=1, limit=2, period=10)
     assert session.budget("fetch") is None, "never asked, nothing learned"
+
+
+def test_a_long_429_raises_search_down_at_once_and_the_bucket_stays_down():
+    """One 429 with a half-hour Retry-After: no sleep, no retry, the error
+    says how long, and the next call on the bucket is refused without a
+    request until the penalty lapses. Other buckets are untouched."""
+    from sox.ggg.session import SearchDown
+
+    calls = {"n": 0}
+
+    def handler(request):
+        calls["n"] += 1
+        if "/search/" in request.url.path:
+            return httpx.Response(429, headers={"Retry-After": "1800"})
+        return httpx.Response(200, json={})
+
+    slept = []
+    session, _ = build(handler, sleeper=slept.append)
+    with pytest.raises(SearchDown) as exc:
+        session.post(SEARCH, json={})
+    assert exc.value.seconds == 1800.0
+    assert calls["n"] == 1 and slept == []
+    assert session.down("search") == 1800.0
+    with pytest.raises(SearchDown):
+        session.post(SEARCH, json={})
+    assert calls["n"] == 1, "refused without a request"
+    session.get(FETCH)
+    assert calls["n"] == 2, "fetch is its own bucket"
+    assert session.down("fetch") == 0.0

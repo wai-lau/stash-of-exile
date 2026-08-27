@@ -155,7 +155,11 @@ Each response reconciles the history to the server's count — padding
 hits it missed just outside the next shorter window, where the server
 says they are not — and a restriction in progress is waited out rather
 than earned twice. The watch status line prints what the tightest
-clause has left.
+clause has left. A lockout longer than a minute — the `30:300` clause
+hands out 1,800 seconds — is never slept: the call is refused, nothing
+queues behind it, and every copy is priced with what is left (the
+index, the bulk book, a waystone's loot score) while the status line
+counts the lockout down.
 Static ids are cached for a week, books for six hours.
 
 Books are league-scoped, and so is the index: sox reads the **softcore**

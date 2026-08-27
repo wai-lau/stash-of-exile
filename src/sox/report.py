@@ -115,6 +115,7 @@ class PricedItem:
     map_stats: tuple[str, ...] = ()        # waystone minimums the search sent
     loot: tuple[float, str] | None = None  # waystone loot score and verdict
     instill: object | None = None          # waystone Instillation path
+    search_down: float = 0.0               # seconds of search lockout, if any
     item_class_name: str = ""            # the game's own label, e.g. "Quarterstaves"
     category: str | None = None            # the trade category searched
     roll_pct: float | None = None
@@ -195,6 +196,9 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
             out.append("  price      no comparable listing")
             out.append("             nothing at least as good is listed — "
                          "price this one by hand, it may be the good one")
+        elif priced.tag == "unpriced:search-down":
+            out.append(f"  price      not priced — search down, "
+                       f"{priced.search_down / 60:.0f} min left")
         else:
             out.append(f"  price      not priced ({priced.tag or 'unknown'})")
     elif priced.source == "trade":
@@ -421,4 +425,7 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
     # Last: the rows above explain how the number was arrived at, and the
     # number is what you read off the end.
     lines += _price_lines(priced, rates)
+    if priced.search_down and priced.price_ex is not None:
+        lines.append(f"             search down, {priced.search_down / 60:.0f} min "
+                     "left — priced without it")
     return "\n".join(lines)
