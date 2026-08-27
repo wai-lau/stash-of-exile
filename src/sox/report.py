@@ -32,6 +32,15 @@ RESET = "\033[0m"
 # The mods the price does NOT account for are the reason to doubt the
 # number, so they are lit, not dimmed into the margin. Bright red.
 UNSEARCHED = "\033[91m"
+# A waystone's loot score wears its band as a colour, bold: grey reroll,
+# blue run it, yellow juice it, green chase. The word would be the colour
+# said twice.
+LOOT_COLOURS = {
+    "reroll": "\033[1;90m",
+    "run it": "\033[1;94m",
+    "juice it": "\033[1;33m",
+    "chase": "\033[1;92m",
+}
 
 # The game's own rarity hues, as the tooltip paints an item's header —
 # yellow rare, blue magic, orange unique, white normal — and the name and
@@ -350,7 +359,7 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
     if priced.loot:
         # The tooltip shows the totals and no opinion; this is the opinion.
         score, verdict = priced.loot
-        lines.append(f"  loot       {score:.0f} ({verdict})")
+        lines.append(f"  loot       {LOOT_COLOURS.get(verdict, '')}{score}{RESET}")
     if priced.instill:
         # The emotion to instill, and the score and band one of it buys.
         path = priced.instill
@@ -360,7 +369,8 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
                 "instilled": "already instilled",
             }.get(path.blocked, path.blocked))
         else:
-            lines.append(f"  instill    {path.emotion} → {path.score} ({path.verdict})"
+            colour = LOOT_COLOURS.get(path.verdict, "")
+            lines.append(f"  instill    {path.emotion} → {colour}{path.score}{RESET}"
                          f"  ·  {path.delirious}% delirious")
     if priced.unsearched:
         # The query lines above say what the price rests on; this is the

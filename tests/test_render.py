@@ -391,7 +391,25 @@ def test_a_waystone_prints_its_loot_score_and_verdict():
         loot=(55.4, "run it"),
     )
     text = render(ITEM, priced, RATES)
-    assert "  loot       55 (run it)" in text
+    # The number alone, bold, in the band's colour — the word was the colour.
+    assert "  loot       \033[1;94m55\033[0m" in text
+    assert "run it" not in text
+
+
+def test_the_loot_bands_are_colours():
+    """reroll grey, run it blue, juice it yellow, chase green."""
+    from sox.report import LOOT_COLOURS
+
+    assert LOOT_COLOURS == {
+        "reroll": "\033[1;90m", "run it": "\033[1;94m",
+        "juice it": "\033[1;33m", "chase": "\033[1;92m",
+    }
+    for verdict, colour in LOOT_COLOURS.items():
+        priced = PricedItem(
+            name="Stone", item_class=ItemClass.ENDGAME, price_ex=6.0,
+            source="exchange", tag="waystone", loot=(25, verdict),
+        )
+        assert f"  loot       {colour}25\033[0m" in render(ITEM, priced, RATES)
 
 
 def test_a_waystone_prints_the_emotion_to_instill():
@@ -405,7 +423,7 @@ def test_a_waystone_prints_the_emotion_to_instill():
                              score=70, verdict="juice it"),
     )
     text = render(ITEM, priced, RATES)
-    assert "  instill    Paranoia → 70 (juice it)  ·  12% delirious" in text
+    assert "  instill    Paranoia → \033[1;33m70\033[0m  ·  12% delirious" in text
 
 
 def test_a_corrupted_waystone_says_it_cannot_be_instilled():
