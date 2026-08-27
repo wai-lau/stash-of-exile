@@ -333,7 +333,7 @@ call.
 ## Reading the output
 
 <pre>Forgotten Warden  [Primal Markings]
-  type       Body Armours → armour.chest   ilvl 84
+  type       unique · Body Armours → armour.chest   ilvl 84
   searched   <ins>Forgotten Warden · unique · Primal Markings</ins>
              <ins>Grants Skill: Level 20 Spirit Vessel</ins>
              <ins>total dexterity ≥ 20</ins>
@@ -345,6 +345,11 @@ call.
   market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>1,079 ex</b>
              cheapest 19 of 1,153 listings, exact
              1 skipped — met your numbers only with their runes</pre>
+
+The title is painted in the game's own rarity colour — yellow rare,
+blue magic, orange unique, white normal — and the `type` row says the
+word, since colour does not grep and a junk item is never searched, so
+nothing else would.
 
 The blue lines under `searched` (underlined here) are the query itself.
 The first names the market the search is scoped to — the rarity, and

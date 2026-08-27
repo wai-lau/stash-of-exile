@@ -8,7 +8,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sox.valuation.classify import ItemClass, display_name
+from sox.valuation.classify import (
+    ItemClass,
+    Rarity,
+    classify,
+    display_name,
+    rarity_of,
+)
 
 # The market row is the answer; everything else on screen explains it.
 # The query the price rests on is blue; the mods it does not rest on are dim.
@@ -23,6 +29,36 @@ MARKET_DIV = "\033[1;33;7m"
 # carry because the session total counts it, and the one not to trade on.
 DIM = "\033[2m"
 RESET = "\033[0m"
+
+# The game's own rarity colours, as the tooltip paints an item's header —
+# yellow rare, blue magic, orange unique, white normal — and the name and
+# base share the one colour there, so they do here. 24-bit, because the
+# nearest of the terminal's sixteen is a different yellow; a terminal
+# without it rounds to its own palette.
+RARITY_RGB = {
+    Rarity.NORMAL: (200, 200, 200),
+    Rarity.MAGIC: (136, 136, 255),
+    Rarity.RARE: (255, 255, 119),
+    Rarity.UNIQUE: (175, 96, 37),
+}
+# A gem or a currency has no rarity; the game paints those by what they are.
+CLASS_RGB = {
+    ItemClass.GEM: (27, 162, 155),
+    ItemClass.CURRENCY: (170, 158, 130),
+}
+
+
+def title_colour(item: dict) -> str:
+    rgb = RARITY_RGB.get(rarity_of(item)) or CLASS_RGB.get(classify(item))
+    return "\033[38;2;%d;%d;%dm" % rgb if rgb else ""
+
+
+def title(item: dict) -> str:
+    """The item's name and base, in the colour the game gives its rarity."""
+    text = display_name(item) + (
+        f"  [{item.get('baseType')}]" if item.get("name") else "")
+    colour = title_colour(item)
+    return f"{colour}{text}{RESET}" if colour else text
 
 
 @dataclass(frozen=True)
@@ -272,10 +308,15 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
 
 
 def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
+    # The rarity in words as well as in the title's colour: colour does not
+    # grep, and a junk rare is never searched, so the search pin that names
+    # the rarity never printed and nothing said the talisman was rare.
+    rarity = rarity_of(item)
     lines = [
-        f"{display_name(item)}"
-        + (f"  [{item.get('baseType')}]" if item.get("name") else ""),
-        f"  type       {priced.item_class_name or priced.item_class}"
+        title(item),
+        "  type       "
+        + (f"{rarity.value} · " if rarity else "")
+        + f"{priced.item_class_name or priced.item_class}"
         + (f" → {priced.category}" if priced.category else "")
         + (f"   ilvl {item['ilvl']}" if item.get("ilvl") else ""),
     ]

@@ -18,13 +18,9 @@ from sox.ggg.governor import Budget
 DIM = "\033[2m"
 BOLD = "\033[1m"
 RESET = "\033[0m"
-GREEN = "\033[32m"
 YELLOW = "\033[33m"
 CYAN = "\033[36m"
 RED = "\033[31m"
-
-# Above this many exalted an item is worth calling out.
-NOTABLE_VALUE_EX = 500.0
 
 
 @dataclass
@@ -103,14 +99,6 @@ def timestamp() -> str:
     return f"{DIM}{datetime.now():%H:%M:%S}{RESET}"
 
 
-def colour_for(price_ex: float | None, divine_ex: float) -> str:
-    if price_ex is None:
-        return YELLOW
-    if price_ex >= NOTABLE_VALUE_EX:
-        return GREEN
-    return RESET
-
-
 def detected(name: str, note: str) -> str:
     """Printed the instant an item lands on the clipboard.
 
@@ -126,11 +114,15 @@ def body_lines(body: str) -> str:
     return "\n".join(body.splitlines()[1:])
 
 
-def entry(body: str, price_ex: float | None, divine_ex: float) -> str:
-    """One priced item, tinted so a valuable one is visible from across a desk."""
-    colour = colour_for(price_ex, divine_ex)
+def entry(body: str) -> str:
+    """One priced item under its timestamp.
+
+    The title arrives in its rarity colour, as the game paints it, so bold
+    is all the header adds. It used to be tinted by price instead; the
+    market row's inverted divine amount is what carries that across a desk.
+    """
     lines = body.splitlines()
-    head = f"{timestamp()} {colour}{BOLD}{lines[0]}{RESET}"
+    head = f"{timestamp()} {BOLD}{lines[0]}{RESET}"
     rest = "\n".join(lines[1:])
     return f"{head}\n{rest}" if rest else head
 

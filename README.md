@@ -28,7 +28,7 @@ clipboard: powershell.exe (Windows clipboard via WSL)
 copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
 ════════════════════════════════════════════════════════════════
 14:31:58 <b>Corruption Hold  [Amethyst Ring]</b>
-  type       Rings → accessory.ring   ilvl 80
+  type       rare · Rings → accessory.ring   ilvl 80
   searched   as minion
              <ins>rare</ins>
              <ins>Minions have #% increased Critical Hit Chance ≥ 30</ins>
@@ -46,7 +46,7 @@ copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
 <ins>total 3,956 ex (11.0 div)</ins>  ·  1 priced  ·  2 searches  ·  3/5 left (10s window)
 ────────────────────────────────────────────────────────────────
 14:32:39 <b>Honour Spiral  [Unset Ring]</b>
-  type       Rings → accessory.ring   ilvl 82
+  type       rare · Rings → accessory.ring   ilvl 82
   searched   <ins>rare</ins>
              <ins>Grants 1 additional Skill Slot</ins>
              <ins>total elemental resistance ≥ 88</ins>

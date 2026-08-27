@@ -259,6 +259,9 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                 name = display_name(item)
                 if item.get("name"):
                     name = f"{name}  [{item.get('baseType')}]"
+                # The session total lists the plain name; the screen gets the
+                # title in its rarity colour, the same one the report prints.
+                title = report.title(item)
                 entry_ = index_price_for(item, index)
                 verdict = candidates.assess(item, entry_, mod_index, base_rules, unique_rules)
                 searching = wants_search(verdict, entry_, item,
@@ -272,7 +275,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                 # the result arrives first.
                 announced = threading.Event()
 
-                def announce_slow(item_name: str = name) -> None:
+                def announce_slow(item_name: str = title) -> None:
                     announced.set()
                     print(watch_ui.detected(item_name, "searching…"), flush=True)
 
@@ -304,8 +307,7 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                     # The header is already on screen; only the detail is left.
                     print(watch_ui.body_lines(body), flush=True)
                 else:
-                    print(watch_ui.entry(body, priced.price_ex, divine_ex),
-                          flush=True)
+                    print(watch_ui.entry(body), flush=True)
                 print(watch_ui.status(stats, divine_ex, _budget(session)), flush=True)
         except KeyboardInterrupt:
             if stop.is_set() or not interactive:

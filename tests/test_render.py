@@ -329,3 +329,47 @@ def test_sections_indent_two_spaces_searched_blue_unsearched_dim():
     assert any(l.startswith("  unsearched") for l in body)
     assert f"{BLUE}Minions deal #% increased Damage ≥ 20" in "\n".join(body)
     assert f"{DIM}+8% to Fire Resistance" in "\n".join(body)
+
+
+JUNK = PricedItem(
+    name="Doom Shield", item_class=ItemClass.GEAR, price_ex=None,
+    source="unpriced", tag="junk", reason="score 2", score=2,
+    item_class_name="Shields", category="armour.shield",
+)
+
+
+def test_the_title_wears_the_games_rarity_colour():
+    """In game the header IS the rarity — yellow rare, blue magic, orange
+    unique, white normal — on the name and the base alike. The type row says
+    the word too: colour does not grep, and a junk rare is never searched,
+    so the search pin that names the rarity never printed and nothing on
+    screen said a Ligurium Talisman was rare.
+    """
+    from sox.report import RESET, title
+
+    body = render({**ITEM, "rarity": "Rare"}, JUNK, RATES).splitlines()
+    assert body[0] == f"\033[38;2;255;255;119mDoom Shield  [Tower Shield]{RESET}"
+    assert body[1] == "  type       rare · Shields → armour.shield   ilvl 70"
+    assert title({**ITEM, "rarity": "Unique"}).startswith("\033[38;2;175;96;37m")
+    assert title({**ITEM, "rarity": "Magic"}).startswith("\033[38;2;136;136;255m")
+    assert title({**ITEM, "rarity": "Normal"}).startswith("\033[38;2;200;200;200m")
+    # A gem or a currency has no rarity; the game paints those by what they are.
+    gem = {"baseType": "Uncut Skill Gem (Level 19)", "itemClass": "Uncut Skill Gems"}
+    assert title(gem) == f"\033[38;2;27;162;155mUncut Skill Gem (Level 19){RESET}"
+    # Nothing known about it: the title stays plain and the row says nothing.
+    body = render(ITEM, JUNK, RATES).splitlines()
+    assert body[0] == "Doom Shield  [Tower Shield]"
+    assert body[1] == "  type       Shields → armour.shield   ilvl 70"
+
+
+def test_the_watch_header_keeps_the_rarity_colour():
+    """The feed's header used to be tinted by price. The rarity colour is the
+    title now, so bold is all the header adds — and the timestamp before it."""
+    from sox import watch
+    from sox.report import RESET
+
+    body = render({**ITEM, "rarity": "Rare"}, JUNK, RATES)
+    head = watch.entry(body).splitlines()[0]
+    assert head.endswith(
+        f" {watch.BOLD}\033[38;2;255;255;119mDoom Shield  [Tower Shield]{RESET}{RESET}")
+    assert watch.detected("x", "searching…").startswith(watch.timestamp()[:6])
