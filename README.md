@@ -22,25 +22,29 @@ Without the symlink, `uv run sox ...` from the project directory works too.
 Park a terminal on a second monitor and run `sox watch`. Copy any item in
 game with Ctrl+C and its price appears, with a running session total:
 
-```
-════════════════════════════════════════════════════════════════
-sox watch 0.1.0+425bb6d  ·  Runes of Aldur  ·  1 div = 382 ex
-clipboard: powershell.exe
+<pre>════════════════════════════════════════════════════════════════
+<b>sox watch</b> 0.1.0+6f1f4e9  ·  Runes of Aldur  ·  1 div = 360 ex
+clipboard: powershell.exe (Windows clipboard via WSL)
 copy an item in game (Ctrl+C) and it is priced here · Ctrl-D to stop
 ════════════════════════════════════════════════════════════════
-18:04:07 Megalomaniac  [Diamond]
-            type       Jewels → jewel   ilvl 80
-            searched   as notable
-            score      0
-                       +0  Allocates Barbaric Strength
-                       +0  Allocates Kite Runner
-            coherence  none — the mods serve different builds
-            market     low 5 div  ·  25th 5 div  ·  median 5 div
-                       cheapest 10 of 768 listings, relaxed:3
+22:53:27 <b>Corruption Hold  [Amethyst Ring]</b>
+            type       Rings → accessory.ring   ilvl 80
+            searched   as minion
+            score      15
+                       <ins>+0  +13% to Chaos Resistance                                  (implicit)</ins>
+                       <ins>+2  Minions deal 22% increased Damage                         (minion)</ins>
+                       +2  Adds 9 to 18 Physical Damage to Attacks
+                       <ins>+2  Minions have 37% increased Critical Hit Chance            (minion)</ins>
+                       <ins>+2  Minions have 10% increased Attack and Cast Speed          (minion)</ins>
+                       +2  +23% to Chaos Resistance                                  (pseudo)
+                       <ins>+2  Minions deal 25% increased Damage if you've Hit Recently  (minion)</ins>
+            coherence  4 mods cluster on minion  +3
+            market     low <b>11 div</b>  ·  25th <b>20 div</b>  ·  median <b>32.5 div</b>
+                       cheapest 10 of 98 listings, relaxed:1
+                       found only after widening, so these comparables are weaker than your item — read the price as a floor
 ────────────────────────────────────────────────────────────────
-total 1,910 ex (5.0 div)  ·  1 priced  ·  2 searches
-────────────────────────────────────────────────────────────────
-```
+<ins>total 3,956 ex (11.0 div)</ins>  ·  1 priced  ·  2 searches
+────────────────────────────────────────────────────────────────</pre>
 
 ## What makes it different from an overlay
 
@@ -50,20 +54,8 @@ the checkboxes and relevant filters for the item yourself. Choose stats that
 synergize well, this knowledge only comes from playing different build
 archetypes."
 
-SoX encodes that based on... well, [_my own judgement_](https://github.com/wai-lau/stash-of-exile/blob/master/docs/pricing-algorithm.html)(I read a few guides and try to sell stuff often, but that's about it).
-
-The first search asks for the whole item — every mod it can search, at the
-floor of its roll's own range, because a roll one point under yours is the
-same good. When nothing that good is listed, the search widens a rung at a
-time, and what survives each rung is chosen by what the item **is**, not by
-mod weight. What identifies the item survives longest — its unique flags,
-the notables it rolled — then the mods its dominant archetype's buyer
-filters on, then the generic value (life, resistances) every buyer pays for
-whatever their build; a mod serving some *other* buyer drops first. Weight
-alone would keep a heavy off-archetype roll while dropping the mods the
-real buyer filters on, and the widened search would describe a buyer who
-does not exist. The report names the archetype it searched as at every
-rung, and marks every mod the price actually rests on.
+SoX encodes that based on... well, [_my own judgement_](docs/pricing-algorithm.md)
+(I read a few guides and try to sell stuff often, but that's about it).
 
 ## Why the clipboard
 
