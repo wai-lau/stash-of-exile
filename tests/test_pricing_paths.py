@@ -980,10 +980,10 @@ def test_a_waystones_loot_score_weighs_rares_over_whites():
     with diminishing returns, pack size mostly adds whites."""
     from sox.valuation.query import loot_score
 
-    # 37 + 0/2 + 24/2 + 16*0.4
-    assert loot_score(load("GhostExpedition")) == (55.4, "run it")
+    # 37 + 0/2 + 24/2 + 16*0.4 = 55.4 -> the integer, and the band is its
+    assert loot_score(load("GhostExpedition")) == (55, "run it")
     # 32 + 45/2 + 17/2 + 20*0.4
-    assert loot_score(load("RareMapFakeAllProps")) == (71.0, "juice it")
+    assert loot_score(load("RareMapFakeAllProps")) == (71, "juice it")
     assert loot_score(load("RareItem")) is None
 
 
@@ -1025,7 +1025,7 @@ def test_a_waystone_is_priced_off_its_tiers_bulk_book_without_a_search(tmp_path)
     assert priced.source == "exchange"
     assert priced.tag == "waystone"
     assert priced.price_ex == 24.0
-    assert priced.loot == loot_score(item) == (13.6, "reroll")
+    assert priced.loot == loot_score(item) == (14, "reroll")
     assert priced.map_stats == (), "nothing was searched"
     assert priced.category == "map.waystone"
 
@@ -1088,7 +1088,7 @@ def test_a_waystone_without_a_book_is_unpriced_but_still_scored(tmp_path):
     # No exchange to hand (--no-trade): still no search, still the score.
     assert priced.source == "unpriced"
     assert priced.tag == "unpriced:no-book"
-    assert priced.loot == (13.6, "reroll")
+    assert priced.loot == (14, "reroll")
     assert priced.map_stats == ()
 
 

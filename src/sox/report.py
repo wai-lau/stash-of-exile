@@ -352,8 +352,7 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
         score, verdict = priced.loot
         lines.append(f"  loot       {score:.0f} ({verdict})")
     if priced.instill:
-        # The best emotion one, two and three times, with the band at each
-        # step, so the third can be skipped when it buys nothing.
+        # The emotion to instill, and the score and band one of it buys.
         path = priced.instill
         if path.blocked:
             lines.append("  instill    " + {
@@ -361,10 +360,8 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
                 "instilled": "already instilled",
             }.get(path.blocked, path.blocked))
         else:
-            steps = [f"{'%s ' % path.emotion if n == 1 else ''}×{n} → {s:.0f} ({v})"
-                     for n, s, v in path.steps]
-            lines.append("  instill    " + "  ·  ".join(steps)
-                         + f"  ·  {path.delirious}% delirious")
+            lines.append(f"  instill    {path.emotion} → {path.score} ({path.verdict})"
+                         f"  ·  {path.delirious}% delirious")
     if priced.unsearched:
         # The query lines above say what the price rests on; this is the
         # rest of the item — dropped by widening, or never searchable — so

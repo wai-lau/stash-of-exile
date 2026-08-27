@@ -91,7 +91,7 @@ session, so sox holds no credentials at all.
 | Most uniques | poe2scout index — free, no API call |
 | Rares, jewels | trade search for "the cheapest item at least as good as yours", every mod on the item in the first search, each compared at the floor of its roll's tier — a point under your roll is the same good |
 | Normal and magic bases | the same search, pinned to the base and floored at its item level |
-| Waystones | never searched — a stone's search caps at 10,000 matches, a commodity, so the price is its tier's bulk exchange book. What separates one stone from another is the loot score from its tooltip totals, with a verdict: reroll, run it, juice it, chase — and the instillation path: the best Distilled Emotion ×1, ×2, ×3 with the band at each step |
+| Waystones | never searched — a stone's search caps at 10,000 matches, a commodity, so the price is its tier's bulk exchange book. What separates one stone from another is the loot score from its tooltip totals, with a verdict: reroll, run it, juice it, chase — and the Distilled Emotion to instill, with the score and band one of it buys |
 | Tablets, relics, charms | trade search; no index covers them |
 | Anything allocating a notable | searched by the exact notable — a Megalomaniac, or an amulet carrying an enhancement |
 

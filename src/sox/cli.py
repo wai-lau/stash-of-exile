@@ -29,7 +29,7 @@ from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_
 from sox.valuation.classify import ItemClass, classify, display_name
 from sox.valuation.exchange_pricer import exchange_rates, price_by_exchange
 from sox.valuation.index_pricer import index_key, index_price_for
-from sox.valuation.instill import instillation_path
+from sox.valuation.instill import instillation
 from sox.valuation.mods import build_index, explain_score, unlisted_mods
 from sox.valuation.rolls import (
     roll_percentiles,
@@ -374,7 +374,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             return report.PricedItem(
                 name=display_name(item), item_class=item_class, price_ex=None,
                 source="unpriced", tag="unpriced:no-book", reason=verdict.reason,
-                loot=loot_score(item), instill=instillation_path(item),
+                loot=loot_score(item), instill=instillation(item),
                 **_identity_fields(item),
             )
         return report.PricedItem(
@@ -383,7 +383,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             reason=verdict.reason, offers=bulk.offers, stock=bulk.stock,
             ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex, quoted=bulk.quoted,
             traded_ex=bulk.traded_ex, loot=loot_score(item),
-            instill=instillation_path(item),
+            instill=instillation(item),
             **_identity_fields(item),
         )
 

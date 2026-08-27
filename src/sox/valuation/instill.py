@@ -1,4 +1,5 @@
-"""Instilling a waystone: what three Distilled Emotions do to its loot score.
+"""Instilling a waystone: the one Distilled Emotion that lifts its loot score
+most, and where it lands.
 
 Delirium's currency, ten emotions; up to three go onto a waystone at the
 Instill interface — a corrupted stone takes none — and four of them move
@@ -10,9 +11,8 @@ own tooltip is the authority:
     Greed    10%             +8% item rarity
     Paranoia 12%             +15% rare monsters
 
-The score is linear, so the best three are the best one three times. What
-varies by stone is where the band flips, so the path is printed a step at
-a time and the third emotion can be skipped when it buys nothing.
+The score is linear, so the best emotion is the best emotion every time;
+the report names it once with the score and band one of it buys.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from sox.valuation.query import LOOT_WEIGHTS, category_for, loot_score, loot_ver
 
 @dataclass(frozen=True)
 class Emotion:
-    delirious: int   # "Players in Area are N% Delirious", per emotion, additive
+    delirious: int   # "Players in Area are N% Delirious"
     line: str        # the waystone line it adds, as the wikis word it
     gain: float      # loot-score points, from LOOT_WEIGHTS
 
@@ -38,15 +38,14 @@ EMOTIONS = {
     "Guilt": Emotion(9, "+8% pack size", round(8 * LOOT_WEIGHTS["Pack Size"], 1)),
 }
 
-SLOTS = 3
-
 
 @dataclass(frozen=True)
 class Instillation:
     emotion: str | None
-    delirious: int                                   # after all three
-    blocked: str | None                              # corrupted | instilled
-    steps: tuple[tuple[int, float, str], ...]        # (count, score, verdict)
+    delirious: int
+    blocked: str | None      # corrupted | instilled
+    score: int | None        # the loot score with one of the emotion on
+    verdict: str | None
 
 
 def _mod_texts(item: dict) -> list[str]:
@@ -54,8 +53,8 @@ def _mod_texts(item: dict) -> list[str]:
             + list(item.get("enchantMods") or []))
 
 
-def instillation_path(item: dict) -> Instillation | None:
-    """The best emotion, one, two and three times, with the band at each.
+def instillation(item: dict) -> Instillation | None:
+    """The emotion to instill, and the score and band one of it buys.
 
     None for anything but a waystone. A corrupted stone takes no emotion;
     an instilled one ("Players in Area are N% Delirious") has had its turn.
@@ -66,14 +65,10 @@ def instillation_path(item: dict) -> Instillation | None:
     if base is None:
         return None
     if item.get("corrupted"):
-        return Instillation(None, 0, "corrupted", ())
+        return Instillation(None, 0, "corrupted", None, None)
     if any("delirious" in text.lower() for text in _mod_texts(item)):
-        return Instillation(None, 0, "instilled", ())
+        return Instillation(None, 0, "instilled", None, None)
 
     name, emotion = max(EMOTIONS.items(), key=lambda pair: pair[1].gain)
-    score, _ = base
-    steps = tuple(
-        (n, round(score + n * emotion.gain, 1), loot_verdict(score + n * emotion.gain))
-        for n in range(1, SLOTS + 1)
-    )
-    return Instillation(name, emotion.delirious * SLOTS, None, steps)
+    score = round(base[0] + emotion.gain)
+    return Instillation(name, emotion.delirious, None, score, loot_verdict(score))

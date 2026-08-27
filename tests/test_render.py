@@ -394,20 +394,18 @@ def test_a_waystone_prints_its_loot_score_and_verdict():
     assert "  loot       55 (run it)" in text
 
 
-def test_a_waystone_prints_its_instillation_path():
+def test_a_waystone_prints_the_emotion_to_instill():
     from sox.valuation.instill import Instillation
 
     priced = PricedItem(
         name="Ghost Expedition", item_class=ItemClass.ENDGAME, price_ex=6.0,
         source="exchange", tag="waystone", offers=33, stock=3380, ask_ex=6.0,
-        loot=(55.4, "run it"),
-        instill=Instillation(emotion="Paranoia", delirious=36, blocked=None,
-                             steps=((1, 70.4, "juice it"), (2, 85.4, "chase"),
-                                    (3, 100.4, "chase"))),
+        loot=(55, "run it"),
+        instill=Instillation(emotion="Paranoia", delirious=12, blocked=None,
+                             score=70, verdict="juice it"),
     )
     text = render(ITEM, priced, RATES)
-    assert ("  instill    Paranoia ×1 → 70 (juice it)  ·  ×2 → 85 (chase)  ·  "
-            "×3 → 100 (chase)  ·  36% delirious") in text
+    assert "  instill    Paranoia → 70 (juice it)  ·  12% delirious" in text
 
 
 def test_a_corrupted_waystone_says_it_cannot_be_instilled():
@@ -415,7 +413,8 @@ def test_a_corrupted_waystone_says_it_cannot_be_instilled():
 
     priced = PricedItem(
         name="Ghost Expedition", item_class=ItemClass.ENDGAME, price_ex=6.0,
-        source="exchange", tag="waystone", loot=(55.4, "run it"),
-        instill=Instillation(emotion=None, delirious=0, blocked="corrupted", steps=()),
+        source="exchange", tag="waystone", loot=(55, "run it"),
+        instill=Instillation(emotion=None, delirious=0, blocked="corrupted",
+                             score=None, verdict=None),
     )
     assert "  instill    corrupted — cannot be instilled" in render(ITEM, priced, RATES)

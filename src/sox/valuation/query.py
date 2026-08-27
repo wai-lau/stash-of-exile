@@ -815,20 +815,22 @@ LOOT_WEIGHTS = {
 LOOT_BANDS = ((80, "chase"), (65, "juice it"), (45, "run it"), (0, "reroll"))
 
 
-def loot_score(item: dict) -> tuple[float, str] | None:
+def loot_score(item: dict) -> tuple[int, str] | None:
     """The tooltip's totals as one number, and what to do with the stone.
 
     None when the item carries none of the totals — it is not a waystone.
+    An integer, and the band is the integer's: a 64.6 printed as 65 and
+    banded as "run it" read as a contradiction.
     """
     totals = {name: _property(item, name) for name in LOOT_WEIGHTS}
     if all(value is None for value in totals.values()):
         return None
     score = round(sum((totals[name] or 0) * weight
-                      for name, weight in LOOT_WEIGHTS.items()), 1)
+                      for name, weight in LOOT_WEIGHTS.items()))
     return score, loot_verdict(score)
 
 
-def loot_verdict(score: float) -> str:
+def loot_verdict(score: int) -> str:
     return next(label for floor, label in LOOT_BANDS if score >= floor)
 
 # The tier lives in the base name — "Waystone (Tier 14)" — not in the
