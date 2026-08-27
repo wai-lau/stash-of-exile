@@ -121,8 +121,8 @@ def detected(name: str, note: str) -> str:
 
 
 def body_lines(body: str) -> str:
-    """The priced detail, indented under an already-printed header."""
-    return "\n".join(f"          {line}" for line in body.splitlines()[1:])
+    """The priced detail under an already-printed header, flush left."""
+    return "\n".join(body.splitlines()[1:])
 
 
 def entry(body: str, price_ex: float | None, divine_ex: float) -> str:
@@ -130,7 +130,7 @@ def entry(body: str, price_ex: float | None, divine_ex: float) -> str:
     colour = colour_for(price_ex, divine_ex)
     lines = body.splitlines()
     head = f"{timestamp()} {colour}{BOLD}{lines[0]}{RESET}"
-    rest = "\n".join(f"          {line}" for line in lines[1:])
+    rest = "\n".join(lines[1:])
     return f"{head}\n{rest}" if rest else head
 
 

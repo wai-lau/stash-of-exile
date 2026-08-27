@@ -10,9 +10,9 @@ from dataclasses import dataclass
 
 from sox.valuation.classify import ItemClass, display_name
 
-# Mods that made it into the query are highlighted, so the score breakdown
-# shows at a glance which mods the price actually rests on.
 # The market row is the answer; everything else on screen explains it.
+# The query the price rests on is blue; the mods it does not rest on are dim.
+BLUE = "\033[94m"
 MARKET = "\033[1;33m"
 # Priced in divine, the same colour is worn inside out. A divine price is the
 # one worth spotting while a watch session scrolls past, and inverting the row
@@ -54,14 +54,14 @@ class PricedItem:
     stock: int = 0         # exchange: units they hold
     ask_ex: float | None = None   # exchange: what one costs to buy
     bid_ex: float | None = None   # exchange: what someone will pay
-    quoted: str = ""              # exchange: the currency the book was read in
+    quoted: str = ""            # exchange: the currency the book was read in
     traded_ex: float = 0.0        # exchange fills: exalted actually exchanged
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
     query_stats: tuple[str, ...] = ()      # each filter sent, with its floor
     unsearched: tuple[tuple[str, str], ...] = ()   # (mod text, why not)
     map_stats: tuple[str, ...] = ()        # waystone minimums the search sent
-    item_class_name: str = ""              # the game's own label, e.g. "Quarterstaves"
+    item_class_name: str = ""            # the game's own label, e.g. "Quarterstaves"
     category: str | None = None            # the trade category searched
     roll_pct: float | None = None
     best_roll_pct: float | None = None
@@ -136,22 +136,22 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
             # particular item scored, and why.
             # The score block below prints the same rows, so the verdict
             # only needs the number it failed against.
-            out.append(f"  verdict    JUNK  (score {priced.score}, needs 6)")
+            out.append(f"verdict    JUNK  (score {priced.score}, needs 6)")
         elif priced.tag == "unpriced:above-market":
-            out.append("  price      no comparable listing")
-            out.append("             nothing at least as good is listed — "
+            out.append("price      no comparable listing")
+            out.append("           nothing at least as good is listed — "
                          "price this one by hand, it may be the good one")
         else:
-            out.append(f"  price      not priced ({priced.tag or 'unknown'})")
+            out.append(f"price      not priced ({priced.tag or 'unknown'})")
     elif priced.source == "trade":
         # Put a weak sample FIRST and in capitals. Buried under the numbers it
         # reads as a footnote, and the number gets believed anyway.
         if priced.confidence == "very-thin":
-            out.append(f"  !! GUESS   only {priced.listings} comparable listing"
+            out.append(f"!! GUESS   only {priced.listings} comparable listing"
                          f"{'s' if priced.listings != 1 else ''} exist — "
                          "this is NOT a price")
         elif priced.confidence == "thin":
-            out.append(f"  !! THIN    only {priced.listings} comparable listings — "
+            out.append(f"!! THIN    only {priced.listings} comparable listings — "
                          "treat the number as a rough bound")
         low, p25, median = fmt_row(
             [priced.price_ex, priced.p25_ex, priced.median_ex], rates)
@@ -172,7 +172,7 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
             market += f"  ·  25th {colour}{p25}{RESET}"
         if priced.median_ex is not None:
             market += f"  ·  median {colour}{median}{RESET}"
-        out.append(f"  market     {market}")
+        out.append(f"market     {market}")
         # `listings` is only ever the cheapest handful — one fetch call is
         # enough to find the low end, so it reads 10 for anything with a real
         # market. The match count is the number that says whether the price is
@@ -186,19 +186,19 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         # a word — but not a row of its own.
         if priced.from_cache:
             found += ", cached"
-        out.append(f"             {found}")
+        out.append(f"           {found}")
         # Past the cap the trade engine truncates BEFORE sorting. Measured
         # live: tier 15+ alone floored at 3 ex while the strictly narrower
         # tier 15+, rarity 24+ floored at 1 — impossible in one market unless
         # each "cheapest" is the cheapest of a different sample. It is.
         if priced.matches >= SEARCH_CAP:
-            out.append("             every search past the cap reads a sample — "
+            out.append("           every search past the cap reads a sample — "
                          "the low is its floor, not the market's")
         if priced.rune_inflated:
-            out.append(f"             {priced.rune_inflated} skipped — met your "
+            out.append(f"           {priced.rune_inflated} skipped — met your "
                          "numbers only with their runes")
         if priced.relax_used:
-            out.append("             found only after widening, so these comparables "
+            out.append("           found only after widening, so these comparables "
                          "are weaker than your item — read the price as a floor")
         # Last, with the other caveats: the numbers are the answer, and this
         # says how to read them. Live, a ring whose comparables ran 1 / 20 /
@@ -206,7 +206,7 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         # totalled 4 ex for the session.
         if priced.skewed and priced.price_ex and priced.median_ex:
             times = priced.median_ex / priced.price_ex
-            out.append(f"             the low is {times:,.0f}x under the median — "
+            out.append(f"           the low is {times:,.0f}x under the median — "
                          "read the 25th as the price")
 
     elif priced.source == "exchange":
@@ -220,7 +220,7 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         # fact, so it is not repeated in words below.
         price = fmt_price(priced.price_ex, rates)
         colour = MARKET_DIV if price.endswith(" div") else MARKET
-        out.append(f"  exchange   {colour}{price}{RESET}"
+        out.append(f"exchange   {colour}{price}{RESET}"
                      + (f"   ({priced.offers:,} offers, {priced.stock:,} in stock)"
                         if priced.offers else ""))
         # The spread is the honest width of the answer. A price quoted without
@@ -228,30 +228,30 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         if priced.bid_ex is not None and priced.ask_ex is not None:
             bid, ask = fmt_row([priced.bid_ex, priced.ask_ex], rates)
             colour = MARKET_DIV if bid.endswith(" div") else MARKET
-            out.append(f"             bid {colour}{bid}{RESET}"
+            out.append(f"           bid {colour}{bid}{RESET}"
                        f"  ·  ask {colour}{ask}{RESET}")
         elif priced.ask_ex is not None and priced.offers:
-            out.append("             ask only — nobody is bidding for these")
+            out.append("           ask only — nobody is bidding for these")
         if priced.stock and priced.stock < 20:
-            out.append("             thin book — few units are actually offered")
+            out.append("           thin book — few units are actually offered")
         # A fills price rests on completed trades, not listings — the one
         # measurement bait cannot touch — and the row says which it is.
         if priced.quoted == "fills":
-            out.append(f"             the game's own exchange — "
+            out.append(f"           the game's own exchange — "
                          f"{priced.traded_ex:,.0f} ex of it traded in the "
                          "last snapshot")
         # Rerouted here from a search that hit the 10,000 cap, where the sort
         # reads only a kept sample. Said out loud, or the exchange row makes
         # the item look like it was never searchable at all.
         if priced.tag == "capped-search":
-            out.append("             the item search capped at 10,000 and reads "
+            out.append("           the item search capped at 10,000 and reads "
                          "a sample — this is the bulk book instead")
 
     else:
-        out.append(f"  index      {fmt_price(priced.price_ex, rates)}"
+        out.append(f"index      {fmt_price(priced.price_ex, rates)}"
                      + (f"   ({priced.quantity:,} listed)" if priced.quantity else ""))
         if priced.quantity and priced.quantity < 20:
-            out.append("             thin market — index price is weak evidence")
+            out.append("           thin market — index price is weak evidence")
         if priced.roll_pct is not None:
             # The mean alone reads as a verdict on the item, but escalation
             # turns on the BEST roll — a copy with one near-perfect
@@ -262,10 +262,10 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
                     else "poorly rolled" if priced.roll_pct <= 0.25 else "average roll")
             if best is not None and best >= 0.75 and priced.roll_pct < 0.75:
                 band = f"average overall, best {best * 100:.0f}th"
-            out.append(f"  rolls      {priced.roll_pct * 100:.0f}th percentile "
+            out.append(f"rolls      {priced.roll_pct * 100:.0f}th percentile "
                          f"({band})")
             if priced.roll_pct >= 0.75:
-                out.append("             the index price is a floor across all "
+                out.append("           the index price is a floor across all "
                              "copies; yours is better than most")
 
     return out
@@ -275,7 +275,7 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
     lines = [
         f"{display_name(item)}"
         + (f"  [{item.get('baseType')}]" if item.get("name") else ""),
-        f"  type       {priced.item_class_name or priced.item_class}"
+        f"type       {priced.item_class_name or priced.item_class}"
         + (f" → {priced.category}" if priced.category else "")
         + (f"   ilvl {item['ilvl']}" if item.get("ilvl") else ""),
     ]
@@ -285,35 +285,36 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
         # listing them again here would say the same thing twice. The query
         # lines are different information: the floors it asked at, and the
         # pseudo sums, which appear nowhere else.
-        lines.append(f"  searched   as {priced.searched_group}")
+        lines.append(f"searched   as {priced.searched_group}")
         for line in priced.query_stats:
-            lines.append(f"             {DIM}{line}{RESET}")
+            lines.append(f"           {BLUE}{line}{RESET}")
     elif priced.query_stats:
         # No dominant buyer, no "as" — but the query still went out and its
         # floors still need stating.
         head, *rest = priced.query_stats
-        lines.append(f"  searched   {DIM}{head}{RESET}")
-        lines += [f"             {DIM}{line}{RESET}" for line in rest]
+        lines.append(f"searched   {BLUE}{head}{RESET}")
+        lines += [f"           {BLUE}{line}{RESET}" for line in rest]
     if priced.map_stats:
         # Spelled out in full, unlike the mods above: a waystone's stats are
         # properties, not mods, so they appear nowhere in the breakdown and
         # this line is their only mention.
-        lines.append("  searched   " + "  ·  ".join(priced.map_stats))
+        lines.append("searched   " + "  ·  ".join(priced.map_stats))
     if priced.unsearched:
         # The query lines above say what the price rests on; this is the
         # rest of the item — dropped by widening, or never searchable — so
         # the reader knows what the number does NOT account for.
         width = max(len(text) for text, _ in priced.unsearched)
-        rows = [f"{text:<{width}}  ({why})" for text, why in priced.unsearched]
-        lines.append(f"  unsearched {rows[0]}")
-        lines += [f"             {row}" for row in rows[1:]]
+        rows = [f"{DIM}{text:<{width}}  ({why}){RESET}"
+                for text, why in priced.unsearched]
+        lines.append(f"unsearched {rows[0]}")
+        lines += [f"           {row}" for row in rows[1:]]
     if priced.breakdown:
         if priced.coherence_group and priced.coherence_count > 1:
             gain = f"  +{priced.coherence_bonus}" if priced.coherence_bonus else ""
-            lines.append(f"  coherence  {priced.coherence_count} mods cluster on "
+            lines.append(f"coherence  {priced.coherence_count} mods cluster on "
                          f"{priced.coherence_group}{gain}")
         else:
-            lines.append("  coherence  none — the mods serve different builds")
+            lines.append("coherence  none — the mods serve different builds")
 
     # Last: the rows above explain how the number was arrived at, and the
     # number is what you read off the end.

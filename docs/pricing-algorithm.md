@@ -304,26 +304,26 @@ call.
 ## Reading the output
 
 <pre>Forgotten Warden  [Primal Markings]
-  type       Body Armours → armour.chest   ilvl 84
-  searched   Grants Skill: Level 20 Spirit Vessel
-             total dexterity ≥ 20
-             Companions have #% increased maximum Life ≥ 30
-  unsearched 40% increased Thorns damage                                                             (unsearchable)
-             +76 to Deflection Rating per 50 missing Energy Shield                                   (unsearchable)
-             14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you  (unsearchable)
-  coherence  none — the mods serve different builds
-  market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>899 ex</b>
-             cheapest 10 of 1,155 listings, exact</pre>
+type       Body Armours → armour.chest   ilvl 84
+searched   <ins>Grants Skill: Level 20 Spirit Vessel</ins>
+           <ins>total dexterity ≥ 20</ins>
+           <ins>Companions have #% increased maximum Life ≥ 30</ins>
+unsearched 40% increased Thorns damage                                                             (unsearchable)
+           +76 to Deflection Rating per 50 missing Energy Shield                                   (unsearchable)
+           14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you  (unsearchable)
+coherence  none — the mods serve different builds
+market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>899 ex</b>
+           cheapest 10 of 1,154 listings, exact</pre>
 
-The dim lines under `searched` are the query itself — each stat filter
+The blue lines under `searched` (underlined here) are the query itself — each stat filter
 the priced rung sent, with the floor it asked at: the pseudo sums
 (`total dexterity ≥ 20` is a +24 roll at the floor of its range) and
 the skill at its own level. On an item with a dominant archetype the
 row reads `searched as minion` first — the buyer the whole widening
 ladder is ordered around, named from the item's own mods so it holds
 at every rung; this chest serves no single buyer, so the query stands
-alone. `unsearched` is the rest of the item, the mods the price does
-NOT account for: `(widened away)` means rung 0 asked for it and the
+alone. `unsearched`, dimmed grey in the terminal, is the rest of the
+item — the mods the price does NOT account for: `(widened away)` means rung 0 asked for it and the
 rung that priced had dropped it, `(unsearchable)` means no filter
 exists for it at all. The market prices are lit amber (bold here), and
 the market row is last because the rows above it explain how the

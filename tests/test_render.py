@@ -53,7 +53,8 @@ def test_the_score_section_gives_way_to_unsearched_mods():
     text = render(ITEM, priced, RATES)
     assert "score      4" not in text
     assert "+145 to Evasion Rating" not in text, "breakdown rows are gone"
-    assert "unsearched +8% to Fire Resistance" in text
+    assert "+8% to Fire Resistance" in text
+    assert any(l.startswith("unsearched") for l in text.splitlines())
     assert "(widened away)" in text
 
 
@@ -78,8 +79,9 @@ def test_the_market_block_is_the_last_thing_rendered():
     import re
 
     body = render(ITEM, priced, RATES).split("\n")
-    # Labelled rows open a section; everything else is that section's detail.
-    labels = [re.match(r"  (\w+)", l).group(1) for l in body if re.match(r"  \w", l)]
+    # Labelled rows open a section flush left; indented lines are detail.
+    labels = [re.match(r"(\w+)", l).group(1) for l in body[1:]
+              if re.match(r"\w", l)]
     assert labels[-1] == "market", labels
     assert {"coherence", "searched"} <= set(labels[:-1])
     assert "score" not in labels
@@ -211,7 +213,7 @@ def test_only_the_amounts_are_lit():
     assert row.count(f"{report.MARKET}12 ex{report.RESET}") == 1
     assert f"{report.MARKET}18 ex{report.RESET}" in row
     assert f"{report.MARKET}20 ex{report.RESET}" in row
-    assert "  market     low " in row, "the labels carry no escape of their own"
+    assert "market     low " in row, "the labels carry no escape of their own"
 
 
 def _traded(**kwargs):
@@ -240,7 +242,7 @@ def test_the_dump_note_comes_after_the_market_row():
     """Above the row it separated the reader from the prices; the numbers are
     the answer and the note is how to read them."""
     lines = render(ITEM, _traded(skewed=True), RATES).splitlines()
-    row = next(i for i, l in enumerate(lines) if l.startswith("  market "))
+    row = next(i for i, l in enumerate(lines) if l.startswith("market "))
     note = next(i for i, l in enumerate(lines) if "read the 25th" in l)
     assert note > row
 
@@ -308,3 +310,22 @@ def test_the_query_renders_without_an_archetype_too():
     assert "searched   " in text
     assert "Grants Skill: Level 20 Spirit Vessel" in text
     assert "Companions have #% increased maximum Life ≥ 40" in text
+
+
+def test_sections_flush_left_searched_blue_unsearched_dim():
+    from sox.report import BLUE, DIM
+
+    priced = PricedItem(
+        name="Doom Shield", item_class=ItemClass.GEAR, price_ex=12.5,
+        source="trade", tag="relaxed:1", reason="score 4", score=4,
+        breakdown=ROWS, listings=9, median_ex=12.5, p25_ex=12.5,
+        searched_group="minion", searched_stats=("x",),
+        query_stats=("Minions deal #% increased Damage ≥ 20",),
+        unsearched=(("+8% to Fire Resistance", "widened away"),),
+    )
+    body = render(ITEM, priced, RATES).splitlines()
+    assert body[1].startswith("type"), "section titles start at column 0"
+    assert any(l.startswith("searched") for l in body)
+    assert any(l.startswith("unsearched") for l in body)
+    assert f"{BLUE}Minions deal #% increased Damage ≥ 20" in "\n".join(body)
+    assert f"{DIM}+8% to Fire Resistance" in "\n".join(body)
