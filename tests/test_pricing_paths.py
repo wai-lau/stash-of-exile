@@ -702,14 +702,15 @@ def test_an_implicit_is_searched_under_the_implicit_group():
         "and not under the explicit group, which would match nothing"
 
 
-def test_forty_allowlisted_mods_can_be_rolled_as_an_implicit():
+def test_the_allowlisted_mods_with_an_implicit_twin_are_exactly_known():
     """The map has to be exact: only 178 of the 3031 explicit stats have an
     implicit twin, so an unchecked prefix swap would send filters that match
-    no listing."""
+    no listing. Forty, and flat Energy Shield since a Lunar Amulet's implicit
+    went unsearched."""
     from sox.valuation.allowlists import load_mods
 
     with_twin = [m for m in load_mods() if m.implicit_ids]
-    assert len(with_twin) == 40
+    assert len(with_twin) == 41
     for entry in with_twin:
         assert all(i.startswith("implicit.") for i in entry.implicit_ids)
         # Same numeric stat, different table.
@@ -1546,6 +1547,7 @@ def test_the_query_names_its_rarity_pin():
     line = explain_query(oaksworn, MODS, NOTABLES)[0]
     assert line == "Oaksworn · unique · Sigil Crest Shield"
 
+
 def test_a_resistance_penalty_is_not_summed_as_resistance():
     """Live, a Rondel of Fragility walked every rung to the bare-name search.
 
@@ -1575,3 +1577,27 @@ def test_a_resistance_penalty_is_not_summed_as_resistance():
     assert pseudo_totals(item, MODS) == []
     assert "#% to all Elemental Resistances ≥ -30" in explain_query(item, MODS, NOTABLES)
 
+
+def test_flat_energy_shield_is_searched_where_it_is_global():
+    """On an amulet "+30 to maximum Energy Shield" is a global stat with no
+    equipment total to ride, so unlisted it could not be searched at all: a
+    Rondel of Fragility reported its implicit as unsearchable. On armour the
+    same wording is local and already inside the ES total, so it must stay
+    out of the stat filters there or it is asked for twice.
+    """
+    from sox.valuation.query import explain_query
+
+    item = load("RondelOfFragility")
+    assert "# to maximum Energy Shield ≥ 20" in explain_query(item, MODS, NOTABLES)
+    query = build_query(item, category_for(item), MODS, NOTABLES)
+    ids = [f["id"] for f in query["query"]["stats"][0]["filters"]]
+    assert "implicit.stat_3489782002" in ids, "the implicit twin, at its floor"
+    unsearched = candidates.unsearched_rows(item, MODS, NOTABLES)
+    assert not any("Energy Shield" in text for text, _why in unsearched)
+
+    chest = load("SpiritLifeChest")
+    query = build_query(chest, category_for(chest), MODS, NOTABLES)
+    ids = [f.get("id", "") for f in query["query"]["stats"][0]["filters"]]
+    assert not any(i.endswith(("3489782002", "4052037485")) for i in ids), \
+        "on armour the ES total already carries it"
+    assert "es" in query["query"]["filters"]["equipment_filters"]["filters"]

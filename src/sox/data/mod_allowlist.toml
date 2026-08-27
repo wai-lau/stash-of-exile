@@ -35,6 +35,16 @@ weight = 2
 implicit_ids = ["implicit.stat_983749596"]
 tags = ["defence", "life"]
 
+[[category.mod]]
+ids = ["explicit.stat_3489782002"]
+slug = "to_maximum_energy_shield"
+text = "# to maximum Energy Shield"
+weight = 1
+local_ids = ["explicit.stat_4052037485"]
+implicit_ids = ["implicit.stat_3489782002"]
+tags = ["defence", "es"]
+note = "global on jewellery, local on armour"
+
 [[category]]
 name = "deflection"
 

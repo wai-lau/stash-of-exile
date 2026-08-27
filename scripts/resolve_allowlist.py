@@ -26,11 +26,20 @@ ALLOWLIST = OrderedDict(
             [
                 (3, "# to maximum Life", "universal after the 0.5 ES nerfs"),
                 (2, "#% increased maximum Life", None),
-                # Local defences are NOT listed here. Flat and percent Armour,
-                # Evasion and Energy Shield are already folded into the item's
-                # displayed total, and that total is searched through
-                # equipment_filters instead. Listing them as stats too would
-                # constrain the same thing twice, and on the wrong stat id.
+                # Local defences are NOT listed here. Flat and percent Armour
+                # and Evasion are already folded into the item's displayed
+                # total, and that total is searched through equipment_filters
+                # instead. Listing them as stats too would constrain the same
+                # thing twice, and on the wrong stat id.
+                #
+                # Flat Energy Shield is the exception, because it is not only
+                # local. On an amulet — a Lunar Amulet's implicit, a rare's
+                # prefix — it is a GLOBAL stat with no total to ride, and
+                # unlisted it could not be searched at all: a Rondel of
+                # Fragility reported its implicit as unsearchable. On armour
+                # the query builder already folds it into the ES total, and
+                # the local twin below resolves the id for the score.
+                (1, "# to maximum Energy Shield", "global on jewellery, local on armour"),
             ],
         ),
         (

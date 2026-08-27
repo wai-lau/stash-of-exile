@@ -276,18 +276,30 @@ def test_coherence_reports_but_does_not_gate_the_search():
 
 
 def test_local_defences_are_searched_as_equipment_filters():
-    """Flat and percent Armour/Evasion/ES are not stats here.
+    """Flat and percent Armour/Evasion/ES are not stats on armour.
 
     The displayed total already contains them, so the total is what gets
     searched. Listing them as stats too would constrain the same thing twice,
     and on the global stat id, which matches nothing on a helmet.
+
+    Flat Energy Shield IS listed — on an amulet it is global and has no total
+    to ride — so on armour it has to be kept out of the stats by the query
+    builder rather than by the allowlist.
     """
     from sox.valuation.mods import normalize_mod
     from sox.valuation.query import build_query, category_for
 
-    for text in ("# to maximum Energy Shield", "#% increased Evasion Rating",
-                 "#% increased Armour"):
+    for text in ("#% increased Evasion Rating", "#% increased Armour"):
         assert normalize_mod(text) not in MODS, f"{text} must not be a stat"
+
+    es_helmet = itemtext.parse(
+        "Item Class: Helmets\nRarity: Rare\nDragon Visor\nVile Crown\n"
+        "--------\nEnergy Shield: 120\n--------\nItem Level: 81\n--------\n"
+        "{ Prefix Modifier }\n+40(30-50) to maximum Energy Shield\n"
+    )
+    query = build_query(es_helmet, category_for(es_helmet), MODS, NOTABLES)
+    assert "es" in query["query"]["filters"]["equipment_filters"]["filters"]
+    assert query["query"]["stats"][0]["filters"] == [], "the total carries it"
 
     helmet = itemtext.parse(
         "Item Class: Helmets\nRarity: Rare\nDragon Visor\nFreebooter Cap\n"
