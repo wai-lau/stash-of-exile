@@ -29,6 +29,29 @@ def test_parse_rolls_extracts_actual_and_range():
         [(5.0, 1.0, 5.0), (82.0, 62.0, 89.0)]
 
 
+def test_parse_rolls_keeps_the_sign_of_a_negative_roll():
+    """The game prints a negative roll's range unsigned: "-30(30-30)%".
+
+    The sign is on the roll and nowhere else, so read at face value the
+    floor sat ABOVE the roll, and a resistance penalty was summed as if it
+    were resistance.
+    """
+    assert parse_rolls("-30(30-30)% to all Elemental Resistances") == \
+        [(-30.0, -30.0, -30.0)]
+    assert parse_rolls("-25(20-40)% to all Elemental Resistances") == \
+        [(-25.0, -40.0, -20.0)]
+    # A range that does carry its signs is taken as written, not flipped twice.
+    assert parse_rolls("-25(-40--20)% to all Elemental Resistances") == \
+        [(-25.0, -40.0, -20.0)]
+
+
+def test_a_negative_roll_parses_to_a_negative_range():
+    item = load("RondelOfFragility")
+    assert item["modRanges"]["-30% to all Elemental Resistances"] == \
+        (-30.0, -30.0, -30.0)
+    assert "-30% to all Elemental Resistances" in item["explicitMods"]
+
+
 def test_rare_item_header():
     item = load("RareItem")
     assert item["itemClass"] == "Bows"

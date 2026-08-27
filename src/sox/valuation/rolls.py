@@ -10,7 +10,9 @@ from __future__ import annotations
 import re
 
 RANGE = re.compile(r"\((\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\)")
-NUMBER = re.compile(r"(\d+(?:\.\d+)?)")
+# Signed. "-30% to all Elemental Resistances" read as 30 is the opposite
+# claim about the item, and a search built on it asks for what no copy has.
+NUMBER = re.compile(r"(-?\d+(?:\.\d+)?)")
 
 MOD_KEYS = ("explicit_mods", "implicit_mods")
 

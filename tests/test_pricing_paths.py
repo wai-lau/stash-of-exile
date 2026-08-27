@@ -1545,3 +1545,33 @@ def test_the_query_names_its_rarity_pin():
     )
     line = explain_query(oaksworn, MODS, NOTABLES)[0]
     assert line == "Oaksworn · unique · Sigil Crest Shield"
+
+def test_a_resistance_penalty_is_not_summed_as_resistance():
+    """Live, a Rondel of Fragility walked every rung to the bare-name search.
+
+    Its "-30(30-30)% to all Elemental Resistances" was read with the floor at
+    +30, so the pseudo total asked for 90 resistance from an item defined by
+    LOSING 30. Totals lead the ladder, so the impossible filter survived to
+    the last mod rung and all of them returned nothing. The fixture is
+    reconstructed from the item's five live query hashes, every one of which
+    it reproduces.
+    """
+    import re
+
+    from sox.valuation.query import explain_query, pseudo_totals
+    from sox.valuation.rolls import parse_values
+
+    item = load("RondelOfFragility")
+    assert pseudo_totals(item, MODS) == [], "a penalty is not a total"
+    lines = explain_query(item, MODS, NOTABLES)
+    assert "#% to all Elemental Resistances ≥ -30" in lines
+    assert not any(line.startswith("total elemental") for line in lines)
+
+    # Without advanced descriptions the value itself has to carry the sign.
+    plain = re.sub(r"\((-?\d+)-(-?\d+)\)", "",
+                   (FIXTURES / "RondelOfFragility.txt").read_text())
+    assert parse_values("-30% to all Elemental Resistances") == [-30.0]
+    item = itemtext.parse(plain)
+    assert pseudo_totals(item, MODS) == []
+    assert "#% to all Elemental Resistances ≥ -30" in explain_query(item, MODS, NOTABLES)
+

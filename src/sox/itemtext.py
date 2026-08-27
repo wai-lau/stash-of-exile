@@ -158,8 +158,22 @@ def strip_rolls(text: str) -> str:
 
 
 def parse_rolls(text: str) -> list[tuple[float, float, float]]:
-    """Every (actual, min, max) triple in an advanced mod line."""
-    return [(float(a), float(lo), float(hi)) for a, lo, hi in ROLL.findall(text)]
+    """Every (actual, min, max) triple in an advanced mod line.
+
+    A negative roll prints its range UNSIGNED — "-30(30-30)% to all
+    Elemental Resistances" — with the sign on the roll and nowhere else.
+    Read at face value the floor sat above the roll, and the pseudo total
+    then asked a Rondel of Fragility for 90 resistance it exists to lose:
+    that filter led every rung, so each returned nothing and the amulet was
+    priced on its name alone. The sign is the roll's, so it is the range's.
+    """
+    out = []
+    for a, lo, hi in ROLL.findall(text):
+        actual, lo, hi = float(a), float(lo), float(hi)
+        if actual < 0 and lo >= 0 and hi >= 0:
+            lo, hi = -hi, -lo
+        out.append((actual, lo, hi))
+    return out
 
 
 def parse(text: str) -> dict:

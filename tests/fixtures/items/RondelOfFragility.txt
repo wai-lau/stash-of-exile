@@ -1,0 +1,23 @@
+Item Class: Amulets
+Rarity: Unique
+Rondel of Fragility
+Lunar Amulet
+--------
+Requires: Level 14
+--------
+Item Level: 76
+--------
+{ Implicit Modifier — Defences }
++30(20-30) to maximum Energy Shield
+--------
+{ Unique Modifier — Speed }
+24(15-30)% increased Skill Speed
+{ Unique Modifier — Critical }
+22(20-30)% increased Critical Hit Chance
+{ Unique Modifier — Elemental, Fire, Cold, Lightning, Resistance }
+-30(30-30)% to all Elemental Resistances
+{ Unique Modifier — Damage }
+31(30-50)% increased Damage
+--------
+Fanatics are the most dangerous enemy,
+for they care not for their own survival.

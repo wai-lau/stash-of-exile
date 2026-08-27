@@ -57,7 +57,10 @@ requirements, and flags like `Corrupted` and `Twice Corrupted`.
 
 With *Advanced Item Descriptions* on, each mod carries its roll and range
 inline — `+24(20-30) to Dexterity`. That range drives roll quality, the
-implicit floor, and the pseudo totals.
+implicit floor, and the pseudo totals. A negative roll prints its range
+unsigned — `-30(30-30)% to all Elemental Resistances` — and the sign is
+restored on read: taken as written, the floor of a penalty sat above the
+roll and was summed into a resistance total no copy could meet.
 
 ### 02 — Route: index or search
 
