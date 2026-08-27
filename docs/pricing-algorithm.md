@@ -188,7 +188,12 @@ gets a query built, below it the tool spends nothing.
 Coherence is separate from the score — it is the clustering of mods onto
 one buyer archetype, and it decides *which stats get searched* in the
 next stage. The item's own defence type votes: an Energy Shield chest is
-an ES item before a mod is read.
+an ES item before a mod is read. Generic value never elects the buyer:
+a resistance mod's "elemental" tag once let three res rolls crown an
+elemental buyer on a minion ring — widening then dropped the minion mod
+its 5-49 div comparables shared — so a defence-tagged mod votes only
+within the defence family, and the umbrella groups every build pays into
+(defence, resistance, life) are not electable at all.
 
 | Archetype | Votes | |
 |---|---|---|
@@ -242,8 +247,12 @@ notables* (an anoint can be re-anointed, so it is a mod, not identity),
 *generic value* (defence totals and mods every buyer pays for), and
 *unrelated* last — a mod serving some other buyer, like attack damage on
 a minion ring, constrains the comparables while describing nobody who
-would buy this item, and is the first thing given up. Within a tier,
-weight leads, then roll quality, then the game's own mod tier.
+would buy this item, and is the first thing given up. Within a tier a
+desecrated mod leads whatever the weights say — it was bone-crafted onto
+the item on purpose, the strongest buyer signal the item carries: on a
+minion ring the desecrated minion mod is what its 5-49 div comparables
+shared, while the weight table preferred the fire roll beside it. Then
+weight, then roll quality, then the game's own mod tier.
 
 | Rung | Stats kept | What remains |
 |---|---|---|
@@ -305,7 +314,8 @@ call.
 
 <pre>Forgotten Warden  [Primal Markings]
   type       Body Armours → armour.chest   ilvl 84
-  searched   <ins>Grants Skill: Level 20 Spirit Vessel</ins>
+  searched   <ins>Forgotten Warden · unique · Primal Markings</ins>
+             <ins>Grants Skill: Level 20 Spirit Vessel</ins>
              <ins>total dexterity ≥ 20</ins>
              <ins>Companions have #% increased maximum Life ≥ 30</ins>
   unsearched 40% increased Thorns damage                                                             (unsearchable)
@@ -313,11 +323,14 @@ call.
              14% of Damage from Deflected Hits is taken from Damageable Companion's Life before you  (unsearchable)
   coherence  none — the mods serve different builds
   market     low <b>360 ex</b>  ·  25th <b>719 ex</b>  ·  median <b>1,079 ex</b>
-             cheapest 19 of 1,154 listings, exact
+             cheapest 19 of 1,153 listings, exact
              1 skipped — met your numbers only with their runes</pre>
 
-The blue lines under `searched` (underlined here) are the query itself — each stat filter
-the priced rung sent, with the floor it asked at: the pseudo sums
+The blue lines under `searched` (underlined here) are the query itself.
+The first names the market the search is scoped to — the rarity, and
+the name and base when they pin, so a unique searched by name says so:
+`Oaksworn · unique · Sigil Crest Shield`. Then each stat filter the
+priced rung sent, with the floor it asked at: the pseudo sums
 (`total dexterity ≥ 20` is a +24 roll at the floor of its range) and
 the skill at its own level. On an item with a dominant archetype the
 row reads `searched as minion` first — the buyer the whole widening

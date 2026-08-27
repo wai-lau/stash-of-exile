@@ -1259,10 +1259,10 @@ def test_a_mod_folded_into_a_pseudo_total_says_so():
     """
     item = load("SpiritLifeChest")
     tags = {text: tag for text, _weight, tag in candidates.score_rows(item, MODS, BASES)}
-    assert tags["+121 to maximum Life"] == "defence, pseudo"
-    assert tags["+24% to Cold Resistance"] == "defence, pseudo"
-    # The archetype stays: the total serves the same buyer the mod does, and
-    # the coherence line needs its two defence rows to point at.
+    # Generic value no longer elects the buyer, so "defence" is not the
+    # item's archetype — but the fold into the pseudo total still shows.
+    assert tags["+121 to maximum Life"] == "pseudo"
+    assert tags["+24% to Cold Resistance"] == "pseudo"
     assert tags["+61 to Spirit"] == ""
     # An equipment filter still substitutes rather than adds — the mod's own
     # identity is dissolved into the item's displayed total.
@@ -1511,3 +1511,37 @@ def test_an_unset_rings_skill_slot_implicit_is_searched():
                        relax=len(RELAX_STEPS) - 1)
     assert slot in bare["query"]["stats"][0]["filters"], \
         "never priced as a bare ring"
+
+
+def test_generic_value_does_not_elect_the_buyer():
+    """Three resistance rolls out-voted the ring's minion mod: their
+    "elemental" tag crowned an elemental buyer, the minion mod became
+    unrelated, and widening dropped the one mod the market prices the ring
+    on. Generic value is paid by every buyer — it cannot say who the buyer
+    IS. Measured live: the comparables carrying the minion mod listed at
+    5-49 div while the res-and-fire search floored at 75 ex."""
+    from sox.valuation.mods import dominant_archetype, matched
+    from sox.valuation.query import searchable_mods
+
+    ring = load("UnsetRing")
+    group, _ = dominant_archetype(matched(searchable_mods(ring), MODS))
+    assert group is None, "fire 1, minion 1 — the res votes must not count"
+
+    _, searched = explain_selection(ring, MODS, NOTABLES, relax=2)
+    assert "Minions deal #% increased Damage if you've Hit Recently" in searched
+
+
+def test_the_query_names_its_rarity_pin():
+    """The Oaksworn question: a unique searched by name printed nothing that
+    said so, and the reader had to ask what market 603 listings were."""
+    from sox.valuation.query import explain_query
+
+    assert explain_query(load("MinionRing"), MODS, NOTABLES)[0] == "rare"
+
+    oaksworn = itemtext.parse(
+        "Item Class: Shields\nRarity: Unique\nOaksworn\nSigil Crest Shield\n"
+        "--------\nArmour: 379\n--------\nItem Level: 80\n--------\n"
+        "{ Unique Modifier }\n+17(13-20)% to Chaos Resistance\n"
+    )
+    line = explain_query(oaksworn, MODS, NOTABLES)[0]
+    assert line == "Oaksworn · unique · Sigil Crest Shield"

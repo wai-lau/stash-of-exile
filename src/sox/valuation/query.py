@@ -1152,6 +1152,7 @@ def _build(
         texts={id(e): t for _, t, e in mod_items},
         rolls=item.get("modRanges") or {},
         seed=defence_seed(item),
+        desecrated=set(item.get("desecratedMods") or []),
     )
     by_entry = {id(e): t for _, t, e in mod_items}
 
@@ -1305,6 +1306,23 @@ def _build(
     # The skill line already carries its level in its own wording.
     shown = granted_skill_text(item) + [_query_line(f, labels)
                                         for f, labels in kept]
+    # The market the search is scoped to leads: the rarity always pins, and
+    # the name and base pin for the rarities bought as one thing. A unique
+    # searched by name printed nothing that said so, and 603 Oaksworn
+    # listings read as an anonymous shield market.
+    pin = []
+    if item.get("name") and rarity_of(item) is Rarity.UNIQUE:
+        pin.append(item["name"])
+    if classify(item) is ItemClass.UNIQUE:
+        pin.append("unique")
+    elif rarity_of(item) is not None:
+        pin.append(rarity_of(item).value)
+    if rarity_of(item) in (Rarity.NORMAL, Rarity.MAGIC, Rarity.UNIQUE):
+        base = base_type(item)
+        if base:
+            pin.append(base)
+    if pin:
+        shown = [" · ".join(pin)] + shown
 
     # Named from the ITEM's mods, not from what a rung kept. The archetype is
     # the judge that ordered the whole ladder — cohering mods survive, the
@@ -1318,10 +1336,10 @@ def _build(
                                seed=defence_seed(item))[0] or ""
     if notable_items:
         group = "notable"
-    elif flag_items and not group:
+    elif flag_items and not group and rarity_of(item) is Rarity.UNIQUE:
         # A unique tablet IS its flag. A rare carrying an implicit flag —
-        # an Unset Ring's skill slot — is still bought on its mods, and its
-        # archetype keeps the name.
+        # an Unset Ring's skill slot — is still bought on its mods, and
+        # keeps its archetype name or none at all.
         group = "variant"
 
     query: dict = {

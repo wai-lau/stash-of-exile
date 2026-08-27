@@ -32,6 +32,14 @@ MAX_COHERENCE_BONUS = 3
 # toward both. Universal minion mods count toward every subtype.
 MINION_SUBTYPES = ("attack", "caster", "companion")
 
+# The defence family a generic-value mod may still vote inside, and the
+# umbrella groups within it that no item is ever said to be FOR — life and
+# resistances are bought by every build, so a cluster of them describes no
+# buyer. The specific defences stay electable: an ES chest with ES mods is
+# an ES item.
+DEFENCE_FAMILY = {"defence", "resistance", "life", "es", "armour", "evasion"}
+GENERIC_GROUPS = {"defence", "resistance", "life"}
+
 
 def strip_annotation(text: str) -> str:
     """The mod without the game's "Unscalable Value" tag, case intact.
@@ -146,9 +154,23 @@ def dominant_archetype(
     counts: dict[str, int] = dict(seed or {})
     weights: dict[str, int] = {}
     for entry in entries:
-        for key in coherence_keys(entry):
+        keys = coherence_keys(entry)
+        # Generic value cannot say who the buyer IS. A resistance mod's
+        # "elemental" tag let three res rolls crown an elemental buyer on a
+        # minion ring, and widening then dropped the minion mod the market
+        # prices the ring on. A defence-tagged mod votes only within the
+        # defence family — its specific defence (es, armour, evasion) can
+        # still cluster with the base it serves.
+        if "defence" in keys:
+            keys = tuple(k for k in keys if k in DEFENCE_FAMILY)
+        for key in keys:
             counts[key] = counts.get(key, 0) + 1
             weights[key] = weights.get(key, 0) + entry.weight
+    # The umbrella groups every build pays into are not electable, same
+    # reasoning as defence_seed never seeding "defence": the catch-all would
+    # outvote the specific archetype on any well-rolled item.
+    for generic in GENERIC_GROUPS:
+        counts.pop(generic, None)
     if not counts:
         return None, 0
     # Shortest key first among equals, so a tie inside one family is reported
@@ -203,6 +225,7 @@ def select_synergistic(
     texts: dict[int, str] | None = None,
     rolls: dict[str, tuple[float, float, float]] | None = None,
     seed: dict[str, int] | None = None,
+    desecrated: set[str] | None = None,
 ) -> tuple[list[ModEntry], str]:
     """Order the mods for the query: cohering, then generic, then unrelated.
 
@@ -212,14 +235,18 @@ def select_synergistic(
     serve one buyer are the ones that survive — and a mod serving a DIFFERENT
     buyer goes behind the generic value everyone pays for.
 
-    Within each class, weight leads, then roll quality, and tier breaks ties.
+    Within each class a desecrated mod leads whatever the weights say — it
+    was bone-crafted onto the item on purpose, the strongest buyer signal
+    the item carries (a minion ring's desecrated minion mod is what its
+    5-49 div comparables share, while the weight table preferred the fire
+    roll beside it). Then weight, then roll quality, and tier breaks ties.
     """
     if not entries:
         return [], ""
 
     key, _ = dominant_archetype(entries, seed=seed)
 
-    def rank(entry: ModEntry) -> tuple[int, float, int]:
+    def rank(entry: ModEntry) -> tuple[int, int, float, int]:
         text = (texts or {}).get(id(entry))
         tier = (tiers or {}).get(text or "", 99)
         # Roll quality decides between mods of equal tier. A weak roll is the
@@ -236,7 +263,8 @@ def select_synergistic(
         # rolled. Roll quality then separates mods of equal weight — "Adds 6
         # to 102 Lightning" at the floor of its range says less about the item
         # than a strong roll of the same weight — and tier breaks what is left.
-        return (-entry.weight, -percentile, tier)
+        chosen = 1 if text in (desecrated or set()) else 0
+        return (-chosen, -entry.weight, -percentile, tier)
 
     ordered = sorted(entries, key=lambda e: (survival_class(e, key), *rank(e)))
     return ordered[:limit], key or ""

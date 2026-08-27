@@ -18,7 +18,7 @@ Grants 1 additional Skill Slot (implicit)
 +34(31-35)% to Cold Resistance
 { Suffix Modifier "of Insulation" (Tier: 5) }
 +35(31-35)% to Lightning Resistance
-{ Suffix Modifier "of Fury" (Tier: 2) }
-Minions deal 15(10-19)% increased Damage if you've Hit Recently
+{ Desecrated Suffix Modifier "of Fury" (Tier: 2) }
+Minions deal 15(10-19)% increased Damage if you've Hit Recently (desecrated)
 --------
 Corrupted
