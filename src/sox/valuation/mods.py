@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 
 from sox.valuation.allowlists import ModEntry
+from sox.valuation.tagging import minion_subtype, subject_for, tags_for
 
 _NUMBER = re.compile(r"[+-]?\d+(?:\.\d+)?")
 
@@ -83,12 +84,14 @@ def unlisted_mods(stats: dict, listed: list[ModEntry]) -> list[ModEntry]:
     Shield" printed as (unsearchable) on a rare amulet. GGG's own table
     knows every one of them.
 
-    Weight 0 means no score, no coherence vote, and last in line: it is in
-    the first rung and the first thing widening drops. The rules are the
-    resolver's — explicit ids only (the same wording under fractured,
-    crafted or desecrated matches only items carrying it that way), every
-    id a wording has (an OR group, never a guess), the (Local) twin and the
-    implicit twin alongside.
+    Weight 0 means no score. It is tagged by the same rules as the allowlist
+    (sox.valuation.tagging), so it coheres with the weighted mods serving
+    its buyer and is widened away by class first, weight second — the hybrid
+    defence roll above outlived the rarity roll once it could say it was a
+    defence. The rules are the resolver's — explicit ids only (the same
+    wording under fractured, crafted or desecrated matches only items
+    carrying it that way), every id a wording has (an OR group, never a
+    guess), the (Local) twin and the implicit twin alongside.
     """
     known = {normalize_mod(e.text) for e in listed}
     groups = {g.get("id"): g.get("entries") or [] for g in stats.get("result") or []}
@@ -110,14 +113,20 @@ def unlisted_mods(stats: dict, listed: list[ModEntry]) -> list[ModEntry]:
             continue
         twins = tuple(implicit[n] for n in (i.split(".", 1)[-1] for i in ids)
                       if n in implicit)
+        # Tagged exactly as the allowlist is, so it coheres — and survives
+        # widening — like any weighted mod serving the same buyer.
+        subject = subject_for(text)
         out.append(ModEntry(
             ids=ids,
             slug=re.sub(r"[^a-z0-9]+", "_", key).strip("_"),
             text=text,
             weight=0,
             category="unlisted",
+            tags=tuple(tags_for(text)),
             local_ids=(local[key],) if key in local else (),
             implicit_ids=twins,
+            subject=subject,
+            minion_subtype=minion_subtype(text, subject),
         ))
     return out
 

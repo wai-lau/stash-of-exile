@@ -103,12 +103,16 @@ def test_the_first_rung_carries_every_mod_at_its_floor():
     assert ids[HYBRID] == 20
 
 
-def test_unlisted_mods_are_the_last_in_line_and_the_first_widened_away():
-    rung0 = [stat for stat, _ in filters_at(0)]
-    assert set(rung0[-2:]) == {EVASION, HYBRID}, "behind everything weighted"
+def test_unlisted_mods_are_tagged_and_cohere_like_any_other():
+    """The hybrid names armour, evasion and energy shield: it belongs with
+    the evasion roll and the ES implicit, not in the unrelated bin. Live it
+    was widened away while the evasion roll it coheres with was kept —
+    weight 0 and no tags left roll percentile to decide between them."""
+    entry = match_mod("24% increased Global Armour, Evasion and Energy Shield", INDEX)
+    assert set(entry.tags) >= {"armour", "evasion", "es", "defence"}
+    assert set(match_mod("37% increased Evasion Rating", INDEX).tags) >= {"evasion", "defence"}
     stats = {stat for stat, _ in filters_at(2)}
-    assert EVASION not in stats and HYBRID not in stats
-    assert stats, "the weighted mods are what survive"
+    assert HYBRID in stats, "coheres with evasion and ES, so it survives widening"
 
 
 def test_unlisted_mods_do_not_score():
