@@ -105,3 +105,21 @@ def test_announces_429_backoff():
     gov.on_429(retry_after=None)
     assert "429, server asked us to wait" in announced
     assert "429, backing off" in announced
+
+
+def test_a_named_governor_says_which_bucket_is_waiting():
+    """Search and fetch each have a governor now; a bare "rate limit" no
+    longer says which one is pacing."""
+    now = [0.0]
+    announced = []
+    gov = RateGovernor(
+        name="search",
+        clock=lambda: now[0],
+        sleeper=lambda s: now.__setitem__(0, now[0] + s),
+        on_wait=lambda seconds, reason: announced.append(reason),
+    )
+    gov.observe({"X-Rate-Limit-Rules": "Ip", "X-Rate-Limit-Ip": "1:10:30"})
+    gov.before_request()
+    gov.record_request()
+    gov.before_request()
+    assert announced == ["search rate limit"]

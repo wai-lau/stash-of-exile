@@ -128,11 +128,16 @@ real depth begins. Read against the bid at 301, the midpoint prints
 | The rate table | `divine, chaos repriced` | Prices and the rate that renders them must come from one book. Reading a Divine Orb off the exchange while converting it with the index's rate printed it as `1.12 div` — the same orb measured twice. |
 | Coverage | `~780 ids, 14 groups` | Currency, runes, essences, omens, fragments, gems — and waystones, which the index does not price at all. Gear, jewels and uniques have no book, and that is the signal to fall back to the index. |
 
-The exchange gets its **own rate governor and its own session**. Search
-answers `trade-search-request-limit` at 5:10:60, the exchange answers
-`trade-exchange-request-limit` at 5:15:60 — and a governor holds one rule
-set and one request history, so a shared one let each response overwrite
-the other endpoint's rules and count its calls against the wrong budget.
+Every endpoint gets its **own rate governor**. Search answers
+`trade-search-request-limit` at 5:10:60, fetch answers
+`trade-fetch-request-limit` at 12:4:10, the exchange answers
+`trade-exchange-request-limit` at 5:15:60 — and the `-state` counters
+show they are separate budgets: a search's count does not move across
+fetches. A governor holds one rule set and one request history, so one
+shared between search and fetch charged every fetch to the search window
+and gated each call by whichever endpoint answered last — half the
+searches GGG allows, spent pacing the wrong thing. The session keeps a
+governor per endpoint, keyed by the trade2 path segment.
 Static ids are cached for a week, books for six hours.
 
 Books are league-scoped, and so is the index: sox reads the **softcore**
@@ -421,7 +426,8 @@ never have been.
 **stale data.** A search result is replayed for 12 hours and the index
 for 6, keyed on the exact query. A cached row is labelled, but it can be
 a day behind a moving market. Rate limits are the reason: `5:10:60`
-searches per window, shared across everything the session does.
+searches per window, and the longer clauses bite harder — `30:300` is six
+searches a minute sustained, one item at six rungs.
 
 ---
 

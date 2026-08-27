@@ -5,13 +5,21 @@ tightens as soon as it sees headers. It sleeps BEFORE issuing a call that
 would breach a rule rather than reacting to a 429, because a 429 already
 costs a restriction window.
 
-Real search limits, captured live 2026-08-18:
+Real limits, captured live 2026-08-18 (search) and 2026-08-27 (fetch):
 
-    x-rate-limit-rules: Ip
-    x-rate-limit-ip:    5:10:60,15:60:300,30:300:1800,600:21600:3600
+    search  x-rate-limit-policy: trade-search-request-limit
+            x-rate-limit-rules:  Ip
+            x-rate-limit-ip:     5:10:60,15:60:300,30:300:1800,600:21600:3600
+    fetch   x-rate-limit-policy: trade-fetch-request-limit
+            x-rate-limit-ip:     12:4:10,16:12:300,50:300:300,1000:21600:1800
 
 One rule carries SEVERAL comma-separated clauses, all enforced at once.
 Parsing only the first would breach the longer windows.
+
+Each policy is its own budget — the -state counters prove it, a search's
+count does not move across fetches — so a governor is one policy's pacing
+and the session keeps one per endpoint. Its name is only for the wait line,
+which otherwise cannot say which bucket is full.
 """
 
 from __future__ import annotations
@@ -39,11 +47,13 @@ class RateGovernor:
         clock: Callable[[], float] = time.monotonic,
         sleeper: Callable[[float], None] = time.sleep,
         on_wait: Callable[[float, str], None] | None = None,
+        name: str = "",
     ) -> None:
         self._clock = clock
         self._sleep = sleeper
         # Waiting silently looks identical to hanging, so callers can show it.
         self._on_wait = on_wait or (lambda seconds, reason: None)
+        self._name = name
         self.rules: list[Rule] = []
         self._history: deque[float] = deque()
         self._consecutive_429 = 0
@@ -81,7 +91,7 @@ class RateGovernor:
             wait = self._wait_needed()
             if wait <= 0:
                 return
-            self._on_wait(wait, "rate limit")
+            self._announce(wait, "rate limit")
             self._sleep(wait)
 
     def _wait_needed(self) -> float:
@@ -100,12 +110,15 @@ class RateGovernor:
     def on_429(self, retry_after: float | None) -> None:
         self._consecutive_429 += 1
         if retry_after is not None:
-            self._on_wait(retry_after, "429, server asked us to wait")
+            self._announce(retry_after, "429, server asked us to wait")
             self._sleep(retry_after)
             return
         backoff = min(BASE_BACKOFF * (2 ** (self._consecutive_429 - 1)), MAX_BACKOFF)
-        self._on_wait(backoff, "429, backing off")
+        self._announce(backoff, "429, backing off")
         self._sleep(backoff)
 
     def on_success(self) -> None:
         self._consecutive_429 = 0
+
+    def _announce(self, seconds: float, reason: str) -> None:
+        self._on_wait(seconds, f"{self._name} {reason}" if self._name else reason)

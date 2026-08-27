@@ -59,7 +59,7 @@ def build(routes, tmp_path):
         return httpx.Response(404, json={})
 
     session = GGGSession(
-        RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
+        lambda name: RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
         httpx.Client(transport=httpx.MockTransport(handler)),
         user_agent="sox-test",
     )
@@ -126,7 +126,7 @@ def test_the_book_is_read_from_sellers_who_are_present(tmp_path):
         return httpx.Response(200, json=offers([(1, 1, 1)]))
 
     session = GGGSession(
-        RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
+        lambda name: RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
         httpx.Client(transport=httpx.MockTransport(handler)),
         user_agent="sox-test",
     )
@@ -164,7 +164,7 @@ def two_sided(tmp_path, ask_pairs, bid_pairs):
         return httpx.Response(200, json=offers(pairs))
 
     session = GGGSession(
-        RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
+        lambda name: RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
         httpx.Client(transport=httpx.MockTransport(handler)),
         user_agent="sox-test",
     )
@@ -254,7 +254,7 @@ def four_sided(tmp_path, books):
         return httpx.Response(200, json=offers(books.get(key, [])))
 
     session = GGGSession(
-        RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
+        lambda name: RateGovernor(clock=lambda: 0.0, sleeper=lambda s: None),
         httpx.Client(transport=httpx.MockTransport(handler)),
         user_agent="sox-test",
     )

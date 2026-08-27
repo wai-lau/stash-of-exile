@@ -117,11 +117,9 @@ def main(argv: list[str] | None = None) -> int:
             def announce(seconds: float, reason: str) -> None:
                 print(f"… waiting {seconds:.0f}s ({reason})", file=sys.stderr, flush=True)
 
-            session = GGGSession(RateGovernor(on_wait=announce),
-                                 httpx.Client(timeout=30), cfg.user_agent)
+            session = _ggg_session(cfg, announce)
             trade = TradeClient(session, cache, cfg.league or league.value)
-            exchange = ExchangeClient(_exchange_session(cfg, announce), cache,
-                                      cfg.league or league.value)
+            exchange = ExchangeClient(session, cache, cfg.league or league.value)
             fills = scout.exchange_fills(league.short)
             rates = exchange_rates(exchange, rates, fills=fills)
         else:
@@ -198,17 +196,15 @@ def _stop_on_eof(stop: threading.Event) -> None:
     _thread.interrupt_main()
 
 
-def _exchange_session(cfg, announce) -> GGGSession:
-    """A session of its own, because the exchange has its own limit policy.
+def _ggg_session(cfg, announce) -> GGGSession:
+    """One session for search, fetch and exchange alike.
 
-    Search answers `trade-search-request-limit` at 5:10:60,15:60:300 and the
-    exchange answers `trade-exchange-request-limit` at 5:15:60,10:90:300. A
-    governor keeps one rule set and one request history, so sharing it makes
-    every response overwrite the other endpoint's rules and count its calls
-    against the wrong budget — throttling one endpoint on the other's traffic
-    while under-counting its own.
+    Each endpoint answers its own limit policy — search 5:10:60, fetch
+    12:4:10, exchange 5:15:60 — and the session pacing them with one
+    governor per endpoint is what keeps a fetch from spending a search.
+    The governor's name is what the wait line prints.
     """
-    return GGGSession(RateGovernor(on_wait=announce),
+    return GGGSession(lambda name: RateGovernor(on_wait=announce, name=name),
                       httpx.Client(timeout=30), cfg.user_agent)
 
 
@@ -225,11 +221,9 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         def announce(seconds: float, reason: str) -> None:
             print(watch_ui.waiting_on_limit(seconds, reason), flush=True)
 
-        governor = RateGovernor(on_wait=announce)
-        session = GGGSession(governor, httpx.Client(timeout=30), cfg.user_agent)
+        session = _ggg_session(cfg, announce)
         trade = TradeClient(session, cache, cfg.league or league.value)
-        exchange = ExchangeClient(_exchange_session(cfg, announce), cache,
-                                  cfg.league or league.value)
+        exchange = ExchangeClient(session, cache, cfg.league or league.value)
         fills = scout.exchange_fills(league.short)
         rates = exchange_rates(exchange, rates, fills=fills)
     else:
