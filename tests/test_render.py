@@ -460,15 +460,17 @@ def test_a_waystone_has_no_coherence_line():
     assert "coherence" not in render(ITEM, priced, RATES)
 
 
-def test_a_waystones_killer_mods_are_called_out_in_colour():
-    """deadly red, risky yellow — the loot score says nothing about whether
-    the map can be run, and nothing else on a stone's report shows its mods."""
-    from sox.report import RESET, RISKY, UNSEARCHED
+def test_a_waystones_deadly_mods_are_called_out_one_per_row():
+    """Red, one per row like the unsearched mods; the risky tier stays off
+    the report — the loot score says nothing about whether the map can be
+    run, and only the killers are worth a line."""
+    from sox.report import RESET, UNSEARCHED
 
     item = {
         "itemClass": "Waystones", "rarity": "Rare", "baseType": "Waystone (Tier 15)",
         "explicitMods": ["-8% maximum Player Resistances",
                          "Monsters have 15% increased Attack, Cast and Movement Speed",
+                         "Monster Damage Penetrates 14% Elemental Resistances",
                          "+30% Monster Elemental Resistances"],
     }
     priced = PricedItem(
@@ -476,6 +478,7 @@ def test_a_waystones_killer_mods_are_called_out_in_colour():
         source="exchange", tag="waystone", loot=(65, "run it"),
     )
     text = render(item, priced, RATES)
-    assert (f"  danger     {UNSEARCHED}-8% maximum Player Resistances{RESET}  ·  "
-            f"{RISKY}Monsters have 15% increased Attack, Cast and Movement Speed{RESET}") in text
+    assert (f"  danger     {UNSEARCHED}-8% maximum Player Resistances{RESET}\n"
+            f"             {UNSEARCHED}Monster Damage Penetrates 14% Elemental Resistances{RESET}") in text
+    assert "Movement Speed" not in text, "risky is not shown"
     assert "Monster Elemental Resistances" not in text
