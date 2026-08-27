@@ -771,21 +771,54 @@ def _property(item: dict, name: str) -> int | None:
 
 
 # Clipboard property name -> map_filters id. Verified against
-# /api/trade2/data/filters -> map_filters ("Endgame Filters").
+# /api/trade2/data/filters -> map_filters ("Endgame Filters"): the API
+# labels map_rare_monsters "Monster Rarity" and map_magic_monsters "Monster
+# Effectiveness", the tooltip's own words.
 #
 # A waystone is bought on the totals at the top of the item, not on the mods
-# that produced them — and of those totals, ONLY the ones a buyer pays for.
-# Measured live on securable T16 rares, one stat at a time: item rarity 57+
-# alone moved the floor from 95 ex to 280, while drop chance 95+ and monster
-# rarity 41+ left it standing. High rolls of those are table stakes on any
-# listed T16, so constraining them shrinks the comparables without describing
-# anything a buyer shops by — the same reason an off-archetype total goes to
-# the back of the ladder. (Measured against SECURABLE listings; at status
-# "any" the offline ghosts put every one of these floors at 1 ex and the
-# differences vanish into the junk.)
+# that produced them. Since 0.5 every waystone mod carries a fixed loot line
+# and the tooltip sums them into these five; a buyer reads the five and
+# nothing else, so the comparable is a stone at least as good on all of them.
+# (Before 0.5, measured live on securable T16s one stat at a time, only item
+# rarity moved the price — 57+ took the floor from 95 ex to 280 while drop
+# chance and monster rarity left it standing. Monster rarity is now the loot
+# stat and that measurement is void.) Revives, gold and experience are not
+# loot and are not sent.
 WAYSTONE_PROPERTIES = {
     "Item Rarity": "map_iir",
+    "Pack Size": "map_packsize",
+    "Monster Rarity": "map_rare_monsters",
+    "Monster Effectiveness": "map_magic_monsters",
+    "Waystone Drop Chance": "map_bonus",
 }
+
+# What a waystone's totals are worth as loot. Exact where the game's own
+# glossary says — Monster Effectiveness: "for every 2% increased
+# Effectiveness ... 1% more quantity of items dropped" — and judgement where
+# it does not: the currency drops from rares, so monster rarity leads; item
+# rarity upgrades drops with diminishing returns on top of the character's
+# own; pack size mostly adds whites, with a chance of an extra rare per pack.
+LOOT_WEIGHTS = {
+    "Monster Rarity": 1.0,
+    "Monster Effectiveness": 0.5,
+    "Item Rarity": 0.5,
+    "Pack Size": 0.4,
+}
+LOOT_BANDS = ((80, "chase"), (65, "juice it"), (45, "run it"), (0, "reroll"))
+
+
+def loot_score(item: dict) -> tuple[float, str] | None:
+    """The tooltip's totals as one number, and what to do with the stone.
+
+    None when the item carries none of the totals — it is not a waystone.
+    """
+    totals = {name: _property(item, name) for name in LOOT_WEIGHTS}
+    if all(value is None for value in totals.values()):
+        return None
+    score = round(sum((totals[name] or 0) * weight
+                      for name, weight in LOOT_WEIGHTS.items()), 1)
+    verdict = next(label for floor, label in LOOT_BANDS if score >= floor)
+    return score, verdict
 
 # The tier lives in the base name — "Waystone (Tier 14)" — not in the
 # property block.
@@ -818,6 +851,10 @@ def waystone_filters(item: dict, category: str) -> dict:
 _MAP_FILTER_TEXT = {
     "map_tier": ("tier", ""),
     "map_iir": ("item rarity", "%"),
+    "map_packsize": ("pack size", "%"),
+    "map_rare_monsters": ("monster rarity", "%"),
+    "map_magic_monsters": ("effectiveness", "%"),
+    "map_bonus": ("drop chance", "%"),
 }
 
 

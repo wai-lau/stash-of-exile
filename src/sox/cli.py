@@ -40,6 +40,7 @@ from sox.valuation.query import (
     category_for,
     explain_query,
     explain_selection,
+    loot_score,
     waystone_stat_texts,
 )
 from sox.valuation.trade_pricer import price_by_search
@@ -385,6 +386,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                         offers=bulk.offers, stock=bulk.stock,
                         ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
                         quoted=bulk.quoted, traded_ex=bulk.traded_ex,
+                        loot=loot_score(item),
                     )
             # Explain the rung that actually produced the price, not rung 0.
             group, stats = explain_selection(item, mod_index, notables,
@@ -408,6 +410,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 unsearched=tuple(candidates.unsearched_rows(
                     item, mod_index, notables, relax=result.relax_used)),
                 map_stats=tuple(waystone_stat_texts(item, category)),
+                loot=loot_score(item),
             )
 
     # The exchange answers first: the game's own fills when the item traded

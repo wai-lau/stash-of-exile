@@ -912,30 +912,37 @@ def test_a_rare_map_flag_is_left_alone():
     assert all(f.get("value") != {} for f in query["query"]["stats"][0]["filters"])
 
 
-def test_a_waystone_is_searched_on_tier_and_item_rarity_only():
-    """Only the stats a buyer pays for. Measured live on securable T16
-    rares, one stat at a time: item rarity 57+ alone moved the floor from
-    95 ex to 280, while drop chance 95+ and monster rarity 41+ left it
-    standing — table stakes on any listed T16. Constraining them anyway
-    priced the stone against scarcity instead of against what buyers
-    actually filter for.
+def test_a_waystone_is_searched_on_every_total_its_tooltip_shows():
+    """0.5 welded a fixed loot line onto every waystone mod and the tooltip
+    sums them: Item Rarity, Pack Size, Monster Rarity, Monster Effectiveness,
+    Waystone Drop Chance. A buyer reads those five and nothing else, so the
+    comparable is a stone at least as good on all five. (Before 0.5 only item
+    rarity moved the price, measured live; monster rarity is now the loot
+    stat and the old measurement is void.)
 
-    Filter ids verified against /api/trade2/data/filters -> map_filters."""
+    Filter ids verified against /api/trade2/data/filters -> map_filters:
+    "Monster Effectiveness" is what the API labels map_magic_monsters."""
     item = load("RareMapFakeAllProps")
     query = build_query(item, category_for(item), MODS, NOTABLES)
     filters = query["query"]["filters"]["map_filters"]["filters"]
-    assert filters == {"map_tier": {"min": 16}, "map_iir": {"min": 17}}
+    assert filters == {
+        "map_tier": {"min": 16}, "map_iir": {"min": 17},
+        "map_packsize": {"min": 20}, "map_rare_monsters": {"min": 32},
+        "map_magic_monsters": {"min": 45}, "map_bonus": {"min": 90},
+    }
 
 
 def test_a_waystone_tier_is_a_floor_not_a_pin():
     """The tier comes from the base name, and it is a minimum like every
     other constraint: a higher tier is at least as good, and there is no
-    maximum anywhere in the search. RareMap carries revives, pack size,
-    monster rarity and drop chance — none of them may reach the query."""
+    maximum anywhere in the search. RareMap is a pre-0.5 stone: revives are
+    never searched and its "Rare Monsters" is the old label, not the
+    tooltip's "Monster Rarity"."""
     item = load("RareMap")
     query = build_query(item, category_for(item), MODS, NOTABLES)
     filters = query["query"]["filters"]["map_filters"]["filters"]
-    assert filters == {"map_tier": {"min": 14}}
+    assert filters == {"map_tier": {"min": 14}, "map_packsize": {"min": 34},
+                       "map_bonus": {"min": 75}}
 
 
 def test_waystone_stats_survive_every_widening_rung():
@@ -961,8 +968,23 @@ def test_the_report_words_the_waystone_stats_off_the_query():
 
     item = load("RareMapFakeAllProps")
     assert waystone_stat_texts(item, category_for(item)) == [
-        "tier 16+", "item rarity 17%+",
+        "tier 16+", "item rarity 17%+", "pack size 20%+", "monster rarity 32%+",
+        "effectiveness 45%+", "drop chance 90%+",
     ]
+
+
+def test_a_waystones_loot_score_weighs_rares_over_whites():
+    """From the tooltip totals, not the mods. Effectiveness is exact from the
+    game's own glossary — 1% more quantity per 2% — the rest is judgement:
+    monster rarity is where the currency drops, item rarity upgrades drops
+    with diminishing returns, pack size mostly adds whites."""
+    from sox.valuation.query import loot_score
+
+    # 37 + 0/2 + 24/2 + 16*0.4
+    assert loot_score(load("GhostExpedition")) == (55.4, "run it")
+    # 32 + 45/2 + 17/2 + 20*0.4
+    assert loot_score(load("RareMapFakeAllProps")) == (71.0, "juice it")
+    assert loot_score(load("RareItem")) is None
 
 
 def test_a_capped_search_is_priced_off_the_bulk_book(tmp_path):

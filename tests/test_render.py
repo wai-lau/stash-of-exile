@@ -379,3 +379,16 @@ def test_the_watch_header_keeps_the_rarity_colour():
     assert head.endswith(
         f" {watch.BOLD}\033[38;2;255;255;119mDoom Shield  [Tower Shield]{RESET}{RESET}")
     assert watch.detected("x", "searching…").startswith(watch.timestamp()[:6])
+
+
+def test_a_waystone_prints_its_loot_score_and_verdict():
+    """The tooltip shows four totals and no opinion; the score is the
+    opinion, and it sits with the stats the search rested on."""
+    priced = PricedItem(
+        name="Ghost Expedition", item_class=ItemClass.ENDGAME, price_ex=12.5,
+        source="trade", tag="exact", listings=9, median_ex=12.5, p25_ex=12.5,
+        map_stats=("tier 15+", "item rarity 24%+"),
+        loot=(55.4, "run it"),
+    )
+    text = render(ITEM, priced, RATES)
+    assert "  loot       55 (run it)" in text

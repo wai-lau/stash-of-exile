@@ -102,6 +102,7 @@ class PricedItem:
     query_stats: tuple[str, ...] = ()      # each filter sent, with its floor
     unsearched: tuple[tuple[str, str], ...] = ()   # (mod text, why not)
     map_stats: tuple[str, ...] = ()        # waystone minimums the search sent
+    loot: tuple[float, str] | None = None  # waystone loot score and verdict
     item_class_name: str = ""            # the game's own label, e.g. "Quarterstaves"
     category: str | None = None            # the trade category searched
     roll_pct: float | None = None
@@ -345,6 +346,10 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
         # properties, not mods, so they appear nowhere in the breakdown and
         # this line is their only mention.
         lines.append("  searched   " + "  ·  ".join(priced.map_stats))
+    if priced.loot:
+        # The tooltip shows the totals and no opinion; this is the opinion.
+        score, verdict = priced.loot
+        lines.append(f"  loot       {score:.0f} ({verdict})")
     if priced.unsearched:
         # The query lines above say what the price rests on; this is the
         # rest of the item — dropped by widening, or never searchable — so

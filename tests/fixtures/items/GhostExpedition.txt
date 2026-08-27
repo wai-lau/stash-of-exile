@@ -1,0 +1,23 @@
+Item Class: Waystones
+Rarity: Rare
+Ghost Expedition
+Waystone (Tier 15)
+--------
+Revives Available: 0 (augmented)
+Item Rarity: +24% (augmented)
+Pack Size: +16% (augmented)
+Monster Rarity: +37% (augmented)
+Waystone Drop Chance: +75% (augmented)
+--------
+Item Level: 80
+--------
+Monsters take 27% reduced Extra Damage from Critical Hits
+Monsters have 15% increased Attack, Cast and Movement Speed
++30% Monster Elemental Resistances
+Monsters Break Armour equal to 29% of Physical Damage dealt
+Monsters have 33% chance to Poison on Hit
+47% less effect of Curses on Monsters
+--------
+Can be used in a Map Device, allowing you to enter a Map. Waystones can only be used once.
+--------
+Corrupted
