@@ -803,16 +803,22 @@ WAYSTONE_PROPERTIES = {
 # What a waystone's totals are worth as loot. Exact where the game's own
 # glossary says — Monster Effectiveness: "for every 2% increased
 # Effectiveness ... 1% more quantity of items dropped" — and judgement where
-# it does not: the currency drops from rares, so monster rarity leads; item
-# rarity upgrades drops with diminishing returns on top of the character's
-# own; pack size mostly adds whites, with a chance of an extra rare per pack.
+# it does not: the currency drops from rares, so monster rarity leads; pack
+# size multiplies every pack, rare packs included, and the glossary adds a
+# chance of an extra rare per pack, so a point of it is a point of drops;
+# item rarity upgrades drops with diminishing returns on top of the
+# character's own.
 LOOT_WEIGHTS = {
     "Monster Rarity": 1.0,
+    "Pack Size": 1.0,
     "Monster Effectiveness": 0.5,
     "Item Rarity": 0.5,
-    "Pack Size": 0.4,
 }
-LOOT_BANDS = ((80, "chase"), (65, "juice it"), (45, "run it"), (0, "reroll"))
+LOOT_BANDS = ((85, "chase"), (70, "juice it"), (50, "run it"), (0, "reroll"))
+# From the juice-it band up a stone is worth a search: the comparable is one
+# at least as good on all five totals, which the bulk book by tier cannot
+# say. Below it, the book.
+SEARCH_LOOT = 70
 
 
 def loot_score(item: dict) -> tuple[int, str] | None:

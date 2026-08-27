@@ -42,6 +42,7 @@ from sox.valuation.query import (
     explain_query,
     explain_selection,
     loot_score,
+    SEARCH_LOOT,
     waystone_stat_texts,
 )
 from sox.valuation.trade_pricer import price_by_search
@@ -360,12 +361,14 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
 
     verdict = candidates.assess(item, entry, mod_index, base_rules, unique_rules)
 
-    # A waystone is never searched. Its search caps at 10,000 matches — a
-    # commodity, and the exchange carries that commodity by tier: Waystone
-    # (Tier 15) held 6,957 online units — so the search only ever spent a
-    # call to learn what the book already said. What separates one stone
-    # from another is the loot score, computed from the tooltip.
-    if category_for(item) == "map.waystone":
+    # A waystone under the juice-it band is not searched. Its search caps at
+    # 10,000 matches — a commodity, and the exchange carries that commodity
+    # by tier: Waystone (Tier 15) held 6,957 online units — so the search
+    # only ever spent a call to learn what the book already said. From
+    # SEARCH_LOOT up the stone is worth one: a comparable at least as good
+    # on all five totals is what the book by tier cannot say.
+    loot = loot_score(item)
+    if category_for(item) == "map.waystone" and (loot is None or loot[0] < SEARCH_LOOT):
         bulk = None
         if exchange is not None and item.get("baseType"):
             bulk = price_by_exchange(item["baseType"], exchange,
@@ -414,7 +417,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                         offers=bulk.offers, stock=bulk.stock,
                         ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
                         quoted=bulk.quoted, traded_ex=bulk.traded_ex,
-                        loot=loot_score(item),
+                        loot=loot, instill=instillation(item),
                     )
             # Explain the rung that actually produced the price, not rung 0.
             group, stats = explain_selection(item, mod_index, notables,
@@ -438,7 +441,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 unsearched=tuple(candidates.unsearched_rows(
                     item, mod_index, notables, relax=result.relax_used)),
                 map_stats=tuple(waystone_stat_texts(item, category)),
-                loot=loot_score(item),
+                loot=loot, instill=instillation(item),
             )
 
     # The exchange answers first: the game's own fills when the item traded

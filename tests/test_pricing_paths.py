@@ -980,10 +980,10 @@ def test_a_waystones_loot_score_weighs_rares_over_whites():
     with diminishing returns, pack size mostly adds whites."""
     from sox.valuation.query import loot_score
 
-    # 37 + 0/2 + 24/2 + 16*0.4 = 55.4 -> the integer, and the band is its
-    assert loot_score(load("GhostExpedition")) == (55, "run it")
-    # 32 + 45/2 + 17/2 + 20*0.4
-    assert loot_score(load("RareMapFakeAllProps")) == (71, "juice it")
+    # 37 + 0/2 + 24/2 + 16 = 65 -> the integer, and the band is its
+    assert loot_score(load("GhostExpedition")) == (65, "run it")
+    # 32 + 45/2 + 17/2 + 20 = 83
+    assert loot_score(load("RareMapFakeAllProps")) == (83, "juice it")
     assert loot_score(load("RareItem")) is None
 
 
@@ -1025,7 +1025,7 @@ def test_a_waystone_is_priced_off_its_tiers_bulk_book_without_a_search(tmp_path)
     assert priced.source == "exchange"
     assert priced.tag == "waystone"
     assert priced.price_ex == 24.0
-    assert priced.loot == loot_score(item) == (14, "reroll")
+    assert priced.loot == loot_score(item) == (34, "reroll")
     assert priced.map_stats == (), "nothing was searched"
     assert priced.category == "map.waystone"
 
@@ -1088,7 +1088,7 @@ def test_a_waystone_without_a_book_is_unpriced_but_still_scored(tmp_path):
     # No exchange to hand (--no-trade): still no search, still the score.
     assert priced.source == "unpriced"
     assert priced.tag == "unpriced:no-book"
-    assert priced.loot == (14, "reroll")
+    assert priced.loot == (34, "reroll")
     assert priced.map_stats == ()
 
 
@@ -1668,3 +1668,64 @@ def test_a_uniques_mods_are_searched_at_their_roll_not_the_range_floor():
             for f in query["query"]["stats"][0]["filters"] if "id" in f}
     assert mins["explicit.stat_4080418644"] == 8    # strength, range 0-10
     assert mins["explicit.stat_3299347043"] == 24   # life, range 0-30
+
+
+def test_a_waystone_worth_juicing_is_searched_on_its_totals(tmp_path):
+    """From 70 up — the juice-it band — a stone is worth a search: the
+    comparable is one at least as good on all five totals, which the bulk
+    book by tier cannot say. Below that, the book."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.trade import Listing
+    from sox.valuation.query import loot_score
+
+    class OneRung:
+        def __init__(self):
+            self.queries = []
+
+        def search(self, query):
+            self.queries.append(query)
+            return "q1", [f"h{i}" for i in range(12)], 12
+
+        def fetch(self, query_id, hashes):
+            return [Listing(amount=2.0, currency="exalted", account="a")
+                    for _ in hashes]
+
+    item = load("RareMapFakeAllProps")
+    assert loot_score(item) == (83, "juice it")
+    trade = OneRung()
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, trade,
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+    )
+    assert priced.source == "trade"
+    assert trade.queries[0]["query"]["filters"]["map_filters"]["filters"]["map_rare_monsters"] == {"min": 32}
+    assert "monster rarity 32%+" in priced.map_stats
+    assert priced.loot == (83, "juice it")
+    assert priced.instill is not None and priced.instill.blocked == "corrupted"
+
+
+def test_a_stone_under_the_juice_band_is_not_searched(tmp_path):
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.valuation.query import loot_score
+
+    class NoSearch:
+        def search(self, query):
+            raise AssertionError("a 65 is the book's to price")
+
+        fetch = search
+
+    item = load("GhostExpedition")
+    assert loot_score(item) == (65, "run it")
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, NoSearch(),
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+    )
+    assert priced.source == "unpriced" and priced.tag == "unpriced:no-book"

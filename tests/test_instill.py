@@ -37,8 +37,9 @@ Can be used in a Map Device, allowing you to enter a Map. Waystones can only be 
 
 def test_the_best_emotion_and_where_it_lands():
     path = instillation(itemtext.parse(BARE_T15))
+    # 65 + 15
     assert path == Instillation(emotion="Paranoia", delirious=12, blocked=None,
-                                score=70, verdict="juice it")
+                                score=80, verdict="juice it")
 
 
 def test_the_band_is_judged_on_the_number_shown():
@@ -49,9 +50,9 @@ def test_the_band_is_judged_on_the_number_shown():
                     .replace("Pack Size: +16%", "Pack Size: +18%") \
                     .replace("Monster Rarity: +37%", "Monster Rarity: +30%")
     item = itemtext.parse(stone)
-    # 30 + 12.5 + 7.2 = 49.7 -> 50
-    assert loot_score(item) == (50, "run it")
-    assert instillation(item).score == 65
+    # 30 + 12.5 + 18 = 60.5 -> 61
+    assert loot_score(item) == (61, "run it")
+    assert instillation(item).score == 76
     assert instillation(item).verdict == "juice it"
 
 
@@ -73,10 +74,11 @@ def test_gear_has_no_instillation():
 
 def test_every_emotion_is_scored_by_the_loot_weights():
     """Paranoia feeds monster rarity at weight 1; Greed feeds item rarity at
-    a half; Guilt and Ire are pack-size class — more bodies, mostly not
-    rares — at 0.4."""
+    a half; Guilt is pack size, which multiplies every pack, at 1; Ire's
+    magic monsters are half a monster-rarity point — a magic pack is not a
+    rare one."""
     gains = {name: e.gain for name, e in EMOTIONS.items()}
-    assert gains == {"Paranoia": 15.0, "Ire": 8.0, "Greed": 4.0, "Guilt": 3.2}
+    assert gains == {"Paranoia": 15.0, "Ire": 10.0, "Greed": 4.0, "Guilt": 8.0}
 
 
 def test_a_half_rounds_up_not_to_even():

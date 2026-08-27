@@ -29,11 +29,12 @@ class Emotion:
     gain: float      # loot-score points, from LOOT_WEIGHTS
 
 
-# Magic monsters are pack-size class for the score: more bodies, mostly not
-# rares. Paranoia's rare monsters are monster rarity, the loot stat.
+# Paranoia's rare monsters are monster rarity, the loot stat. Ire's magic
+# monsters are half a monster-rarity point: a magic pack is not a rare one.
+# Guilt is pack size, which multiplies every pack.
 EMOTIONS = {
     "Paranoia": Emotion(12, "+15% rare monsters", round(15 * LOOT_WEIGHTS["Monster Rarity"], 1)),
-    "Ire": Emotion(7, "+20% magic monsters", round(20 * LOOT_WEIGHTS["Pack Size"], 1)),
+    "Ire": Emotion(7, "+20% magic monsters", round(20 * 0.5 * LOOT_WEIGHTS["Monster Rarity"], 1)),
     "Greed": Emotion(10, "+8% item rarity", round(8 * LOOT_WEIGHTS["Item Rarity"], 1)),
     "Guilt": Emotion(9, "+8% pack size", round(8 * LOOT_WEIGHTS["Pack Size"], 1)),
 }
