@@ -74,6 +74,9 @@ archetypes."
 SoX encodes that based on... well, [_my own judgement_](docs/pricing-algorithm.md)
 (I read a few guides and try to sell stuff often, but that's about it).
 
+Waystones get their own page — what the market pays for on a stone,
+measured, and how to roll one worth paying for: [docs/waystones.md](docs/waystones.md).
+
 ## Why the clipboard
 
 **There is no PoE2 stash API.** The OAuth stash endpoint supports only the

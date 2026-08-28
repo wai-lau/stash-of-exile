@@ -74,7 +74,7 @@ limit. Anything the index cannot describe gets searched — and anything
 |---|---|---|
 | Currency, gems | exchange, then index | Fungible; one price describes every copy — and the exchange book is far deeper than the handful of listings the index counts. Stage 03. |
 | Endgame (ultimatums, tablets, logbooks…) | always search | No index covers them at all. |
-| Waystones | exchange; search from a loot score of 80 | The tier's bulk book prices the commodity; the tooltip totals become a loot score, and a stone worth juicing is searched on them. See stage 05. |
+| Waystones | exchange; search from a loot score of 80 | The tier's bulk book prices the commodity; the tooltip totals become a loot score, and a stone worth juicing is searched on them. See stage 05, and [waystones.md](waystones.md) for what the market was measured to pay. |
 | Jewel allocating a notable | always search | Value is *which* notables; the index reports ~1 ex for all 25,000 Megalomaniacs. |
 | Unique | index unless escalated | See below. |
 | Rare / magic / normal gear | search if it scores | Rare needs score ≥ 6, or ≥ 4 at ilvl 80+. Everything else ≥ 4. Gear has no exchange book, so an item that does not qualify stays junk. |
