@@ -23,7 +23,7 @@ from sox.ggg.governor import RateGovernor
 from sox.ggg.session import GGGError, GGGSession, SearchDown
 from sox.ggg.exchange import ExchangeClient
 from sox.ggg.trade import TradeClient
-from sox.scout import ScoutClient
+from sox.scout import STALE_SNAPSHOT_S, LiveFills, ScoutClient, Snapshot
 from sox.valuation import candidates
 from sox.valuation.allowlists import load_bases, load_mods, load_notables, load_uniques
 from sox.valuation.classify import ItemClass, classify, display_name
@@ -221,10 +221,19 @@ def _mod_index(listed, trade: TradeClient | None):
     return build_index(listed + unlisted_mods(trade.stats(), listed))
 
 
+def _warn_if_stale(fills: LiveFills) -> None:
+    """Said once when the snapshot comes into use, and again on every row
+    priced from it — a line printed at midnight has scrolled away by one."""
+    age = fills.age()
+    if age is not None and age >= STALE_SNAPSHOT_S:
+        print(watch_ui.stale_snapshot(age), flush=True)
+
+
 def run_watch(args, cfg, cache, scout, league) -> int:
     """Price every item copied to the clipboard, until Ctrl-D."""
     index = scout.prices(league.short)
-    rates = scout.currency_rates(index)
+    index_rates = scout.currency_rates(index)
+    rates = index_rates
     listed = load_mods()
     base_rules, unique_rules = load_bases(), load_uniques()
     notables = load_notables()
@@ -237,15 +246,20 @@ def run_watch(args, cfg, cache, scout, league) -> int:
         session = _ggg_session(cfg, announce)
         trade = TradeClient(session, cache, cfg.league or league.value)
         exchange = ExchangeClient(session, cache, cfg.league or league.value)
-        fills = scout.exchange_fills(league.short)
-        rates = exchange_rates(exchange, rates, fills=fills)
+        # The session starts on the snapshot the cache last held and asks
+        # poe2scout for this hour's behind it; the loop takes the answer
+        # between items and reprices the rates that hang off it.
+        fills = LiveFills(scout.cached_fills(league.short))
+        fills.refresh(lambda: scout.exchange_fills(league.short, refresh=True))
+        rates = exchange_rates(exchange, index_rates, fills=fills)
     else:
-        fills = {}
+        fills = LiveFills(Snapshot({}, None))
     mod_index = _mod_index(listed, trade)
 
     divine_ex = rates.get("divine") or league.divine_price_ex
     print(watch_ui.banner(league.value, divine_ex,
                           clipboard.describe_backend()), flush=True)
+    _warn_if_stale(fills)
     stats = watch_ui.Session()
 
     # Ctrl+C is how you copy an item in game. Hitting it with the terminal
@@ -297,6 +311,13 @@ def run_watch(args, cfg, cache, scout, league) -> int:
                 timer.daemon = True
                 if searching:
                     timer.start()
+
+                if fills.take_update():
+                    rates = exchange_rates(exchange, index_rates, fills=fills)
+                    divine_ex = rates.get("divine") or divine_ex
+                    print(watch_ui.waiting(f"exchange fills refreshed — 1 div = "
+                                           f"{divine_ex:.0f} ex"), flush=True)
+                    _warn_if_stale(fills)
 
                 try:
                     priced = _price_item(item, index, rates, mod_index, base_rules,
@@ -396,7 +417,8 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
             price_ex=bulk.price_ex, source="exchange", tag="waystone",
             reason=verdict.reason, offers=bulk.offers, stock=bulk.stock,
             ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex, quoted=bulk.quoted,
-            traded_ex=bulk.traded_ex, loot=loot_score(item),
+            traded_ex=bulk.traded_ex, snapshot_age=bulk.snapshot_age,
+            loot=loot_score(item),
             instill=instillation(item), search_down=search_down,
             **_identity_fields(item),
         )
@@ -432,6 +454,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                             offers=bulk.offers, stock=bulk.stock,
                             ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
                             quoted=bulk.quoted, traded_ex=bulk.traded_ex,
+                            snapshot_age=bulk.snapshot_age,
                             loot=loot, instill=instillation(item),
                             map_stats=tuple(waystone_stat_texts(item, category)),
                             **_identity_fields(item),
@@ -455,6 +478,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                             offers=bulk.offers, stock=bulk.stock,
                             ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex,
                             quoted=bulk.quoted, traded_ex=bulk.traded_ex,
+                            snapshot_age=bulk.snapshot_age,
                             loot=loot, instill=instillation(item),
                         )
                 # Explain the rung that actually produced the price, not rung 0.
@@ -498,7 +522,7 @@ def _price_item(item, index, rates, mod_index, base_rules, unique_rules,
                 price_ex=bulk.price_ex, source="exchange", tag=None,
                 reason=verdict.reason, offers=bulk.offers, stock=bulk.stock,
                 ask_ex=bulk.ask_ex, bid_ex=bulk.bid_ex, quoted=bulk.quoted,
-                traded_ex=bulk.traded_ex,
+                traded_ex=bulk.traded_ex, snapshot_age=bulk.snapshot_age,
             )
 
     if entry is not None:

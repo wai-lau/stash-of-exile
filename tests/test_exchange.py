@@ -27,6 +27,7 @@ STATIC = {"result": [
         {"id": "exalted", "text": "Exalted Orb"},
         {"id": "divine", "text": "Divine Orb"},
         {"id": "wisdom", "text": "Scroll of Wisdom"},
+        {"id": "hinekoras-lock", "text": "Hinekora's Lock"},
     ]},
     {"id": "Ritual", "label": "Ritual", "entries": [
         {"id": "omen-of-the-sovereign", "text": "Omen of the Sovereign"},
@@ -368,6 +369,23 @@ def test_thin_fills_fall_through_to_the_book(tmp_path):
                                fills={"Omen of the Sovereign": (36.0, 281.0)})
     assert priced.price_ex == pytest.approx(1.0)
     assert priced.quoted == "exalted"
+
+
+def test_a_dear_item_needs_twenty_units_of_fills(tmp_path):
+    """Five thousand exalted is a morning of rune trade and a hundredth of a
+    Hinekora's Lock: ten locks changing hands at 1,395 div is a handful of
+    deals, not a market, and the board asked 1,643. A floor in exalted alone
+    waves every dear item through, so the floor is twenty units' worth."""
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "hinekoras-lock"): [(590_000, 1, 1)],
+        ("divine", "hinekoras-lock"): [(1643, 1, 1)] * 25,
+    })
+    priced = price_by_exchange("Hinekora's Lock", client, divine_ex=360.0,
+                               fills={"Hinekora's Lock": (501_707.0, 5_017_069.0)})
+    assert priced.quoted == "divine"
+    assert priced.price_ex == pytest.approx(1643 * 360.0)
 
 
 def test_divine_is_never_priced_against_itself(tmp_path):

@@ -20,7 +20,9 @@ Without the symlink, `uv run sox ...` from the project directory works too.
 ## Watch mode
 
 Park a terminal on a second monitor and run `sox watch`. Copy any item in
-game with Ctrl+C and its price appears, with a running session total:
+game with Ctrl+C and its price appears, with a running session total.
+The session starts at once on the exchange snapshot it last saw, fetches
+this hour's behind it, and warns when what poe2scout has is hours old:
 
 <pre>════════════════════════════════════════════════════════════════
 <b>sox watch</b> 0.1.0+5d4a8af  ·  Runes of Aldur  ·  1 div = 360 ex
@@ -87,7 +89,7 @@ session, so sox holds no credentials at all.
 
 | Item | How it is priced |
 |---|---|
-| Currency, runes, essences, omens, fragments, gems | the game's own Currency Exchange first — fills cannot be faked by bait listings — then the bulk trade book, read from sellers who are online in league, against both exalted and divine, the broader book answering |
+| Currency, runes, essences, omens, fragments, gems | the game's own Currency Exchange first — fills cannot be faked by bait listings, but must amount to a market: 5,000 ex and twenty units of the item — then the bulk trade book, read from sellers who are online in league, against both exalted and divine, the broader book answering |
 | Most uniques | poe2scout index — free, no API call |
 | Rares, jewels | trade search for "the cheapest item at least as good as yours", every mod on the item in the first search, each compared at the floor of its roll's tier — a point under your roll is the same good |
 | Normal and magic bases | the same search, pinned to the base and floored at its item level |

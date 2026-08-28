@@ -29,3 +29,8 @@ def test_the_status_line_says_the_search_is_down_instead_of_a_budget():
     line = watch_ui.status(stats, divine_ex=360.0, budget=Budget(0, 30, 300), down=1700.0)
     assert "search down 28 min" in line
     assert "left" not in line
+
+
+def test_a_stale_snapshot_is_a_warning_with_its_age():
+    line = watch_ui.stale_snapshot(29 * 3600)
+    assert "29h" in line and "snapshot" in line

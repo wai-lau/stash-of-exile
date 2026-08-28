@@ -17,9 +17,11 @@ places it is still wrong.
 flowchart TD
     clip[clipboard text] --> parse["parse — mods · properties · rolls · flags"]
     parse --> kind{item class}
-    kind -- "currency · gem" --> book["exchange book (both sides)"]
+    kind -- "currency · gem" --> fills{"fills ≥ 5,000 ex and 20 units?"}
+    fills -- yes --> price([price])
+    fills -- no --> book["exchange book (both sides)"]
     kind -- unique --> desc{"index can describe it?"}
-    desc -- yes --> book
+    desc -- yes --> fills
     desc -- escalated --> build[build query]
     book -- no book --> index["index price (poe2scout)"]
     kind -- gear --> score[score the mods]
@@ -106,7 +108,22 @@ one-unit "1 Exalted for 1" bait listings while 38,000 ex of the rune
 actually changed hands near 260 — and every fill on that exchange is an
 instant trade. Below 5,000 ex of turnover the figure is pair noise
 (281 ex of one omen "traded at 36"), and the trade-site books answer
-instead.
+instead. For a dear item the exalted floor is no floor: one Hinekora's
+Lock is 500,000 ex, so ten of them cleared it a thousand times over while
+the snapshot said 1,395 div and the board asked 1,643. Ten deals are not
+a market, so the floor is also **twenty units' worth** — for anything
+under 250 ex that is the exalted floor, for anything dearer it is the one
+that bites.
+
+A watch session does not wait on the snapshot: it starts on the last one
+the cache holds, however old, asks poe2scout for this hour's in the
+background, and takes the answer between items — reprinting the divine
+rate when it lands, since the rates hang off the same figures. Each
+snapshot carries its own timestamp, and past three hours it is stale:
+the session says so when it starts on one or a refresh lands one, and
+every row priced from it ends in the age, in capitals, like a weak
+sample. poe2scout's snapshots stopped for a day on 2026-08-27, and a
+fresh fetch of a day-old snapshot is a day-old price.
 
 Those books are read from **sellers online in league** (`onlineleague`) —
 measured against the alternatives. `any` is where bait lives: the omen
@@ -176,6 +193,7 @@ there is no exchange either, and everything falls back to the index.
 | `ask only — nobody is bidding for these` | The book has offers but no bids. |
 | `thin book — few units are actually offered` | Under 20 units in stock. |
 | `the game's own exchange — 84,602 ex of it traded in the last snapshot` | The price rests on completed in-game trades, not listings — the one measurement bait cannot touch. |
+| `…in the last snapshot, 29H OLD` | poe2scout has not taken a snapshot in hours; the fills price is that old, and the board has likely moved. |
 | `the item search capped at 10,000 and reads a sample — this is the bulk book instead` | Past 10,000 matches the trade engine sorts only a kept sample — measured live, tier 15+ floored at 3 ex while its own subsets floored at 1 ex and at 1 transmute — so a capped search has described a commodity and its bulk book answers instead. A capped search with no book keeps the trade answer, branded `every search past the cap reads a sample`. |
 
 ### 04 — Score the mods
@@ -456,7 +474,11 @@ never have been.
 for 6, keyed on the exact query. A cached row is labelled, but it can be
 a day behind a moving market. Rate limits are the reason: `5:10:60`
 searches per window, and the longer clauses bite harder — `30:300` is six
-searches a minute sustained, one item at six rungs.
+searches a minute sustained, one item at six rungs. The exchange fills
+run the other way: a session starts on whatever snapshot the cache last
+held and swaps in a fresh one as soon as it arrives (see above). poe2scout
+itself can fall behind — its hourly snapshots stopped for a day on
+2026-08-27 — which is what the snapshot-age warning reads.
 
 ---
 

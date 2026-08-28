@@ -9,8 +9,12 @@ the statistic is weighted by stock rather than counting listings.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from sox.ggg.exchange import Offer
+
+if TYPE_CHECKING:
+    from sox.scout import LiveFills, Snapshot
 
 # Low enough to track real supply, high enough to step over a thin trap. The
 # 1-exalted divine offers are 0.3% of that book, so a tenth percentile clears
@@ -54,6 +58,19 @@ DIVINE = "divine"
 # where its online book floors at 2. Masterwork's 38,000 ex of fills is a
 # market.
 FILL_FLOOR_EX = 5_000.0
+# ...and for a dear item the exalted floor is no floor at all: one
+# Hinekora's Lock is 500,000 ex, so ten of them changing hands cleared it a
+# thousand times over and the snapshot said 1,395 div while the board asked
+# 1,643. Ten deals are not a market. The floor is therefore also stated in
+# units — twenty of the item — which for anything under 250 ex is the
+# exalted floor and for anything dearer is the one that bites. The snapshot
+# quotes the average fill, so traded / price is exactly the unit count.
+FILL_FLOOR_UNITS = 20
+
+
+def fill_floor_ex(price_ex: float) -> float:
+    """How much of an item must have traded for its fills to be a price."""
+    return max(FILL_FLOOR_EX, FILL_FLOOR_UNITS * price_ex)
 
 # Below this many units an exalted book cannot support a price and the
 # divine book is read as well. Above it the exalted answer stands: the
@@ -76,6 +93,7 @@ class BulkPrice:
     quoted: str = UNIT            # the currency the book was read in; "fills"
                                   # when the game's own exchange answered
     traded_ex: float = 0.0        # fills only: exalted actually exchanged
+    snapshot_age: float | None = None   # fills only: seconds since the snapshot
 
 
 def _read_book(exchange, item_id: str, unit: str, unit_ex: float) -> BulkPrice | None:
@@ -125,7 +143,7 @@ def price_by_exchange(
     name: str,
     exchange,
     divine_ex: float | None = None,
-    fills: dict[str, tuple[float, float]] | None = None,
+    fills: dict[str, tuple[float, float]] | Snapshot | LiveFills | None = None,
 ) -> BulkPrice | None:
     """What one unit of `name` is worth — by its fills, then by its book.
 
@@ -166,9 +184,11 @@ def price_by_exchange(
 
     if fills:
         price_ex, traded = fills.get(name, (0.0, 0.0))
-        if traded >= FILL_FLOOR_EX:
+        if traded >= fill_floor_ex(price_ex):
+            # A bare dict of fills (the tests') has no age to report.
+            age = fills.age() if hasattr(fills, "age") else None
             return BulkPrice(price_ex=price_ex, offers=0, stock=0,
-                             quoted="fills", traded_ex=traded)
+                             quoted="fills", traded_ex=traded, snapshot_age=age)
 
     priced = _read_book(exchange, item_id, UNIT, 1.0)
     if priced is not None and priced.stock >= THIN_STOCK:
@@ -199,7 +219,7 @@ RATE_CURRENCIES = ("divine", "chaos")
 def exchange_rates(
     exchange,
     index_rates: dict[str, float],
-    fills: dict[str, tuple[float, float]] | None = None,
+    fills: dict[str, tuple[float, float]] | Snapshot | LiveFills | None = None,
 ) -> dict[str, float]:
     """The index rate table with the quoted currencies repriced in bulk.
 

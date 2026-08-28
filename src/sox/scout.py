@@ -7,6 +7,8 @@ confirmed live. `category` is REQUIRED; omitting it returns HTTP 400.
 
 from __future__ import annotations
 
+import threading
+import time
 from dataclasses import dataclass
 
 import httpx
@@ -68,6 +70,60 @@ class IndexEntry:
     price_ex: float
     quantity: int
     metadata: dict
+
+
+# poe2scout takes a snapshot an hour, so a read within the hour is up to an
+# hour old by nature, and a second hour is slack for their side. Past three
+# the snapshots have stopped: they did for a day on 2026-08-27, and a fresh
+# fetch of a day-old snapshot priced Hinekora's Lock at 1,395 div against a
+# board asking 1,643. The fetch time says nothing; the snapshot's own does.
+STALE_SNAPSHOT_S = 3 * 3600
+
+
+@dataclass(frozen=True)
+class Snapshot:
+    """One hour of the game's exchange: each currency's fills, and when.
+
+    `epoch` is the snapshot's own timestamp. None when the epoch endpoint
+    did not answer — the prices stand, the age is unknown. Reads like the
+    dict it wraps where the pricer reads it: `get`, `[]` and truth.
+    """
+
+    fills: dict[str, tuple[float, float]]
+    epoch: float | None = None
+
+    def get(self, name: str, default=None):
+        return self.fills.get(name, default)
+
+    def __getitem__(self, name: str) -> tuple[float, float]:
+        return self.fills[name]
+
+    def __bool__(self) -> bool:
+        return bool(self.fills)
+
+    def age(self, now: float | None = None) -> float | None:
+        """Seconds since the snapshot was taken; None when that is unknown."""
+        if self.epoch is None:
+            return None
+        return max(0.0, (time.time() if now is None else now) - self.epoch)
+
+
+def describe_age(seconds: float) -> str:
+    """An age as a reader says it: 45min, 29h, 3d."""
+    if seconds < 3600:
+        return f"{int(seconds // 60)}min"
+    if seconds < 48 * 3600:
+        return f"{int(seconds // 3600)}h"
+    return f"{int(seconds // 86400)}d"
+
+
+def _snapshot_from_cache(cached) -> Snapshot:
+    if not cached:
+        return Snapshot({}, None)
+    if "fills" not in cached:   # the shape before the epoch rode along
+        return Snapshot({k: (v[0], v[1]) for k, v in cached.items()}, None)
+    return Snapshot({k: (v[0], v[1]) for k, v in cached["fills"].items()},
+                    cached.get("epoch"))
 
 
 class ScoutClient:
@@ -165,9 +221,15 @@ class ScoutClient:
                 return items
             page += 1
 
-    def exchange_fills(self, league_short: str) -> dict[str, tuple[float, float]]:
+    def cached_fills(self, league_short: str) -> Snapshot:
+        """The last snapshot the cache holds, however old — the figures a
+        watch session starts on while `exchange_fills(refresh=True)` runs
+        behind it. Empty when nothing was ever cached."""
+        return _snapshot_from_cache(self._cache.peek("exchange_fills", league_short))
+
+    def exchange_fills(self, league_short: str, *, refresh: bool = False) -> Snapshot:
         """Display name -> (price in exalted, exalted traded), read off the
-        game's own Currency Exchange.
+        game's own Currency Exchange, with the snapshot's own timestamp.
 
         poe2scout snapshots the in-game exchange hourly. The endpoint is
         undocumented — read out of their frontend bundle and confirmed live —
@@ -183,16 +245,20 @@ class ScoutClient:
         own, which lands divine at 361.8 ex right where the trade-site book
         independently puts it. Each currency takes its figure from the pair
         it traded the most value in.
+
+        `refresh` skips the cache read: the snapshot is hourly and poe2scout
+        sets no rate limit, so the fetch a session starts in the background
+        always asks, and the cache only seeds the wait.
         """
-        cached = self._cache.get("exchange_fills", league_short)
+        cached = None if refresh else self._cache.get("exchange_fills", league_short)
         if cached is not None:
-            return {k: (v[0], v[1]) for k, v in cached.items()}
+            return _snapshot_from_cache(cached)
 
         best: dict[str, tuple[float, float]] = {}
         try:
             pairs = self._get(f"/Leagues/{league_short}/SnapshotPairs")
         except (httpx.HTTPError, ValueError):
-            return {}
+            return Snapshot({}, None)
         for pair in pairs or []:
             for side in ("CurrencyOne", "CurrencyTwo"):
                 name = (pair.get(side) or {}).get("Text")
@@ -206,15 +272,27 @@ class ScoutClient:
 
         unit = best.get("Exalted Orb", (0.0, 0.0))[0]
         if not unit:
-            return {}
+            return Snapshot({}, None)
         fills = {name: (price / unit, traded / unit)
                  for name, (price, traded) in best.items()}
+        epoch = self._snapshot_epoch(league_short)
         self._cache.put(
             "exchange_fills", league_short,
-            {k: list(v) for k, v in fills.items()},
+            {"epoch": epoch, "fills": {k: list(v) for k, v in fills.items()}},
             ttl=TTL["exchange_fills"],
         )
-        return fills
+        return Snapshot(fills, epoch)
+
+    def _snapshot_epoch(self, league_short: str) -> float | None:
+        """When the snapshot the pairs came from was taken — its own clock,
+        not ours. As undocumented as the pairs; losing it loses the age
+        warning, not the prices."""
+        try:
+            payload = self._get(f"/Leagues/{league_short}/ExchangeSnapshot")
+        except (httpx.HTTPError, ValueError):
+            return None
+        epoch = payload.get("Epoch") if isinstance(payload, dict) else None
+        return float(epoch) if epoch else None
 
     def currency_rates(self, index: dict[str, IndexEntry]) -> dict[str, float]:
         """Trade currency id -> value in exalted."""
@@ -229,3 +307,60 @@ class ScoutClient:
         response = self._client.get(BASE + path, headers=self._headers, params=params)
         response.raise_for_status()
         return response.json()
+
+
+class LiveFills:
+    """The exchange fills as a watch session sees them.
+
+    A session can run for hours on the snapshot it read at startup, and
+    waiting on that read before the first item prices is the wrong trade
+    too. So the session starts on whatever the cache last held — stale beats
+    nothing — and a fetch runs behind it; the loop takes the fresh figures
+    between items, where the rates that hang off them are recomputed in the
+    same thread that reads them. An empty or failed fetch is not news and
+    leaves the old figures standing.
+
+    Reads what the pricer reads of a dict: `get` and truth — and its age.
+    """
+
+    def __init__(self, current: Snapshot) -> None:
+        self._current = current
+        self._pending: Snapshot | None = None
+        self._lock = threading.Lock()
+
+    def get(self, name: str, default=None):
+        return self._current.get(name, default)
+
+    def __bool__(self) -> bool:
+        return bool(self._current)
+
+    @property
+    def epoch(self) -> float | None:
+        return self._current.epoch
+
+    def age(self, now: float | None = None) -> float | None:
+        return self._current.age(now)
+
+    def refresh(self, fetch) -> threading.Thread:
+        """Run `fetch` on a thread; its answer waits for `take_update`."""
+        def run() -> None:
+            try:
+                fresh = fetch()
+            except Exception:  # noqa: BLE001 - the session must not care
+                return
+            if fresh:
+                with self._lock:
+                    self._pending = fresh
+
+        worker = threading.Thread(target=run, name="exchange-fills", daemon=True)
+        worker.start()
+        return worker
+
+    def take_update(self) -> bool:
+        """Swap in a landed fetch; True when the figures changed."""
+        with self._lock:
+            fresh, self._pending = self._pending, None
+        if fresh is None:
+            return False
+        self._current = fresh
+        return True

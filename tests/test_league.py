@@ -24,8 +24,17 @@ LEAGUES = [
 ]
 
 
-def build(payload, cache_path):
+# The snapshot's own timestamp, from /ExchangeSnapshot — poe2scout takes one
+# an hour, and this one is 2026-08-27 00:00 UTC.
+SNAPSHOT = {"Epoch": 1_787_788_800, "Volume": 81_803_773.0}
+
+
+def build(payload, cache_path, snapshot=SNAPSHOT):
     def handler(request):
+        if "ExchangeSnapshot" in str(request.url):
+            if snapshot is None:
+                return httpx.Response(404, json={})
+            return httpx.Response(200, json=snapshot)
         return httpx.Response(200, json=payload)
 
     return ScoutClient(
@@ -86,4 +95,77 @@ def test_a_snapshot_with_no_exalted_figure_prices_nothing(tmp_path):
     """Without exalted's own figure there is no unit to normalise with, and
     a raw RelativePrice quoted as a price would be ~10% off everything."""
     scout = build([PAIRS[1]], tmp_path / "c.sqlite")
-    assert scout.exchange_fills("runes") == {}
+    assert not scout.exchange_fills("runes")
+
+
+def build_counting(payload, cache):
+    """`calls` counts the pair reads; the epoch read rides along with each."""
+    calls = []
+
+    def handler(request):
+        if "ExchangeSnapshot" in str(request.url):
+            return httpx.Response(200, json=SNAPSHOT)
+        calls.append(str(request.url))
+        return httpx.Response(200, json=payload)
+
+    return ScoutClient(httpx.Client(transport=httpx.MockTransport(handler)),
+                       cache, user_agent="sox-test"), calls
+
+
+def test_cached_fills_are_read_past_their_ttl(tmp_path):
+    """Startup takes the last snapshot the cache holds, however old, and
+    costs no request doing it."""
+    now = [1000.0]
+    cache = Cache(tmp_path / "c.sqlite", clock=lambda: now[0])
+    scout, calls = build_counting(PAIRS, cache)
+    fresh = scout.exchange_fills("runes")
+    now[0] += 2 * 3600
+    assert scout.cached_fills("runes") == fresh
+    assert len(calls) == 1
+
+
+def test_a_refresh_asks_again_even_with_a_fresh_cache(tmp_path):
+    """The snapshot is hourly and poe2scout is not rate-limited, so the
+    background fetch always asks; the cache only seeds the wait."""
+    scout, calls = build_counting(PAIRS, Cache(tmp_path / "c.sqlite"))
+    scout.exchange_fills("runes")
+    scout.exchange_fills("runes")
+    assert len(calls) == 1
+    scout.exchange_fills("runes", refresh=True)
+    assert len(calls) == 2
+
+
+def test_the_snapshot_carries_its_own_epoch(tmp_path):
+    """poe2scout's hourly snapshots stopped for a day on 2026-08-27 and a
+    freshly fetched answer was 29 hours old. The fetch time says nothing;
+    the snapshot's own timestamp is what an age is measured from."""
+    scout = build(PAIRS, tmp_path / "c.sqlite")
+    snap = scout.exchange_fills("runes")
+    assert snap.epoch == 1_787_788_800
+    assert snap.age(now=1_787_788_800 + 29 * 3600) == 29 * 3600
+
+
+def test_the_cached_snapshot_keeps_its_epoch(tmp_path):
+    now = [1000.0]
+    cache = Cache(tmp_path / "c.sqlite", clock=lambda: now[0])
+    scout, _ = build_counting(PAIRS, cache)
+    scout.exchange_fills("runes")
+    now[0] += 2 * 3600
+    assert scout.cached_fills("runes").epoch == 1_787_788_800
+
+
+def test_a_snapshot_without_an_epoch_has_no_age(tmp_path):
+    """The epoch endpoint is as undocumented as the pairs one; losing it
+    loses the warning, not the prices."""
+    scout = build(PAIRS, tmp_path / "c.sqlite", snapshot=None)
+    snap = scout.exchange_fills("runes")
+    assert snap["Divine Orb"][0] == pytest.approx(329.21 / 0.91)
+    assert snap.epoch is None
+    assert snap.age(now=1.0) is None
+
+
+def test_an_empty_cache_is_an_empty_snapshot(tmp_path):
+    scout, calls = build_counting(PAIRS, Cache(tmp_path / "c.sqlite"))
+    snap = scout.cached_fills("runes")
+    assert not snap and snap.epoch is None
+    assert calls == []

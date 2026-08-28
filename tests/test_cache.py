@@ -80,3 +80,35 @@ def test_survives_an_unwritable_location(tmp_path):
         broken.close()
     finally:
         os.chmod(directory, 0o700)
+
+
+def test_an_expired_entry_can_still_be_peeked(tmp_path):
+    """A watch session starts on whatever the cache last held — stale beats
+    nothing while the fresh snapshot is still on its way."""
+    now = [1000.0]
+    cache = Cache(tmp_path / "c.sqlite", clock=lambda: now[0])
+    cache.put("t", "k", {"a": 1}, ttl=10)
+    now[0] += 11
+    assert cache.get("t", "k") is None
+    assert cache.peek("t", "k") == {"a": 1}
+
+
+def test_peeking_a_missing_key_is_none(tmp_path):
+    cache = Cache(tmp_path / "c.sqlite")
+    assert cache.peek("t", "missing") is None
+
+
+def test_a_write_from_another_thread_is_read_here(tmp_path):
+    """The exchange snapshot is fetched on a thread and read on the main
+    one. sqlite ties a connection to the thread that opened it; a cache
+    that reconnects on every crossing loses the row to whichever thread
+    asks next."""
+    import threading
+
+    cache = Cache(tmp_path / "c.sqlite")
+    cache.put("t", "main", 1, ttl=60)
+    worker = threading.Thread(target=lambda: cache.put("t", "thread", 2, ttl=60))
+    worker.start()
+    worker.join()
+    assert cache.get("t", "thread") == 2
+    assert cache.get("t", "main") == 1

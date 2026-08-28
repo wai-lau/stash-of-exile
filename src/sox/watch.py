@@ -14,6 +14,7 @@ from pathlib import Path
 
 from sox import __version__
 from sox.ggg.governor import Budget
+from sox.scout import describe_age
 
 DIM = "\033[2m"
 BOLD = "\033[1m"
@@ -169,6 +170,13 @@ def waiting(message: str) -> str:
 
 def error(message: str) -> str:
     return f"{RED}{BOLD}!! ERROR{RESET}   {RED}{message}{RESET}"
+
+
+def stale_snapshot(age_s: float) -> str:
+    """poe2scout has not taken a snapshot in hours: every fills price in
+    the session is that old until it does."""
+    return (f"{YELLOW}{BOLD}!! exchange snapshot {describe_age(age_s)} old{RESET}  "
+            f"{DIM}poe2scout has not taken a new one — fills prices lag the board{RESET}")
 
 
 def waiting_on_limit(seconds: float, reason: str) -> str:
