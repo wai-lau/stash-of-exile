@@ -1,0 +1,19 @@
+Item Class: Waystones
+Rarity: Rare
+Blight Crypt
+Waystone (Tier 15)
+--------
+Revives Available: 0 (augmented)
+Item Rarity: +20% (augmented)
+Pack Size: +20% (augmented)
+Monster Rarity: +70% (augmented)
+Monster Effectiveness: +20% (augmented)
+Waystone Drop Chance: +90% (augmented)
+--------
+Item Level: 80
+--------
+30% increased Monster Damage
+25% more Monster Life
+Monsters are Armoured
+--------
+Can be used in a Map Device, allowing you to enter a Map. Waystones can only be used once.

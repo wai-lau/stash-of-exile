@@ -173,10 +173,11 @@ def error(message: str) -> str:
 
 
 def stale_snapshot(age_s: float) -> str:
-    """poe2scout has not taken a snapshot in hours: every fills price in
-    the session is that old until it does."""
+    """poe2scout has not taken a snapshot in hours: its fills stand aside
+    and the trade-site books price until it does."""
     return (f"{YELLOW}{BOLD}!! exchange snapshot {describe_age(age_s)} old{RESET}  "
-            f"{DIM}poe2scout has not taken a new one — fills prices lag the board{RESET}")
+            f"{DIM}fills set aside — priced off the trade-site books until "
+            f"poe2scout catches up{RESET}")
 
 
 def waiting_on_limit(seconds: float, reason: str) -> str:

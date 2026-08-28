@@ -815,10 +815,22 @@ LOOT_WEIGHTS = {
     "Item Rarity": 0.5,
 }
 LOOT_BANDS = ((90, "chase"), (70, "juice it"), (50, "run it"), (0, "reroll"))
-# From 80 a stone is worth a search: the comparable is one at least as good
-# on all five totals, which the bulk book by tier cannot say. Below it, the
-# book.
-SEARCH_LOOT = 80
+# From here the stone is run, not sold, and a search would only price what
+# is not for sale. The juice-it band.
+RUN_LOOT = 70
+# What each total sells at. Measured 2026-08-28 (docs/waystones.md): under
+# these a fifteen is the tier's 1 ex, at them it is a divine, whatever the
+# total does for loot — item rarity 80 sells for 260 ex and scores 40. Buyers
+# pay for the scarcity of a roll, and each total's top is about equally
+# scarce; pack size's top is a hundred, the market not believing in it. This
+# league's numbers; re-measure them.
+SALE_CLIFFS = {
+    "Monster Rarity": 60,
+    "Pack Size": 35,
+    "Item Rarity": 80,
+    "Monster Effectiveness": 50,
+    "Waystone Drop Chance": 120,
+}
 
 
 def loot_score(item: dict) -> tuple[int, str] | None:
@@ -845,7 +857,39 @@ def loot_verdict(score: int) -> str:
 _WAYSTONE_TIER = re.compile(r"\(Tier (\d+)\)")
 
 
-def waystone_filters(item: dict, category: str) -> dict:
+def waystone_tier(item: dict) -> int | None:
+    tier = _WAYSTONE_TIER.search(item.get("baseType") or "")
+    return int(tier.group(1)) if tier else None
+
+
+def for_sale(item: dict) -> tuple[str, ...]:
+    """The totals at their market cliffs on a stone not worth running.
+
+    Empty for a stone worth running — from RUN_LOOT the owner runs it, and a
+    search would price what is not for sale — and for one under every
+    cliff, which the tier's book prices. What is left looks good and is
+    not: sell it, and the search says for how much — floored on these
+    totals alone, since the market prices the one total and five floors at
+    once match nothing (measured: item rarity 80 alone was 148 listings).
+    """
+    loot = loot_score(item)
+    if loot is None or loot[0] >= RUN_LOOT:
+        return ()
+    return tuple(name for name, cliff in SALE_CLIFFS.items()
+                 if (_property(item, name) or 0) >= cliff)
+
+
+def sale_texts(item: dict) -> tuple[str, ...]:
+    """`for_sale`, worded for the report: "item rarity 84% clears 80"."""
+    return tuple(
+        f"{_MAP_FILTER_TEXT[WAYSTONE_PROPERTIES[name]][0]} {_property(item, name)}% "
+        f"clears {SALE_CLIFFS[name]}"
+        for name in for_sale(item)
+    )
+
+
+def waystone_filters(item: dict, category: str,
+                     only: tuple[str, ...] | None = None) -> dict:
     """The endgame totals the item is bought on, as trade minimums.
 
     Like a defence total, these are the honest measure of the item — the
@@ -853,14 +897,20 @@ def waystone_filters(item: dict, category: str) -> dict:
     beside the stat ladder rather than in it and survive every rung. The tier
     is a floor like everything else: a higher tier is at least as good, and
     the search has no maximums. Zero constrains nothing and is not sent.
+
+    `only` names the totals to send — the ones that sell a stone
+    (`for_sale`) — and `()` sends the tier alone: the floor for a sixteen
+    nothing as good is listed against, whose bulk book is bait.
     """
     if not category.startswith("map."):
         return {}
     out: dict = {}
-    tier = _WAYSTONE_TIER.search(item.get("baseType") or "")
+    tier = waystone_tier(item)
     if tier:
-        out["map_tier"] = {"min": int(tier.group(1))}
+        out["map_tier"] = {"min": tier}
     for prop_name, filter_id in WAYSTONE_PROPERTIES.items():
+        if only is not None and prop_name not in only:
+            continue
         value = _property(item, prop_name)
         if value is not None and value > 0:
             out[filter_id] = {"min": value}
@@ -878,7 +928,8 @@ _MAP_FILTER_TEXT = {
 }
 
 
-def waystone_stat_texts(item: dict, category: str) -> list[str]:
+def waystone_stat_texts(item: dict, category: str,
+                        only: tuple[str, ...] | None = None) -> list[str]:
     """The endgame minimums as the report words them.
 
     Read off the same filters the query sends, so the two cannot drift —
@@ -887,7 +938,7 @@ def waystone_stat_texts(item: dict, category: str) -> list[str]:
     """
     return [
         f"{_MAP_FILTER_TEXT[fid][0]} {value['min']}{_MAP_FILTER_TEXT[fid][1]}+"
-        for fid, value in waystone_filters(item, category).items()
+        for fid, value in waystone_filters(item, category, only).items()
     ]
 
 
@@ -1072,6 +1123,7 @@ def _build(
     notables: dict[str, str],
     status: str = "any",
     relax: int = 0,
+    only: tuple[str, ...] | None = None,
 ) -> tuple[dict, str, list[str]]:
     """The query, the buyer group behind it, and the stats it asks for.
 
@@ -1422,7 +1474,7 @@ def _build(
         query["query"]["filters"]["equipment_filters"] = {"filters": equipment}
     if requirements:
         query["query"]["filters"]["req_filters"] = {"filters": requirements}
-    endgame = waystone_filters(item, category)
+    endgame = waystone_filters(item, category, only)
     if endgame:
         query["query"]["filters"]["map_filters"] = {"filters": endgame}
 
@@ -1494,8 +1546,9 @@ def build_query(
     notables: dict[str, str],
     status: str = "any",
     relax: int = 0,
+    only: tuple[str, ...] | None = None,
 ) -> dict:
-    return _build(item, category, index, notables, status, relax)[0]
+    return _build(item, category, index, notables, status, relax, only)[0]
 
 
 def explain_query(

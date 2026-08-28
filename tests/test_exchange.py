@@ -388,6 +388,28 @@ def test_a_dear_item_needs_twenty_units_of_fills(tmp_path):
     assert priced.price_ex == pytest.approx(1643 * 360.0)
 
 
+def test_fills_off_a_stale_snapshot_stand_aside(tmp_path):
+    """poe2scout stopped snapshotting for a day; a fill from then is not a
+    price now, and the books are live. Past three hours the fills are set
+    aside and the book answers."""
+    import time
+
+    from sox.scout import Snapshot
+    from sox.valuation.exchange_pricer import price_by_exchange
+
+    client = four_sided(tmp_path, {
+        ("exalted", "masterwork-rune"): [(300, 1, 184)],
+    })
+    stale = Snapshot({"Masterwork Rune": (260.0, 38_000.0)}, epoch=time.time() - 4 * 3600)
+    priced = price_by_exchange("Masterwork Rune", client, divine_ex=340.0, fills=stale)
+    assert priced.quoted == "exalted"
+    assert priced.price_ex == pytest.approx(300.0)
+
+    fresh = Snapshot({"Masterwork Rune": (260.0, 38_000.0)}, epoch=time.time() - 600)
+    priced = price_by_exchange("Masterwork Rune", client, divine_ex=340.0, fills=fresh)
+    assert priced.quoted == "fills"
+
+
 def test_divine_is_never_priced_against_itself(tmp_path):
     """Its own book is 1:1 and says nothing, exactly as exalted's does."""
     from sox.valuation.exchange_pricer import price_by_exchange

@@ -123,28 +123,6 @@ def test_a_fills_price_names_the_game_exchange():
     assert "38,000" in text
 
 
-def test_a_fills_price_off_a_stale_snapshot_says_how_old():
-    """poe2scout's hourly snapshots stopped for a day and Hinekora's Lock
-    printed at 1,395 div against a board asking 1,643. The age is the
-    warning, first and in capitals like a weak sample."""
-    priced = PricedItem(
-        name="Hinekora's Lock", item_class=ItemClass.CURRENCY, price_ex=501_707.0,
-        source="exchange", tag=None, quoted="fills", traded_ex=5_017_069.0,
-        snapshot_age=29 * 3600 + 600,
-    )
-    text = render(ITEM, priced, RATES)
-    assert "29H OLD" in text
-
-
-def test_a_fills_price_off_this_hour_snapshot_carries_no_age():
-    priced = PricedItem(
-        name="Masterwork Rune", item_class=ItemClass.GEM, price_ex=260.0,
-        source="exchange", tag=None, quoted="fills", traded_ex=38_000.0,
-        snapshot_age=90 * 60,
-    )
-    assert "OLD" not in render(ITEM, priced, RATES)
-
-
 def test_a_capped_search_says_its_low_is_a_sample():
     """Measured live: tier 15+ alone floored at 3 ex while the strictly
     narrower tier 15+, rarity 24+ floored at 1 — impossible in one market.
@@ -416,6 +394,19 @@ def test_a_waystone_prints_its_loot_score_and_verdict():
     # The number alone, bold, in the band's colour — the word was the colour.
     assert "  loot       \033[94m55\033[0m" in text
     assert "run it" not in text
+
+
+def test_a_stone_for_sale_says_which_total_sells_it():
+    """The loot score says run it; the market says sell it, and the row
+    says on what."""
+    priced = PricedItem(
+        name="Empyrean Beacon", item_class=ItemClass.ENDGAME, price_ex=260.0,
+        source="trade", tag="exact", listings=10, median_ex=275.0, p25_ex=270.0,
+        map_stats=("tier 15+", "item rarity 84%+"),
+        loot=(67, "run it"), sale=("item rarity 84% clears 80",),
+    )
+    text = render(ITEM, priced, RATES)
+    assert "sell — item rarity 84% clears 80" in text
 
 
 def test_the_loot_bands_are_colours():

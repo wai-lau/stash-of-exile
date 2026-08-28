@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from sox.scout import STALE_SNAPSHOT_S, describe_age
 from sox.valuation.classify import (
     ItemClass,
     Rarity,
@@ -109,13 +108,13 @@ class PricedItem:
     bid_ex: float | None = None   # exchange: what someone will pay
     quoted: str = ""            # exchange: the currency the book was read in
     traded_ex: float = 0.0        # exchange fills: exalted actually exchanged
-    snapshot_age: float | None = None   # exchange fills: seconds since the snapshot
     searched_group: str | None = None
     searched_stats: tuple[str, ...] = ()
     query_stats: tuple[str, ...] = ()      # each filter sent, with its floor
     unsearched: tuple[tuple[str, str], ...] = ()   # (mod text, why not)
     map_stats: tuple[str, ...] = ()        # waystone minimums the search sent
     loot: tuple[float, str] | None = None  # waystone loot score and verdict
+    sale: tuple[str, ...] = ()             # waystone: the totals that sell it
     instill: object | None = None          # waystone Instillation path
     search_down: float = 0.0               # seconds of search lockout, if any
     item_class_name: str = ""            # the game's own label, e.g. "Quarterstaves"
@@ -297,15 +296,9 @@ def _price_lines(priced: PricedItem, rates: dict[str, float]) -> list[str]:
         # A fills price rests on completed trades, not listings — the one
         # measurement bait cannot touch — and the row says which it is.
         if priced.quoted == "fills":
-            line = (f"             the game's own exchange — "
-                    f"{priced.traded_ex:,.0f} ex of it traded in the last snapshot")
-            # The snapshot's age is the reason to doubt the number: poe2scout
-            # stopped taking them for a day and a lock printed 1,395 div
-            # against a board asking 1,643. Lit like a weak sample.
-            age = priced.snapshot_age
-            if age is not None and age >= STALE_SNAPSHOT_S:
-                line += f", {UNSEARCHED}{describe_age(age).upper()} OLD{RESET}"
-            out.append(line)
+            out.append(f"             the game's own exchange — "
+                         f"{priced.traded_ex:,.0f} ex of it traded in the "
+                         "last snapshot")
         # Rerouted here from a search that hit the 10,000 cap, where the sort
         # reads only a kept sample. Said out loud, or the exchange row makes
         # the item look like it was never searchable at all.
@@ -382,7 +375,11 @@ def render(item: dict, priced: PricedItem, rates: dict[str, float]) -> str:
     if priced.loot:
         # The tooltip shows the totals and no opinion; this is the opinion.
         score, verdict = priced.loot
-        lines.append(f"  loot       {LOOT_COLOURS.get(verdict, '')}{score}{RESET}")
+        line = f"  loot       {LOOT_COLOURS.get(verdict, '')}{score}{RESET}"
+        # The score says run it; the market says sell it, and on what.
+        if priced.sale:
+            line += "  ·  sell — " + ", ".join(priced.sale)
+        lines.append(line)
     if priced.instill:
         # The emotion to instill, and the score and band one of it buys.
         path = priced.instill

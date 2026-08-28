@@ -159,20 +159,24 @@ search floor of 99. poe2scout's fills carry no waystones, so nothing
 catches it; the fifteen's book is honest only because 1 ex is its real
 price.
 
-### What this says about the algorithm
+### What changed on the algorithm's side (2026-08-28)
 
-- The search gate (`SEARCH_LOOT`, 80) sits exactly where monster rarity
-  crosses from 20 ex to a divine, so on the total the score weights most
-  it is right. On the others it is not: item rarity 80 scores 40,
-  effectiveness 50 scores 25, drop chance 120 scores 0 — all "reroll",
-  none searched, all priced off the 1-ex book while selling for
-  250–400 ex. A stone with any one total at its cliff — monster rarity
-  60, item rarity 80, effectiveness 50, drop chance 120, pack size 35 —
-  should open the search whatever it scores. The cliffs are this
-  league's; re-measure them.
-- The loot score is about loot and the price is about scarcity, and they
-  disagree on pack size. Keep both readings: the score says whether to
-  run it, the search says what it sells for.
-- A Tier 16 should never be priced off the bulk book. The tier alone is
-  a 10,000-match search with a real floor; a book whose cheapest offer is
-  one account's wall is not a market.
+- **The search is for selling.** The owner runs the stones worth
+  running and sells the ones that look good and are not, so the search
+  opens only on the second kind: loot under 70 (`RUN_LOOT`) with a
+  single total at its cliff — monster rarity 60, pack size 35, item
+  rarity 80, effectiveness 50, drop chance 120 (`SALE_CLIFFS`,
+  `for_sale`), and the search floors on those totals alone — five floors
+  at once matched nothing where item rarity 80 alone was 148 listings.
+  The loot row names the total that sells it. A stone from
+  70 is priced off the tier's book, whatever it rolled — the search was
+  only ever going to price what is not for sale. The cliffs are this
+  league's; re-run the script and move them.
+- **The loot score is about loot and the price is about scarcity**, and
+  they disagree on pack size. Both readings stay: the score says whether
+  to run it, the search says what it sells for.
+- **A Tier 16 is never priced off the bulk book.** It is searched
+  whatever it scores; when nothing at least as good is listed, the floor
+  is one more search on the tier alone — a 10,000-match search with a
+  real floor — and a capped search keeps its sample rather than falling
+  to the book.

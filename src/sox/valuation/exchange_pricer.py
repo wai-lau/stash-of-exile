@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from sox.ggg.exchange import Offer
+from sox.scout import STALE_SNAPSHOT_S
 
 if TYPE_CHECKING:
     from sox.scout import LiveFills, Snapshot
@@ -93,7 +94,6 @@ class BulkPrice:
     quoted: str = UNIT            # the currency the book was read in; "fills"
                                   # when the game's own exchange answered
     traded_ex: float = 0.0        # fills only: exalted actually exchanged
-    snapshot_age: float | None = None   # fills only: seconds since the snapshot
 
 
 def _read_book(exchange, item_id: str, unit: str, unit_ex: float) -> BulkPrice | None:
@@ -182,13 +182,15 @@ def price_by_exchange(
     if item_id == UNIT:
         return BulkPrice(price_ex=1.0, offers=0, stock=0, ask_ex=1.0, bid_ex=1.0)
 
-    if fills:
+    # Fills off a stale snapshot stand aside: poe2scout stopped taking them
+    # for a day, and a fill from then is not a price now while the books
+    # are live. A bare dict of fills (the tests') carries no age.
+    age = fills.age() if fills and hasattr(fills, "age") else None
+    if fills and (age is None or age < STALE_SNAPSHOT_S):
         price_ex, traded = fills.get(name, (0.0, 0.0))
         if traded >= fill_floor_ex(price_ex):
-            # A bare dict of fills (the tests') has no age to report.
-            age = fills.age() if hasattr(fills, "age") else None
             return BulkPrice(price_ex=price_ex, offers=0, stock=0,
-                             quoted="fills", traded_ex=traded, snapshot_age=age)
+                             quoted="fills", traded_ex=traded)
 
     priced = _read_book(exchange, item_id, UNIT, 1.0)
     if priced is not None and priced.stock >= THIN_STOCK:

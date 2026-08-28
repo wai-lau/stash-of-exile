@@ -82,6 +82,7 @@ def price_by_search(
     status: str = "any",
     min_results: int = 1,
     max_searches: int = 6,
+    only: tuple[str, ...] | None = None,
 ) -> TradeResult:
     searches = 0
     best: TradeResult | None = None
@@ -94,7 +95,8 @@ def price_by_search(
     for step in range(len(RELAX_STEPS)):
         if searches >= max_searches:
             break
-        query = build_query(item, category, index, notables, status=status, relax=step)
+        query = build_query(item, category, index, notables, status=status,
+                            relax=step, only=only)
         key = query_hash(query)
 
         # The first rung asks for the whole item, so on an item with fewer

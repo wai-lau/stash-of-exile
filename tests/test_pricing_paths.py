@@ -1673,7 +1673,8 @@ def test_a_uniques_mods_are_searched_at_their_roll_not_the_range_floor():
 def test_a_waystone_worth_juicing_is_searched_on_its_totals(tmp_path):
     """From 80 up a stone is worth a search: the
     comparable is one at least as good on all five totals, which the bulk
-    book by tier cannot say. Below that, the book."""
+    book by tier cannot say — and a sixteen is searched whatever it scores,
+    its book being bait."""
     import types
 
     from sox.cache import Cache
@@ -1708,6 +1709,161 @@ def test_a_waystone_worth_juicing_is_searched_on_its_totals(tmp_path):
     assert priced.instill is not None and priced.instill.blocked == "corrupted"
 
 
+def test_a_stone_that_looks_good_but_is_not_is_searched_to_sell(tmp_path):
+    """Item rarity 84 scores 40 and sells for 260 ex; the loot score says
+    run it, the market says sell it, and the report says which."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.trade import Listing
+    from sox.valuation.query import loot_score
+
+    class OneRung:
+        def __init__(self):
+            self.queries = []
+
+        def search(self, query):
+            self.queries.append(query)
+            return "q1", [f"h{i}" for i in range(12)], 148
+
+        def fetch(self, query_id, hashes):
+            return [Listing(amount=260.0, currency="exalted", account="a")
+                    for _ in hashes]
+
+    item = load("SellableMap")
+    assert loot_score(item) == (67, "run it")
+    trade = OneRung()
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, trade,
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+    )
+    assert priced.source == "trade"
+    assert priced.price_ex == 260.0
+    assert priced.sale == ("item rarity 84% clears 80",)
+    # Floored on the total that sells it, not on all five at once: the
+    # market prices the one total, and five floors at once match nothing.
+    assert trade.queries[0]["query"]["filters"]["map_filters"]["filters"] == {
+        "map_tier": {"min": 15}, "map_iir": {"min": 84}}
+    assert priced.map_stats == ("tier 15+", "item rarity 84%+")
+
+
+def test_a_stone_worth_running_is_not_searched(tmp_path):
+    """Monster rarity 70 clears its cliff, and the stone scores 110: the
+    owner runs it, and a search would only price what is not for sale."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.exchange import Book, Offer
+    from sox.valuation.query import loot_score
+
+    class NoSearch:
+        def search(self, query):
+            raise AssertionError("a stone worth running is not for sale")
+
+        fetch = search
+
+    class BulkBook:
+        def ids(self):
+            return {"Waystone (Tier 15)": "waystone-15"}
+
+        def book(self, item_id, have="exalted"):
+            return Book([Offer(ratio=1.0, stock=6170)], 37)
+
+    item = load("JuicyMap")
+    assert loot_score(item) == (110, "chase")
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, NoSearch(),
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+        exchange=BulkBook(),
+    )
+    assert priced.source == "exchange"
+    assert priced.sale == ()
+    assert priced.loot == (110, "chase")
+
+
+def test_a_sixteen_with_nothing_as_good_listed_falls_to_its_tier_not_the_book(tmp_path):
+    """The sixteen's bulk book is one AFK account's 63 stones at 1 ex under
+    a 99-ex search floor. A sixteen is searched whatever it scores, and when
+    nothing at least as good is listed the tier alone is the floor."""
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.trade import Listing
+
+    class TierOnlyAnswers:
+        def __init__(self):
+            self.queries = []
+
+        def search(self, query):
+            self.queries.append(query)
+            filters = query["query"]["filters"]["map_filters"]["filters"]
+            if set(filters) == {"map_tier"}:
+                return "q2", [f"h{i}" for i in range(10)], 10000
+            return "q1", [], 0
+
+        def fetch(self, query_id, hashes):
+            return [Listing(amount=99.0, currency="exalted", account="a")
+                    for _ in hashes]
+
+    class BaitBook:
+        def ids(self):
+            return {"Waystone (Tier 16)": "waystone-16"}
+
+        def book(self, item_id, have="exalted"):
+            raise AssertionError("a sixteen is never priced off the book")
+
+    item = load("RareMapFakeAllProps")
+    trade = TierOnlyAnswers()
+    priced = _price_item(
+        item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, trade,
+        Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+        exchange=BaitBook(),
+    )
+    assert priced.source == "trade"
+    assert priced.tag == "waystone-floor"
+    assert priced.price_ex == 99.0
+    assert trade.queries[-1]["query"]["filters"]["map_filters"]["filters"] == {"map_tier": {"min": 16}}
+    assert priced.map_stats == ("tier 16+",)
+
+
+def test_a_sixteens_capped_search_keeps_the_sample_not_the_book(tmp_path):
+    import types
+
+    from sox.cache import Cache
+    from sox.cli import _price_item
+    from sox.ggg.trade import Listing
+
+    class Capped:
+        def search(self, query):
+            return "q1", [f"h{i}" for i in range(10)], 10000
+
+        def fetch(self, query_id, hashes):
+            return [Listing(amount=100.0, currency="exalted", account="a")
+                    for _ in hashes]
+
+    class BaitBook:
+        def ids(self):
+            return {"Waystone (Tier 16)": "waystone-16"}
+
+        def book(self, item_id, have="exalted"):
+            raise AssertionError("a sixteen is never priced off the book")
+
+    priced = _price_item(
+        load("RareMapFakeAllProps"), {}, {"exalted": 1.0}, MODS, BASES, UNIQUES,
+        NOTABLES, Capped(), Cache(tmp_path / "c.sqlite"),
+        types.SimpleNamespace(status="any", max_searches=4, force=False),
+        exchange=BaitBook(),
+    )
+    assert priced.source == "trade"
+    assert priced.price_ex == 100.0
+
+
 def test_a_stone_under_the_search_gate_is_not_searched(tmp_path):
     import types
 
@@ -1717,7 +1873,7 @@ def test_a_stone_under_the_search_gate_is_not_searched(tmp_path):
 
     class NoSearch:
         def search(self, query):
-            raise AssertionError("under 80 is the book's to price")
+            raise AssertionError("under every cliff is the book's to price")
 
         fetch = search
 
@@ -1734,7 +1890,8 @@ def test_a_stone_under_the_search_gate_is_not_searched(tmp_path):
 def test_a_searched_stone_with_no_comparable_falls_back_to_the_book_as_a_floor(tmp_path):
     """Nothing at least as good on all five totals is listed: that is what
     the search says, and it is worth knowing. But the stone is still at
-    least a Waystone (Tier 16), and the book by tier is the floor."""
+    least a Waystone (Tier 15), and the book by tier is the floor. (A
+    sixteen's book is bait; it falls to a tier-only search instead.)"""
     import types
 
     from sox.cache import Cache
@@ -1750,14 +1907,14 @@ def test_a_searched_stone_with_no_comparable_falls_back_to_the_book_as_a_floor(t
 
     class BulkBook:
         def ids(self):
-            return {"Waystone (Tier 16)": "waystone-16"}
+            return {"Waystone (Tier 15)": "waystone-15"}
 
         def book(self, item_id, have="exalted"):
-            if item_id == "waystone-16" and have == "exalted":
+            if item_id == "waystone-15" and have == "exalted":
                 return Book([Offer(ratio=24.0, stock=500)], 2501)
             return Book([], 0)
 
-    item = load("RareMapFakeAllProps")
+    item = load("SellableMap")
     priced = _price_item(
         item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES,
         NothingListed(), Cache(tmp_path / "c.sqlite"),
@@ -1767,8 +1924,9 @@ def test_a_searched_stone_with_no_comparable_falls_back_to_the_book_as_a_floor(t
     assert priced.source == "exchange"
     assert priced.tag == "waystone-floor"
     assert priced.price_ex == 24.0
-    assert "monster rarity 32%+" in priced.map_stats, "what the search asked is still shown"
-    assert priced.loot == (83, "juice it")
+    assert priced.map_stats == ("tier 15+", "item rarity 84%+"), "what the search asked is still shown"
+    assert priced.loot == (67, "run it")
+    assert priced.sale == ("item rarity 84% clears 80",)
 
 
 def test_with_the_search_down_gear_is_priced_without_it(tmp_path):
@@ -1818,14 +1976,14 @@ def test_with_the_search_down_a_stone_keeps_its_loot_and_its_book(tmp_path):
 
     class BulkBook:
         def ids(self):
-            return {"Waystone (Tier 16)": "waystone-16"}
+            return {"Waystone (Tier 15)": "waystone-15"}
 
         def book(self, item_id, have="exalted"):
-            if item_id == "waystone-16" and have == "exalted":
+            if item_id == "waystone-15" and have == "exalted":
                 return Book([Offer(ratio=24.0, stock=500)], 2501)
             return Book([], 0)
 
-    item = load("RareMapFakeAllProps")   # loot 83: would search, if it could
+    item = load("SellableMap")   # for sale: would search, if it could
     priced = _price_item(
         item, {}, {"exalted": 1.0}, MODS, BASES, UNIQUES, NOTABLES, Down(),
         Cache(tmp_path / "c.sqlite"),
@@ -1833,5 +1991,5 @@ def test_with_the_search_down_a_stone_keeps_its_loot_and_its_book(tmp_path):
         exchange=BulkBook(),
     )
     assert priced.source == "exchange" and priced.price_ex == 24.0
-    assert priced.loot == (83, "juice it")
+    assert priced.loot == (67, "run it")
     assert priced.search_down == 1700.0
