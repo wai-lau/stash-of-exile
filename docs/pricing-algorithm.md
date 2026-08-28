@@ -16,17 +16,17 @@ places it is still wrong.
 ```mermaid
 flowchart TD
     clip[clipboard text] --> parse["parse — mods · properties · rolls · flags"]
-    parse --> class{item class}
-    class -- "currency · gem" --> book["exchange book (both sides)"]
-    class -- unique --> desc{"index can describe it?"}
+    parse --> kind{item class}
+    kind -- "currency · gem" --> book["exchange book (both sides)"]
+    kind -- unique --> desc{"index can describe it?"}
     desc -- yes --> book
     desc -- escalated --> build[build query]
     book -- no book --> index["index price (poe2scout)"]
-    class -- gear --> score[score the mods]
+    kind -- gear --> score[score the mods]
     score --> qual{"qualifies? or not indexed"}
     qual -- no --> junk["junk — no search"]
     qual -- yes --> build
-    class -- "endgame · notable jewel" --> build
+    kind -- "endgame · notable jewel" --> build
     build --> search[search trade2]
     search --> m{"matches ≥ 1?"}
     m -- yes --> fetch["fetch cheapest 10 (up to 30 deep)"]
